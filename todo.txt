@@ -1,0 +1,14 @@
+Goal: Strengthen those atrophed programming muscles
+Goal: Use Unix system calls appropriately (eg, check for errors)
+Goal: split the typer and compiler
+Goal: Add in coroutines (eg, async and await) using threads
+Goal: Keep it simple (eg, no multiple returns/multipass compiler) for now
+
+Get entire language compiling for arithmetic expressions
+    tokenizer
+    parser
+    typer
+    compiler
+    vm
+
+Add in a print statement to print to console

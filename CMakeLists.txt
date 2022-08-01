@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.16)
+project(tama)
+set(CMAKE_C_STANDARD 99)
+add_compile_options(-Wall -Wextra -pedantic -pthread)
+add_link_options(-pthread)
+add_subdirectory(src)
