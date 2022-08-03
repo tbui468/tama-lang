@@ -5,10 +5,14 @@ Goal: Add in coroutines (eg, async and await) using threads
 Goal: Keep it simple (eg, no multiple returns/multipass compiler) for now
 
 Get entire language compiling for arithmetic expressions
-    tokenizer
-    parser
-    typer
-    compiler
-    vm
-
-Add in a print statement to print to console
+    Lexer
+        Let lexer recognize multiple digit numbers (only recognizing single digits now)
+    Parser
+        could do recursive descent or the other one (I forget the name)
+        will need to define AST nodes too
+    Typer
+        traverse AST once to catch type errors
+    Compiler
+        traverse AST again to generate bytecode
+    VM
+        run the bytecode - for now just have the vm printf the result on the stack when it ends
