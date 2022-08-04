@@ -10,6 +10,8 @@ Get entire language compiling for arithmetic expressions
     Parser
         could do recursive descent or the other one (I forget the name)
         will need to define AST nodes too
+        Might be easier to make p (the parser) a static variable for now 
+            instead of passing a struct Parser* to all parsing functions
     Typer
         traverse AST once to catch type errors
     Compiler
