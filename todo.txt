@@ -1,3 +1,14 @@
+Have lexer recognize floats
+Write type checker (don't allow addition of floats and ints for now)
+    need error messages and disallow arithmetic of floats and ints for now
+Write compiler
+    write bytecode chunks that are sent to the vm
+    chunck includes a table of constants (along with the bytecode)
+Write vm
+    let's make it a stack-based machine for now (and maybe change it to register based later)
+
+
+
 Goal: Strengthen those atrophed programming muscles
 Goal: Use Unix system calls appropriately (eg, check for errors)
 Goal: split the typer and compiler

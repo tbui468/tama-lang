@@ -3,14 +3,15 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-static char* code = "43 + 65*9/-7";
+static char* code = "43.23 + .65*9/-7.";
 
 
 /*
  * Tokens
  */
 enum TokenType {
-    T_NUMBER,
+    T_INT,
+    T_FLOAT,
     T_PLUS,
     T_MINUS,
     T_STAR,
@@ -255,6 +256,37 @@ void lexer_skip_ws(struct Lexer *l) {
         l->current++;
 }
 
+bool is_digit(char c) {
+    return '0' <= c && c <= '9';
+}
+
+struct Token lexer_read_number(struct Lexer *l) {
+    struct Token t;
+    t.start = &l->code[l->current];
+    t.len = 1;
+    bool has_decimal = *t.start == '.';
+
+    while (1) {
+        char next = l->code[l->current + t.len];
+        if (is_digit(next)) {
+            t.len++;
+        } else if (next == '.') {
+            t.len++;
+            if (has_decimal) {
+                printf("Parser error!  Too many decimals!\n"); //Need to have real error message here
+                exit(1);    
+            } else {
+                has_decimal = true;
+            }
+        } else {
+            break;
+        }
+    }
+
+    t.type = has_decimal ? T_FLOAT : T_INT;
+    return t;
+}
+
 struct Token lexer_next_token(struct Lexer *l) {
 
     lexer_skip_ws(l);
@@ -283,16 +315,7 @@ struct Token lexer_next_token(struct Lexer *l) {
             t.len = 1;
             break;
         default:
-            t.type = T_NUMBER;
-            t.start = &l->code[l->current];
-            t.len = 1;
-            while (1) {
-                char next = l->code[l->current + t.len];
-                if ('0' <= next && next <= '9')
-                    t.len++;
-                else
-                    break;
-            }
+            t = lexer_read_number(l);
             break;
     }
     l->current += t.len;
@@ -340,7 +363,7 @@ int main (int argc, char **argv) {
         printf("\n");
     }
     
-    //Type check (can skip this until we have ints, floats, and booleans)
+    //Type check (can skip this until we have ints, floats, True, False)
 
     //Compile into bytecode
 
