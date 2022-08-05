@@ -3,7 +3,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-static char* code = "43.23 + .65*9/-7.";
+//static char* code = "43.23 + .65*9.0/-7.";
+static char* code = "43 + 65*9/-7";
 
 
 /*
@@ -273,7 +274,7 @@ struct Token lexer_read_number(struct Lexer *l) {
         } else if (next == '.') {
             t.len++;
             if (has_decimal) {
-                printf("Parser error!  Too many decimals!\n"); //Need to have real error message here
+                printf("Parser error!  Too many decimals!\n"); //TODO: Need to have real error message here
                 exit(1);    
             } else {
                 has_decimal = true;
@@ -322,6 +323,41 @@ struct Token lexer_next_token(struct Lexer *l) {
     return t;
 }
 
+/*
+ * Type Checker
+ */
+
+enum TokenType type_check(struct Node* n) {
+    enum TokenType t;
+    switch(n->type) {
+        case NODE_LITERAL: {
+            struct NodeLiteral *l = (struct NodeLiteral*)n;
+            t = l->value.type;
+            break;
+        }
+        case NODE_UNARY: {
+            struct NodeUnary *u = (struct NodeUnary*)n;
+            t = type_check(u->right);
+            break;
+        }
+        case NODE_BINARY: {
+            struct NodeBinary* b = (struct NodeBinary*)n;
+            enum TokenType left_type = type_check(b->left);
+            enum TokenType right_type = type_check(b->right);
+            if (left_type != right_type) {
+                printf("Left and right types don't match!\n");
+                exit(0); //TODO: Need to display static type checker error message
+            }
+            t = left_type;
+            break;
+        }
+        default:
+            t = T_EOF;
+            break;
+    }
+    return t;
+}
+
 int main (int argc, char **argv) {
     argc = argc;
     argv = argv;
@@ -363,7 +399,11 @@ int main (int argc, char **argv) {
         printf("\n");
     }
     
-    //Type check (can skip this until we have ints, floats, True, False)
+    //Static Type checking
+    for (int i = 0; i < na.count; i++) {
+        type_check(na.nodes[i]);
+        printf("\n");
+    }
 
     //Compile into bytecode
 
