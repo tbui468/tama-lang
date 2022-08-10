@@ -1,12 +1,61 @@
-Have lexer recognize floats
-Write type checker (don't allow addition of floats and ints for now)
-    need error messages and disallow arithmetic of floats and ints for now
+Finish compiler_compiler(struct Compiler *c, struct NodeArray *na)
+    it should produce runnable x64 assembly and print out result of arithmetic
+
+    b, w, l, q (do we need these suffixes when using with operators like mov to specifiy size of operand???)
+
+    TODO: Massive bug with resizing arrays - look at ca_append for the correct version using a while loop 
+            bug occurs when user tries to insert more than double the current max count
+
+Goal: Get integer arithmetic working and use c printf to print out digit 
+        Problem solved!  Needed [] to get the value rather than the addresses
+
+Compile to x86_64 assembly files (then use nasm to assemble to machine code)
+    How can we go from the AST (literal, binary, and unary nodes)
+    to lines of assembly that nasm can assemble????
+    literals can just be given names (eg l0, l1, l2, etc)
+        and printed to section .data
+        we will need the offset so that we know where each constant is
+
+    The assembly IS the opcodes we need
+        for now, just push all results to the stack (like we did in Cebra)
+        can store values in registers later if necessary, but let's
+            keep it simple for now.
+        Just push all constants onto the stack
+            eg, mov first literal to register and push
+                mov second literal to register and push
+                pop stack twice and put into registers
+                add two registers, and then push result onto stack
+
+    Then the arithmetic part needs to know where in the data (offset???)
+        the literal resides...
+
+    Or, more simply, just fill the registers with the values
+        we have enough registers for at least some (8?) constants to load
+
+Idea: compile to x86 assembly (which we can then assemble to machine code..)
+    https://cs.lmu.edu/~ray/notes/nasmtutorial/
+    look here for tutorial on using nasm, ld, and x64 assembly
+
+    Three operand types:
+        Register operands
+        Memory operands
+        Immediate operands
+
+    Define data (db, dw, dd, dq)
+
+    Understanding calling conventions:
+        Which registers to use for ints and pointers, and which for floating-points
+
+    Goal: Write .asm file that does some arithmetic, then prints result out using puts
+        Then have Tamarind compiler compile .tmd files to .asm (which we can assemble to .o, then link to create executable)
+
 Write compiler
     write bytecode chunks that are sent to the vm
     chunck includes a table of constants (along with the bytecode)
 Write vm
     let's make it a stack-based machine for now (and maybe change it to register based later)
 
+How do unions work again?  Try on compiler explorer.
 
 
 Goal: Strengthen those atrophed programming muscles
@@ -16,6 +65,9 @@ Goal: Add in coroutines (eg, async and await) using threads
 Goal: Keep it simple (eg, no multiple returns/multipass compiler) for now
 
 Get entire language compiling for arithmetic expressions
+    Error
+        Make a struct to hold/reorder error messages
+        Need line information to make error messages better
     Lexer
         Let lexer recognize multiple digit numbers (only recognizing single digits now)
     Parser
@@ -23,9 +75,11 @@ Get entire language compiling for arithmetic expressions
         will need to define AST nodes too
         Might be easier to make p (the parser) a static variable for now 
             instead of passing a struct Parser* to all parsing functions
-    Typer
+    Type Checker
         traverse AST once to catch type errors
     Compiler
         traverse AST again to generate bytecode
     VM
         run the bytecode - for now just have the vm printf the result on the stack when it ends
+
+    REPL

@@ -4,7 +4,8 @@
 #include <stdbool.h>
 
 //static char* code = "43.23 + .65*9.0/-7.";
-static char* code = "43 + 65*9/-7";
+//static char* code = "43 + 65+9-7";
+static char* code = "43 + 2 - 40";
 
 
 /*
@@ -143,6 +144,151 @@ void ast_print(struct Node* n) {
             break;
     }
 }
+
+
+/*
+ * Compiler
+ */
+
+struct CharArray {
+    char* chars;
+    int count;
+    int max_count;
+};
+
+struct Compiler {
+    struct CharArray text;
+    struct CharArray data;
+    int data_offset; //in bytes
+};
+
+void ca_init(struct CharArray* ca) {
+    ca->chars = NULL;
+    ca->count = 0;
+    ca->max_count = 0;
+}
+
+void ca_append(struct CharArray* ca, char* s, int len) {
+    if (ca->max_count == 0) {
+        ca->max_count = 8;
+        ca->chars = realloc(NULL, sizeof(char) * ca->max_count);
+    }
+
+    while (ca->count + len > ca->max_count) {
+        ca->max_count *= 2;
+        ca->chars = realloc(ca->chars, sizeof(char) * ca->max_count);
+    }
+
+    memcpy(&ca->chars[ca->count], s, len);
+    ca->count += len;
+}
+
+void compiler_init(struct Compiler *c) {
+    ca_init(&c->text);
+    ca_init(&c->data);
+    c->data_offset = 0;
+}
+
+//appends to text section (op codes)
+void compiler_append_text(struct Compiler *c, char *s, int len) {
+    ca_append(&c->text, s, len);
+}
+
+//appends to data section
+int compiler_append_data(struct Compiler *c, char *s, int len) {
+    if (c->data.count != 0) {
+        ca_append(&c->data, ", ", 2);
+    }
+    ca_append(&c->data, s, len);
+
+    int previous_offset = c->data_offset;
+    c->data_offset += 8;
+    return previous_offset; 
+}
+
+//write out assembly file
+void compiler_output_assembly(struct Compiler *c) {
+    FILE *f = fopen("out.asm", "w");
+    char *s = "     global      main\n"
+              "     extern      printf\n"
+              "\n"
+              "     section     .text\n"
+              "main:\n"
+              "push     rax\n"
+              "push     rcx\n"
+              "\n";
+    char *e = "\n"
+              "pop         rax\n"
+              "mov         rdi, format\n"
+              "mov         rsi, rax\n"
+              "xor         rax, rax\n"
+              "call        printf\n"
+              "pop         rcx\n"
+              "pop         rax\n"
+              "ret\n"
+              "\n"
+              "     section     .data\n"
+              "format:     db \"%ld\", 10, 0\n"
+              "const:      dq ";
+    fwrite(s, sizeof(char), strlen(s), f);
+    fwrite(c->text.chars, sizeof(char), c->text.count, f);
+    fwrite(e, sizeof(char), strlen(e), f);
+    fwrite(c->data.chars, sizeof(char), c->data.count, f);
+    fclose(f);
+}
+
+//TODO: write compilation functions
+//When compiling a literal, write to data section and push onto stack (using offset after writing to data section)
+//Just use stack for everything now (can optimize with register usage later)
+void compiler_compile(struct Compiler *c, struct Node *n) {
+    switch (n->type) {
+        case NODE_LITERAL: {
+            struct NodeLiteral* l = (struct NodeLiteral*)n;
+            int offset = compiler_append_data(c, l->value.start, l->value.len);
+            char s[64];
+            sprintf(s, "mov     rax, [const + %d]\n", offset);
+            compiler_append_text(c, s, strlen(s));
+            char* push_op = "push       rax\n\0";
+            compiler_append_text(c, push_op, strlen(push_op));
+            break;
+        }
+        case NODE_UNARY: {
+            struct NodeUnary *u = (struct NodeUnary*)n;
+            compiler_compile(c, u->right);
+            char* pop_op = "pop     rax\n\0";
+            compiler_append_text(c, pop_op, strlen(pop_op));
+            char* neg_op = "neg     rax\n\0"; //TODO: Assuming only - is used for unary nodes now
+            compiler_append_text(c, neg_op, strlen(neg_op));
+            char* push_op = "push       rax\n\0";
+            compiler_append_text(c, push_op, strlen(push_op));
+            break;
+        }
+        case NODE_BINARY: {
+            struct NodeBinary* b = (struct NodeBinary*)n;
+            compiler_compile(c, b->left);
+            compiler_compile(c, b->right);
+            char* pop_right = "pop      rcx\n\0";
+            compiler_append_text(c, pop_right, strlen(pop_right));
+            char* pop_left = "pop       rax\n\0";
+            compiler_append_text(c, pop_left, strlen(pop_left));
+            if (*b->op.start == '+') {
+                char* add = "add        rax, rcx\n\0";
+                compiler_append_text(c, add, strlen(add)); 
+            } else if (*b->op.start == '-') {
+                char* sub = "sub        rax, rcx\n\0";
+                compiler_append_text(c, sub, strlen(sub)); 
+            }
+            char* push_op = "push       rax\n\0";
+            compiler_append_text(c, push_op, strlen(push_op));
+            break;
+        }
+        default:
+            printf("Node type not recognized\n");
+            break;
+    }
+}
+
+
 
 /*
  *  Parser
@@ -405,9 +551,16 @@ int main (int argc, char **argv) {
         printf("\n");
     }
 
-    //Compile into bytecode
+    //Compile into x64 assembly
+    struct Compiler c;
+    compiler_init(&c);
+    compiler_compile(&c, na.nodes[0]);
+    //compiler_append_text(&c, "mov\n", 4);
+    //compiler_append_data(&c, "const\n", 6);
+    compiler_output_assembly(&c);
 
-    //Run bytecode on vm (stack or register based vm???)
+
+    //Assemble into machine code using nasm (or similar) and gcc
 
     return 0;
 }
