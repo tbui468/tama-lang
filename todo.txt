@@ -1,62 +1,27 @@
-Finish compiler_compiler(struct Compiler *c, struct NodeArray *na)
-    it should produce runnable x64 assembly and print out result of arithmetic
+Get the compiler working with integer arithmetic (with result being single digit)
+    push, pop and using write syscall to print out result
 
-    b, w, l, q (do we need these suffixes when using with operators like mov to specifiy size of operand???)
+Write assembly routine to print out multiple digits in output
 
-    TODO: Massive bug with resizing arrays - look at ca_append for the correct version using a while loop 
-            bug occurs when user tries to insert more than double the current max count
+Add in modulus operator 
 
-Goal: Get integer arithmetic working and use c printf to print out digit 
-        Problem solved!  Needed [] to get the value rather than the addresses
+Add in ability to do signed arithmetic
 
-Compile to x86_64 assembly files (then use nasm to assemble to machine code)
-    How can we go from the AST (literal, binary, and unary nodes)
-    to lines of assembly that nasm can assemble????
-    literals can just be given names (eg l0, l1, l2, etc)
-        and printed to section .data
-        we will need the offset so that we know where each constant is
+Then write some assembly to print numbers with mulitple digits
+    need to include up to 10 digits if using 32 bit integers (one-billions place)
+    can just put this in my c program as a constant char* once the routine works
+        and just append to the resulting .asm file that we produce
 
-    The assembly IS the opcodes we need
-        for now, just push all results to the stack (like we did in Cebra)
-        can store values in registers later if necessary, but let's
-            keep it simple for now.
-        Just push all constants onto the stack
-            eg, mov first literal to register and push
-                mov second literal to register and push
-                pop stack twice and put into registers
-                add two registers, and then push result onto stack
+Idea: Might be easier to start with IA32 (Intel 32-bit assembly)
+    convert current arithmetic compiler to use IA32 assembly
 
-    Then the arithmetic part needs to know where in the data (offset???)
-        the literal resides...
+    Compare my assembly to what the gnu compiler / compiler explorer generates
 
-    Or, more simply, just fill the registers with the values
-        we have enough registers for at least some (8?) constants to load
+    nasm -felf32 <file>.asm
+    ld -m elf_i386 <file>.o
 
 Idea: compile to x86 assembly (which we can then assemble to machine code..)
     https://cs.lmu.edu/~ray/notes/nasmtutorial/
-    look here for tutorial on using nasm, ld, and x64 assembly
-
-    Three operand types:
-        Register operands
-        Memory operands
-        Immediate operands
-
-    Define data (db, dw, dd, dq)
-
-    Understanding calling conventions:
-        Which registers to use for ints and pointers, and which for floating-points
-
-    Goal: Write .asm file that does some arithmetic, then prints result out using puts
-        Then have Tamarind compiler compile .tmd files to .asm (which we can assemble to .o, then link to create executable)
-
-Write compiler
-    write bytecode chunks that are sent to the vm
-    chunck includes a table of constants (along with the bytecode)
-Write vm
-    let's make it a stack-based machine for now (and maybe change it to register based later)
-
-How do unions work again?  Try on compiler explorer.
-
 
 Goal: Strengthen those atrophed programming muscles
 Goal: Use Unix system calls appropriately (eg, check for errors)
