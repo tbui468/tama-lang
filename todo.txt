@@ -1,16 +1,41 @@
-Get the compiler working with integer arithmetic (with result being single digit)
-    push, pop and using write syscall to print out result
+Get print_int function in assembly_test/math.asm working
+    need to pick a calling convention (such as microsoft's cdecl) and implement it
+        what is caller-saved and callee-saved registers?
 
 Write assembly routine to print out multiple digits in output
+    Need at least the ability to print 10 digits (for 32 bit unsigned/signed integers)
+    Can just append it to our compiled assembly
 
-Add in modulus operator 
+    set counter to 0
+    top: 
+        if n bigger than 9:
+            mod n by 10 to get remainder
+            push remainder onto stack
+            increment counter
+            divide n by 10 to shift to the right
+            goto top
+        else:
+            push number onto stack
+            increment counter
+    print_char:
+        if counter > 0:
+            print top of stack
+            pop stack
+            decrement counter
+            goto print_char
+
+    Read about cdecl (microsofts calling convention used in C compiler)
+        what's caller-saved and callee-saved registers???
 
 Add in ability to do signed arithmetic
+    is this different for addition/subtraction vs multiplication/division?
+    Need a way to print negative numbers out too
 
-Then write some assembly to print numbers with mulitple digits
-    need to include up to 10 digits if using 32 bit integers (one-billions place)
-    can just put this in my c program as a constant char* once the routine works
-        and just append to the resulting .asm file that we produce
+Add in modulus operator 
+    should be easy...right?  One of the registers holds the remainder when using 'div' operation
+
+Floating point arithmetic
+    This will require a bit of testing in assembly to see how it works
 
 Idea: Might be easier to start with IA32 (Intel 32-bit assembly)
     convert current arithmetic compiler to use IA32 assembly
@@ -23,18 +48,12 @@ Idea: Might be easier to start with IA32 (Intel 32-bit assembly)
 Idea: compile to x86 assembly (which we can then assemble to machine code..)
     https://cs.lmu.edu/~ray/notes/nasmtutorial/
 
-Goal: Strengthen those atrophed programming muscles
-Goal: Use Unix system calls appropriately (eg, check for errors)
-Goal: split the typer and compiler
-Goal: Add in coroutines (eg, async and await) using threads
-Goal: Keep it simple (eg, no multiple returns/multipass compiler) for now
-
 Get entire language compiling for arithmetic expressions
     Error
         Make a struct to hold/reorder error messages
         Need line information to make error messages better
     Lexer
-        Let lexer recognize multiple digit numbers (only recognizing single digits now)
+        Let lexer recognize variable declaration and assignment
     Parser
         could do recursive descent or the other one (I forget the name)
         will need to define AST nodes too
@@ -43,8 +62,4 @@ Get entire language compiling for arithmetic expressions
     Type Checker
         traverse AST once to catch type errors
     Compiler
-        traverse AST again to generate bytecode
-    VM
-        run the bytecode - for now just have the vm printf the result on the stack when it ends
-
-    REPL
+        traverse AST again to generate IA32 assembly

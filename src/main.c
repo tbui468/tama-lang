@@ -209,27 +209,39 @@ int compiler_append_data(struct Compiler *c, char *s, int len) {
 //write out assembly file
 void compiler_output_assembly(struct Compiler *c) {
     FILE *f = fopen("out.asm", "w");
-    char *s = "     global      main\n"
-              "     extern      printf\n"
+    char *s = "section     .text\n"
+              "global      _start\n"
               "\n"
-              "     section     .text\n"
-              "main:\n"
-              "push     rax\n"
-              "push     rcx\n"
-              "\n";
+              "_start:\n";
     char *e = "\n"
-              "pop         rax\n"
-              "mov         rdi, format\n"
-              "mov         rsi, rax\n"
-              "xor         rax, rax\n"
-              "call        printf\n"
-              "pop         rcx\n"
-              "pop         rax\n"
-              "ret\n"
+              "    ;change result to char, print result, print newline, exit\n"
+              "    pop     eax\n"
+              "    add     eax, 0x30\n"
+              "    push    eax\n"
               "\n"
-              "     section     .data\n"
-              "format:     db \"%ld\", 10, 0\n"
-              "const:      dq ";
+              "    mov     ecx, esp\n"
+              "    mov     edx, 1\n"
+              "\n"
+              "    mov     eax, 0x4\n"
+              "    mov     ebx, 0x1\n"
+              "    int     0x80\n"
+              "\n"
+              "    pop     eax\n"
+              "\n"
+              "    mov     eax, 0xa\n"
+              "    push    eax\n"
+              "    mov     ecx, esp\n"
+              "    mov     edx, 1\n"
+              "    mov     eax, 0x4\n"
+              "    mov     ebx, 0x1\n"
+              "    int     0x80\n"
+              "    pop     eax\n"
+              "\n"
+              "    mov     eax, 0x1\n"
+              "    xor     ebx, ebx\n"
+              "    int     0x80\n"
+              "\n"
+              "section     .data\n";
     fwrite(s, sizeof(char), strlen(s), f);
     fwrite(c->text.chars, sizeof(char), c->text.count, f);
     fwrite(e, sizeof(char), strlen(e), f);
@@ -237,22 +249,17 @@ void compiler_output_assembly(struct Compiler *c) {
     fclose(f);
 }
 
-//TODO: write compilation functions
-//When compiling a literal, write to data section and push onto stack (using offset after writing to data section)
-//Just use stack for everything now (can optimize with register usage later)
 void compiler_compile(struct Compiler *c, struct Node *n) {
     switch (n->type) {
         case NODE_LITERAL: {
             struct NodeLiteral* l = (struct NodeLiteral*)n;
-            int offset = compiler_append_data(c, l->value.start, l->value.len);
             char s[64];
-            sprintf(s, "mov     rax, [const + %d]\n", offset);
+            sprintf(s, "    push    %.*s\n", l->value.len, l->value.start);
             compiler_append_text(c, s, strlen(s));
-            char* push_op = "push       rax\n\0";
-            compiler_append_text(c, push_op, strlen(push_op));
             break;
         }
         case NODE_UNARY: {
+            /*
             struct NodeUnary *u = (struct NodeUnary*)n;
             compiler_compile(c, u->right);
             char* pop_op = "pop     rax\n\0";
@@ -261,24 +268,25 @@ void compiler_compile(struct Compiler *c, struct Node *n) {
             compiler_append_text(c, neg_op, strlen(neg_op));
             char* push_op = "push       rax\n\0";
             compiler_append_text(c, push_op, strlen(push_op));
+            */
             break;
         }
         case NODE_BINARY: {
             struct NodeBinary* b = (struct NodeBinary*)n;
             compiler_compile(c, b->left);
             compiler_compile(c, b->right);
-            char* pop_right = "pop      rcx\n\0";
+            char* pop_right = "    pop     ebx\n\0";
             compiler_append_text(c, pop_right, strlen(pop_right));
-            char* pop_left = "pop       rax\n\0";
+            char* pop_left = "    pop     eax\n\0";
             compiler_append_text(c, pop_left, strlen(pop_left));
             if (*b->op.start == '+') {
-                char* add = "add        rax, rcx\n\0";
+                char* add = "    add     eax, ebx\n\0";
                 compiler_append_text(c, add, strlen(add)); 
             } else if (*b->op.start == '-') {
-                char* sub = "sub        rax, rcx\n\0";
+                char* sub = "    sub     eax, ebx\n\0";
                 compiler_append_text(c, sub, strlen(sub)); 
             }
-            char* push_op = "push       rax\n\0";
+            char* push_op = "    push    eax\n\0";
             compiler_append_text(c, push_op, strlen(push_op));
             break;
         }
