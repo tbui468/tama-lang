@@ -1,21 +1,40 @@
-;6 * 2 - 14 / 3 + 2
-;answer: 10
+;6 * 2 - 14 / 3 + 10
+;answer: 18
 
 section     .text
 global      _start
 
-print_int:
-    ;make new call frame
-    push    ebp         ;save old call frame
-    mov     ebp, esp    ;intialize new call frame
+print_newline:
+    push    ebp
+    mov     ebp, esp
+
+    push    0xa
+    mov     ecx, esp
+    mov     edx, 1
+
+    mov     eax, 0x4
+    mov     ebx, 0x1
+    int     0x80 
+    
+    pop     eax
+
+    pop     ebp
+    xor     eax, eax
+    ret
+
+print_digit:
+    ;create new call frame
+    push    ebp
+    mov     ebp, esp
 
     ;convert byte into char
-    pop     eax
+    mov     eax, [ebp + 8]
     add     eax, 0x30
-    push    eax
+    mov     [ebp + 8], eax
 
     ;set arguments for write syscall 
-    mov     ecx, esp
+    mov     ecx, ebp
+    add     ecx, 8  ;need to go down stack 2 bytes (top is old base pointer address, and second to top is return address)
     mov     edx, 1
 
     ;set syscall to write, file descriptor to stdout, and trigger interrupt
@@ -23,10 +42,38 @@ print_int:
     mov     ebx, 0x1
     int     0x80
 
-    ;restore old call frame
-    mov     esp, ebp
+    ;restore previous call frame, and return 0
     pop     ebp
+    xor     eax, eax
+    ret
 
+print_int:
+    push    ebp
+    mov     ebp, esp
+
+    mov     eax, [ebp + 8] 
+    mov     edi, 0      ;counter to keep track of how many digits we pushed so that they can be popped/printed in order
+
+    push_digit:
+    cmp     eax, 0
+    je      print_all
+  
+    mov     edx, 0 
+    mov     ecx, 10
+    div     ecx
+    ;divide number by 10 and store quotient in edx
+    push    edx         ;push remainder for later printing
+    inc     edi
+    jmp     push_digit
+
+    print_all: 
+    call    print_digit
+    add     esp, 4
+    dec     edi 
+    cmp     edi, 0
+    jg      print_all 
+
+    pop     ebp
     xor     eax, eax
     ret
 
@@ -60,28 +107,24 @@ _start:
     push    eax
 
     ;push constant, add and push result
-    push    1
+    push    10
     pop     eax
     pop     ebx
     add     eax, ebx
-    push    eax
+    ;push    eax
 
     ;***************Compiler should end writing here***************
-    ;Caller will clean the stack of all the pushed arguments
-    ;pushed eax in line above for the print_int argument
+    push    eax         ;holds the number we want to print (could be multiple digits long)
     call    print_int
     add     esp, 4
-    ;return value is in eax if we want to use it
 
-    ;print newline
-    mov     eax, 0xa
-    push    eax
-    mov     ecx, esp
-    mov     edx, 1
-    mov     eax, 0x4
-    mov     ebx, 0x1
-    int     0x80
-    pop     eax
+    call    print_newline
+
+    push    8
+    call    print_int
+    add     esp, 4
+
+    call    print_newline
 
     ;exit syscall with argument 0
     mov     eax, 0x1

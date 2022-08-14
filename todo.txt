@@ -2,30 +2,17 @@ Get print_int function in assembly_test/math.asm working
     need to pick a calling convention (such as microsoft's cdecl) and implement it
         what is caller-saved and callee-saved registers?
 
-Write assembly routine to print out multiple digits in output
-    Need at least the ability to print 10 digits (for 32 bit unsigned/signed integers)
-    Can just append it to our compiled assembly
+    Make the function to print multiple numbers
+    Make that function work with negative numbers
 
-    set counter to 0
-    top: 
-        if n bigger than 9:
-            mod n by 10 to get remainder
-            push remainder onto stack
-            increment counter
-            divide n by 10 to shift to the right
-            goto top
-        else:
-            push number onto stack
-            increment counter
-    print_char:
-        if counter > 0:
-            print top of stack
-            pop stack
-            decrement counter
-            goto print_char
+    Caller-saved is call-clobbered (caller should save this shit before a function call since it may change)
+        eax, edx, and ecx are call-clobbered (return values returned in eax)
+            these registers are used in common operations (div, mul, etc) so they were chose to be call-clobbered
+    Callee-saved is call-preserved (caller doesn't need to worry about those registers changing during a function call)
+        ebx, esi, edi are call-preserved (routine should restore these register values if it uses them)
 
-    Read about cdecl (microsofts calling convention used in C compiler)
-        what's caller-saved and callee-saved registers???
+Create function call print_int (other one should be called print digit)
+    that prints an integer with more than one digit
 
 Add in ability to do signed arithmetic
     is this different for addition/subtraction vs multiplication/division?
