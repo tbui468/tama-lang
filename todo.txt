@@ -1,3 +1,5 @@
+Computer Systems: A Programmer's Perspective might be worth looking into
+
 Get print_int function in assembly_test/math.asm working
     need to pick a calling convention (such as microsoft's cdecl) and implement it
         what is caller-saved and callee-saved registers?
@@ -17,6 +19,22 @@ Create function call print_int (other one should be called print digit)
 Add in ability to do signed arithmetic
     is this different for addition/subtraction vs multiplication/division?
     Need a way to print negative numbers out too
+
+    Try to print -10, -1, 0, 1, and 10 to see what happens (hopefully 0, 1, and 10 work right)
+
+    test    eax, 0x80000000              ;this will do a bitwise AND
+                                ;ZF set based on eax and 1
+    jnz     bit0_is_set         ;jump here if bit set
+    ;code here if bit0 not set
+    jmp     done 
+    bit0_is_set:
+        ;code goes here if bit0 was set
+    done:
+
+    Need to test eax vs 2 for second bit, eax vs 4 for third bit, etc
+    bit 31 (last bit in a 32-bit integer) is set IF a signed number
+        We need to check this bit before printing
+        if set, need to change negative number to positive before printing (along with printing a '-' before the number)
 
 Add in modulus operator 
     should be easy...right?  One of the registers holds the remainder when using 'div' operation

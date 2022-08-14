@@ -1,28 +1,26 @@
-;6 * 2 - 14 / 3 + 10
+;6 * 2 - 14 / 3 - 10
 ;answer: 18
 
 section     .text
 global      _start
 
-print_newline:
+_print_char:
     push    ebp
     mov     ebp, esp
 
-    push    0xa
-    mov     ecx, esp
+    mov     ecx, ebp
+    add     ecx, 8
     mov     edx, 1
 
     mov     eax, 0x4
     mov     ebx, 0x1
-    int     0x80 
-    
-    pop     eax
+    int     0x80
 
     pop     ebp
     xor     eax, eax
     ret
 
-print_digit:
+_print_digit:
     ;create new call frame
     push    ebp
     mov     ebp, esp
@@ -47,12 +45,26 @@ print_digit:
     xor     eax, eax
     ret
 
-print_int:
+_print_int:
     push    ebp
     mov     ebp, esp
 
     mov     eax, [ebp + 8] 
     mov     edi, 0      ;counter to keep track of how many digits we pushed so that they can be popped/printed in order
+
+    test    eax, 0x80000000 ;hex for 2^31
+    jnz     do_negative
+    jmp     negative_done
+do_negative:
+
+    push    0x2d
+    call    _print_char
+    add     esp, 4
+
+    mov     eax, [ebp + 8]
+    neg     eax
+
+negative_done: 
 
     push_digit:
     cmp     eax, 0
@@ -66,8 +78,8 @@ print_int:
     inc     edi
     jmp     push_digit
 
-    print_all: 
-    call    print_digit
+print_all: 
+    call    _print_digit
     add     esp, 4
     dec     edi 
     cmp     edi, 0
@@ -108,23 +120,35 @@ _start:
 
     ;push constant, add and push result
     push    10
-    pop     eax
     pop     ebx
-    add     eax, ebx
+    pop     eax
+    sub     eax, ebx
     ;push    eax
 
     ;***************Compiler should end writing here***************
     push    eax         ;holds the number we want to print (could be multiple digits long)
-    call    print_int
+    call    _print_int
     add     esp, 4
 
-    call    print_newline
-
-    push    8
-    call    print_int
+    push    0xa
+    call    _print_char
     add     esp, 4
 
-    call    print_newline
+    push    -100
+    call    _print_int
+    add     esp, 4
+
+    push    0xa
+    call    _print_char
+    add     esp, 4
+
+    push    131
+    call    _print_int
+    add     esp, 4
+
+    push    0xa
+    call    _print_char
+    add     esp, 4
 
     ;exit syscall with argument 0
     mov     eax, 0x1
