@@ -5,7 +5,7 @@
 
 //static char* code = "43.23 + .65*9.0/-7.";
 //static char* code = "43 + 65+9-7";
-static char* code = "43 + 2 - 40";
+static char* code = "10 / 3 - 10 * 2 + 1";
 
 
 /*
@@ -211,31 +211,17 @@ void compiler_output_assembly(struct Compiler *c) {
     FILE *f = fopen("out.asm", "w");
     char *s = "section     .text\n"
               "global      _start\n"
+              "%include \"../../assembly_test/fun.asm\""
               "\n"
               "_start:\n";
     char *e = "\n"
-              "    ;change result to char, print result, print newline, exit\n"
-              "    pop     eax\n"
-              "    add     eax, 0x30\n"
-              "    push    eax\n"
+              //"    push    eax\n"
+              "    call    _print_int\n"
+              "    add     esp, 4\n"
               "\n"
-              "    mov     ecx, esp\n"
-              "    mov     edx, 1\n"
-              "\n"
-              "    mov     eax, 0x4\n"
-              "    mov     ebx, 0x1\n"
-              "    int     0x80\n"
-              "\n"
-              "    pop     eax\n"
-              "\n"
-              "    mov     eax, 0xa\n"
-              "    push    eax\n"
-              "    mov     ecx, esp\n"
-              "    mov     edx, 1\n"
-              "    mov     eax, 0x4\n"
-              "    mov     ebx, 0x1\n"
-              "    int     0x80\n"
-              "    pop     eax\n"
+              "    push    0xa\n"
+              "    call    _print_char\n"
+              "    add     esp, 4\n"
               "\n"
               "    mov     eax, 0x1\n"
               "    xor     ebx, ebx\n"
@@ -285,6 +271,14 @@ void compiler_compile(struct Compiler *c, struct Node *n) {
             } else if (*b->op.start == '-') {
                 char* sub = "    sub     eax, ebx\n\0";
                 compiler_append_text(c, sub, strlen(sub)); 
+            } else if (*b->op.start == '*') {
+                char* mul = "    imul    eax, ebx\n\0";
+                compiler_append_text(c, mul, strlen(mul)); 
+            } else if (*b->op.start == '/') {
+                char* cdq = "    cdq\n\0";
+                compiler_append_text(c, cdq, strlen(cdq));
+                char* div = "    idiv    ebx\n\0";
+                compiler_append_text(c, div, strlen(div)); 
             }
             char* push_op = "    push    eax\n\0";
             compiler_append_text(c, push_op, strlen(push_op));
