@@ -5,7 +5,7 @@
 
 //static char* code = "43.23 + .65*9.0/-7.";
 //static char* code = "43 + 65+9-7";
-static char* code = "10 * 2 - 100";
+static char* code = "-10 * 2 -- 100";
 
 
 /*
@@ -245,16 +245,14 @@ void compiler_compile(struct Compiler *c, struct Node *n) {
             break;
         }
         case NODE_UNARY: {
-            /*
             struct NodeUnary *u = (struct NodeUnary*)n;
             compiler_compile(c, u->right);
-            char* pop_op = "pop     rax\n\0";
-            compiler_append_text(c, pop_op, strlen(pop_op));
-            char* neg_op = "neg     rax\n\0"; //TODO: Assuming only - is used for unary nodes now
+            char* pop_right = "    pop     eax\n\0";
+            compiler_append_text(c, pop_right, strlen(pop_right));
+            char* neg_op = "    neg     eax\n\0";
             compiler_append_text(c, neg_op, strlen(neg_op));
-            char* push_op = "push       rax\n\0";
+            char* push_op = "    push    eax\n\0";
             compiler_append_text(c, push_op, strlen(push_op));
-            */
             break;
         }
         case NODE_BINARY: {

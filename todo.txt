@@ -1,31 +1,31 @@
 Read a little more of 'Computer Systems: A Programmer's Perspective'
 
-Add unary node path to compiler (negation)
+Parentheses tokens and parsing
+    just call parse from the beginning again if we reach the parse_group,
+        and consume the final RIGHT_PAREN
+
+print keyword and statements vs expressions
+    print 4 + 5 - 6  (expression inside a statement)
+    4 * 8           (expression statement - the value is popped)
+
+    NODE_EXPR - leaves a value on the stack after running
+    NODE_EXPR_STMT - pops the stack after running
+    NODE_STMT - leaves nothing on the stack after running
+
+variables
+
+boolean data type
+
+conditional statements
 
 Add in modulus operator 
     should be easy...right?  One of the registers holds the remainder when using 'div' operation
     but what about trying to modulus with negative numbers?
 
-print keyword (need this otherwise all expressions, eg variable assignments, will print out to screen)
-
-variables
-
-booleans
-
-conditional statements
-
 Need to deal with overflow with multiplication/add
 
 Floating point arithmetic
     This will require a bit of testing in assembly to see how it works
-
-Idea: Might be easier to start with IA32 (Intel 32-bit assembly)
-    convert current arithmetic compiler to use IA32 assembly
-
-    Compare my assembly to what the gnu compiler / compiler explorer generates
-
-    nasm -felf32 <file>.asm
-    ld -m elf_i386 <file>.o
 
 Idea: compile to x86 assembly (which we can then assemble to machine code..)
     https://cs.lmu.edu/~ray/notes/nasmtutorial/
