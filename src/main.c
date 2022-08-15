@@ -5,7 +5,7 @@
 
 //static char* code = "43.23 + .65*9.0/-7.";
 //static char* code = "43 + 65+9-7";
-static char* code = "10 / 3 - 10 * 2 + 1";
+static char* code = "10 * 2 - 100";
 
 
 /*
@@ -529,9 +529,10 @@ int main (int argc, char **argv) {
     t.len = 0;
     ta_add(&ta, t);
 
+    /*
     for (int i = 0; i < ta.count; i++) {
         printf("%.*s\n", ta.tokens[i].len, ta.tokens[i].start);
-    }
+    }*/
 
     //Parse tokens into AST
     struct Parser p;
@@ -542,15 +543,16 @@ int main (int argc, char **argv) {
         na_add(&na, parser_parse(&p));
     }
 
+    /*
     for (int i = 0; i < na.count; i++) {
         ast_print(na.nodes[i]);
         printf("\n");
-    }
+    }*/
     
     //Static Type checking
     for (int i = 0; i < na.count; i++) {
         type_check(na.nodes[i]);
-        printf("\n");
+      //  printf("\n");
     }
 
     //Compile into x64 assembly

@@ -1,8 +1,5 @@
 Read a little more of 'Computer Systems: A Programmer's Perspective'
 
-Add script to run after cmake is done building (to assemble, link and run output file)
-    have cmake also run a script to assembly .asm and link the object file into an executable (to save time when iterating)
-
 Add unary node path to compiler (negation)
 
 Add in modulus operator 
