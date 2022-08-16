@@ -1,17 +1,9 @@
 Read a little more of 'Computer Systems: A Programmer's Perspective'
     next chapter is about how numbers are stored in memory
 
-allow multiple lines to be parsed - need to call parser multiple times to get syntax trees for each statement
+Write function to free nodes - we need to start worrying about memory soon
 
 make a struct to hold error message - will need line info inside of tokens so that we can report error location
-
-print keyword and statements vs expressions
-    print 4 + 5 - 6  (expression inside a statement)
-    4 * 8           (expression statement - the value is popped)
-
-    NODE_EXPR - leaves a value on the stack after running
-    NODE_EXPR_STMT - pops the stack after running
-    NODE_STMT - leaves nothing on the stack after running
 
 variables - name needs to be associated with a position in the stack
     variables need to a type to be specified in the declaration too
@@ -22,6 +14,9 @@ variables - name needs to be associated with a position in the stack
 boolean data type
 
 conditional statements
+    NODE_IF - can have elif/else inside of here too
+        else is a single pointer to 
+        elif needs to be an array of pointers since there could be none or many elifs
 
 Add in modulus operator 
     should be easy...right?  One of the registers holds the remainder when using 'div' operation

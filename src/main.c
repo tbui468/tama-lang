@@ -3,9 +3,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-//static char* code = "43.23 + .65*9.0/-7.";
-//static char* code = "43 + 65+9-7";
-static char* code = "(11/-10) * (2 -- 100)";
+static char* code = "print((11/-10) * (2 -- 100))\n"
+                    "print(-5)";
 
 
 /*
@@ -20,6 +19,9 @@ enum TokenType {
     T_SLASH,
     T_L_PAREN,
     T_R_PAREN,
+    T_NEWLINE,
+    T_PRINT,
+    T_NIL,
     T_EOF
 };
 
@@ -44,7 +46,9 @@ struct TokenArray {
 enum NodeType {
     NODE_BINARY,
     NODE_UNARY,
-    NODE_LITERAL
+    NODE_LITERAL,
+    NODE_PRINT,
+    NODE_EXPR_STMT
 };
 
 struct Node {
@@ -69,6 +73,17 @@ struct NodeLiteral {
     struct Token value; 
 };
 
+//TODO: remove after generalizing to NodeCall
+struct NodePrint {
+    struct Node n;
+    struct Node *arg;
+};
+
+struct NodeExprStmt {
+    struct Node n;
+    struct Node *expr;
+};
+
 struct NodeArray {
     struct Node **nodes;
     int count;
@@ -83,7 +98,7 @@ void na_init(struct NodeArray *na) {
 
 void na_add(struct NodeArray *na, struct Node* n) {
     if (na->max_count == 0) {
-        na->max_count = 0;
+        na->max_count = 8;
         na->nodes = realloc(NULL, sizeof(struct Node*) * na->max_count);
     } else if (na->count + 1 > na->max_count) {
         na->max_count *= 2;
@@ -117,6 +132,20 @@ struct Node* node_binary(struct Node* left, struct Token op, struct Node* right)
     return (struct Node*)node;
 }
 
+struct Node *node_print(struct Node* arg) {
+    struct NodePrint *node = realloc(NULL, sizeof(struct NodePrint));
+    node->n.type = NODE_PRINT;
+    node->arg = arg;
+    return (struct Node*)node;
+}
+
+struct Node *node_expr_stmt(struct Node *expr) {
+    struct NodeExprStmt *node = realloc(NULL, sizeof(struct NodeExprStmt));
+    node->n.type = NODE_EXPR_STMT;
+    node->expr = expr;
+    return (struct Node*)node;
+}
+
 void ast_print(struct Node* n) {
     switch (n->type) {
         case NODE_LITERAL: {
@@ -139,6 +168,14 @@ void ast_print(struct Node* n) {
             printf("%.*s", b->op.len, b->op.start);
             ast_print(b->right);
             printf(")");
+            break;
+        }
+        case NODE_PRINT: {
+            printf("NODE_PRINT");
+            break;
+        }
+        case NODE_EXPR_STMT: {
+            printf("NODE_EXPR_STMT");  
             break;
         }
         default:
@@ -217,14 +254,6 @@ void compiler_output_assembly(struct Compiler *c) {
               "\n"
               "_start:\n";
     char *e = "\n"
-              //"    push    eax\n"
-              "    call    _print_int\n"
-              "    add     esp, 4\n"
-              "\n"
-              "    push    0xa\n"
-              "    call    _print_char\n"
-              "    add     esp, 4\n"
-              "\n"
               "    mov     eax, 0x1\n"
               "    xor     ebx, ebx\n"
               "    int     0x80\n"
@@ -282,6 +311,26 @@ void compiler_compile(struct Compiler *c, struct Node *n) {
             }
             char* push_op = "    push    eax\n\0";
             compiler_append_text(c, push_op, strlen(push_op));
+            break;
+        }
+        case NODE_EXPR_STMT: {
+            struct NodeExprStmt *es = (struct NodeExprStmt*)n;
+            compiler_compile(c, es->expr);
+            char* pop = "    pop     ebx\n\0";
+            compiler_append_text(c, pop, strlen(pop));
+            break;
+        }
+        case NODE_PRINT: {
+            struct NodePrint *np = (struct NodePrint*)n;
+            compiler_compile(c, np->arg);
+            char* call = "    call    _print_int\n\0";
+            compiler_append_text(c, call, strlen(call));
+            char* clear = "    add     esp, 4\n\0"; //TODO: assuming one 4 byte argument
+            compiler_append_text(c, clear, strlen(clear));
+            char* newline = "    push    0xa\n"
+                            "    call    _print_char\n"
+                            "    add     esp, 4\n";
+            compiler_append_text(c, newline, strlen(newline));
             break;
         }
         default:
@@ -389,6 +438,19 @@ struct Node* parse_add_sub(struct Parser *p) {
 struct Node* parse_expr(struct Parser *p) {
     return parse_add_sub(p); 
 }
+
+struct Node *parse_stmt(struct Parser *p) {
+    struct Token next = parser_peek(p);
+    if (next.type == T_PRINT) {
+        parser_consume(p, T_PRINT);
+        parser_consume(p, T_L_PAREN);
+        struct Node* arg = parse_expr(p);
+        parser_consume(p, T_R_PAREN);
+        return node_print(arg);
+    } else {
+        return node_expr_stmt(parse_expr(p));
+    }
+}
 /*
  * Lexer
  */
@@ -431,6 +493,33 @@ bool is_digit(char c) {
     return '0' <= c && c <= '9';
 }
 
+bool is_char(char c) {
+    return ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z');
+}
+
+//Could be a keyword or a user defined word
+struct Token lexer_read_identifier(struct Lexer *l) {
+    struct Token t;
+    t.start = &l->code[l->current];
+    t.len = 1;
+
+    while (1) {
+        char next = l->code[l->current + t.len];
+        if (!(is_digit(next) || is_char(next) || next == '_'))
+            break;
+        t.len++;
+    }
+
+    //TODO: just check for 'print' keyword for now
+    if (strncmp("print", t.start, 5) == 0) {
+        t.type = T_PRINT;
+    } else {
+        printf("Parser error!  Unrecognized keyword!\n");
+        exit(1);
+    }
+    return t;
+}
+
 struct Token lexer_read_number(struct Lexer *l) {
     struct Token t;
     t.start = &l->code[l->current];
@@ -444,7 +533,7 @@ struct Token lexer_read_number(struct Lexer *l) {
         } else if (next == '.') {
             t.len++;
             if (has_decimal) {
-                printf("Parser error!  Too many decimals!\n"); //TODO: Need to have real error message here
+                printf("Parser error!  Too many decimals!\n"); //TODO: Need to have real error added to array of error messages
                 exit(1);    
             } else {
                 has_decimal = true;
@@ -465,6 +554,11 @@ struct Token lexer_next_token(struct Lexer *l) {
     struct Token t;
     char c = l->code[l->current];
     switch (c) {
+        case '\n':
+            t.type = T_NEWLINE;
+            t.start = &l->code[l->current];
+            t.len = 1;
+            break;
         case '+':
             t.type = T_PLUS;
             t.start = &l->code[l->current];
@@ -496,7 +590,11 @@ struct Token lexer_next_token(struct Lexer *l) {
             t.len = 1;
             break;
         default:
-            t = lexer_read_number(l);
+            if (is_digit(c)) {
+                t = lexer_read_number(l);
+            } else {
+                t = lexer_read_identifier(l);
+            }
             break;
     }
     l->current += t.len;
@@ -517,6 +615,8 @@ enum TokenType type_check(struct Node* n) {
         }
         case NODE_UNARY: {
             struct NodeUnary *u = (struct NodeUnary*)n;
+            //TODO: don't allow - for string/boolean
+            //TODO: don't allow ! for int/float/string types
             t = type_check(u->right);
             break;
         }
@@ -532,7 +632,7 @@ enum TokenType type_check(struct Node* n) {
             break;
         }
         default:
-            t = T_EOF;
+            t = T_NIL;
             break;
     }
     return t;
@@ -552,7 +652,8 @@ int main (int argc, char **argv) {
 
     while (l.current < (int)strlen(l.code)) {
         struct Token t = lexer_next_token(&l);
-        ta_add(&ta, t);
+        if (t.type != T_NEWLINE)
+            ta_add(&ta, t);
     }
 
     struct Token t;
@@ -561,18 +662,19 @@ int main (int argc, char **argv) {
     t.len = 0;
     ta_add(&ta, t);
 
-    /*
+/*
     for (int i = 0; i < ta.count; i++) {
         printf("%.*s\n", ta.tokens[i].len, ta.tokens[i].start);
     }*/
 
     //Parse tokens into AST
+    
     struct Parser p;
     parser_init(&p, &ta);
     struct NodeArray na;
     na_init(&na);
     while (parser_peek(&p).type != T_EOF) {
-        na_add(&na, parse_expr(&p));
+        na_add(&na, parse_stmt(&p));
     }
 
     /*
@@ -584,15 +686,14 @@ int main (int argc, char **argv) {
     //Static Type checking
     for (int i = 0; i < na.count; i++) {
         type_check(na.nodes[i]);
-      //  printf("\n");
     }
 
-    //Compile into x64 assembly
+    //Compile into IA32 (Intel syntax)
     struct Compiler c;
     compiler_init(&c);
-    compiler_compile(&c, na.nodes[0]);
-    //compiler_append_text(&c, "mov\n", 4);
-    //compiler_append_data(&c, "const\n", 6);
+    for (int i = 0; i < na.count; i++) {
+        compiler_compile(&c, na.nodes[i]);
+    }
     compiler_output_assembly(&c);
 
 
