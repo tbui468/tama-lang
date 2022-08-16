@@ -5,7 +5,7 @@
 
 //static char* code = "43.23 + .65*9.0/-7.";
 //static char* code = "43 + 65+9-7";
-static char* code = "-10 * 2 -- 100";
+static char* code = "(9+-10) * (2 -- 100)";
 
 
 /*
@@ -18,6 +18,8 @@ enum TokenType {
     T_MINUS,
     T_STAR,
     T_SLASH,
+    T_L_PAREN,
+    T_R_PAREN,
     T_EOF
 };
 
@@ -316,8 +318,22 @@ void parser_init(struct Parser *p, struct TokenArray *ta) {
     p->current = 0;
 }
 
+struct Node *parse_expr(struct Parser *p);
+
+struct Node *parse_group(struct Parser *p) {
+    parser_consume(p); //TODO: left paren - need to make a parser_next() - peek looks, next takes, consume has second argument and expects something
+    struct Node* n = parse_expr(p);
+    parser_consume(p); //TODO: right paren
+    return n;
+}
+
 struct Node* parse_literal(struct Parser *p) {
-    return node_literal(parser_consume(p));
+    struct Token next = parser_peek(p);
+    if (next.type == T_L_PAREN) {
+        return parse_group(p);
+    } else {
+        return node_literal(parser_consume(p));
+    }
 }
 
 struct Node* parse_unary(struct Parser *p) {
@@ -362,7 +378,7 @@ struct Node* parse_add_sub(struct Parser *p) {
     return left;
 }
 
-struct Node* parser_parse(struct Parser *p) {
+struct Node* parse_expr(struct Parser *p) {
     return parse_add_sub(p); 
 }
 /*
@@ -461,6 +477,16 @@ struct Token lexer_next_token(struct Lexer *l) {
             t.start = &l->code[l->current];
             t.len = 1;
             break;
+        case '(':
+            t.type = T_L_PAREN;
+            t.start = &l->code[l->current];
+            t.len = 1;
+            break;
+        case ')':
+            t.type = T_R_PAREN;
+            t.start = &l->code[l->current];
+            t.len = 1;
+            break;
         default:
             t = lexer_read_number(l);
             break;
@@ -538,7 +564,7 @@ int main (int argc, char **argv) {
     struct NodeArray na;
     na_init(&na);
     while (parser_peek(&p).type != T_EOF) {
-        na_add(&na, parser_parse(&p));
+        na_add(&na, parse_expr(&p));
     }
 
     /*

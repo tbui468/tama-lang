@@ -1,8 +1,13 @@
 Read a little more of 'Computer Systems: A Programmer's Perspective'
 
-Parentheses tokens and parsing
-    just call parse from the beginning again if we reach the parse_group,
-        and consume the final RIGHT_PAREN
+make a parser_next(struct Parser *p) function, and change parser_consume(struct Parser *p, struct Token t)
+    next returns the next token
+    peek shows the next token
+    consume reports an error if not specified token
+
+allow multiple lines to be parsed - need to call parser multiple times to get syntax trees for each statement
+
+make a struct to hold error message - will need line info inside of tokens so that we can report error location
 
 print keyword and statements vs expressions
     print 4 + 5 - 6  (expression inside a statement)
@@ -12,7 +17,11 @@ print keyword and statements vs expressions
     NODE_EXPR_STMT - pops the stack after running
     NODE_STMT - leaves nothing on the stack after running
 
-variables
+variables - name needs to be associated with a position in the stack
+    variables need to a type to be specified in the declaration too
+        eg, x: int = 6, y: bool = true, z: float = 42.32
+
+    ints and a floats are 4 bytes, and bools are 1 byte
 
 boolean data type
 
