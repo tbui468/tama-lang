@@ -5,7 +5,7 @@
 
 //static char* code = "43.23 + .65*9.0/-7.";
 //static char* code = "43 + 65+9-7";
-static char* code = "(9+-10) * (2 -- 100)";
+static char* code = "(11/-10) * (2 -- 100)";
 
 
 /*
@@ -305,8 +305,16 @@ struct Token parser_peek(struct Parser *p) {
     return p->ta->tokens[p->current];
 }
 
-struct Token parser_consume(struct Parser *p) {
+struct Token parser_next(struct Parser *p) {
     return p->ta->tokens[p->current++];
+}
+
+struct Token parser_consume(struct Parser *p, enum TokenType tt) {
+    struct Token t = p->ta->tokens[p->current++];
+    if (t.type != tt) {
+        printf("Parsing error!\n");  //TODO: put in proper error message into a struct to display after all parsing is done
+    }
+    return t;
 }
 
 bool parser_end(struct Parser *p) {
@@ -321,9 +329,9 @@ void parser_init(struct Parser *p, struct TokenArray *ta) {
 struct Node *parse_expr(struct Parser *p);
 
 struct Node *parse_group(struct Parser *p) {
-    parser_consume(p); //TODO: left paren - need to make a parser_next() - peek looks, next takes, consume has second argument and expects something
+    parser_consume(p, T_L_PAREN);
     struct Node* n = parse_expr(p);
-    parser_consume(p); //TODO: right paren
+    parser_consume(p, T_R_PAREN);
     return n;
 }
 
@@ -332,14 +340,14 @@ struct Node* parse_literal(struct Parser *p) {
     if (next.type == T_L_PAREN) {
         return parse_group(p);
     } else {
-        return node_literal(parser_consume(p));
+        return node_literal(parser_next(p));
     }
 }
 
 struct Node* parse_unary(struct Parser *p) {
     struct Token next = parser_peek(p);
     if (next.type == T_MINUS) {
-        struct Token op = parser_consume(p);
+        struct Token op = parser_next(p);
         return node_unary(op, parse_unary(p));
     } else {
         return parse_literal(p);
@@ -354,7 +362,7 @@ struct Node* parse_mul_div(struct Parser *p) {
         if (next.type != T_STAR && next.type != T_SLASH)
             break;
 
-        struct Token op = parser_consume(p);
+        struct Token op = parser_next(p);
         struct Node *right = parse_unary(p);
         left = node_binary(left, op, right);
     }
@@ -370,7 +378,7 @@ struct Node* parse_add_sub(struct Parser *p) {
         if (next.type != T_MINUS && next.type != T_PLUS)
             break;
 
-        struct Token op = parser_consume(p);
+        struct Token op = parser_next(p);
         struct Node *right = parse_mul_div(p);
         left = node_binary(left, op, right);
     }

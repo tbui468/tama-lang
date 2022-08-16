@@ -1,9 +1,5 @@
 Read a little more of 'Computer Systems: A Programmer's Perspective'
-
-make a parser_next(struct Parser *p) function, and change parser_consume(struct Parser *p, struct Token t)
-    next returns the next token
-    peek shows the next token
-    consume reports an error if not specified token
+    next chapter is about how numbers are stored in memory
 
 allow multiple lines to be parsed - need to call parser multiple times to get syntax trees for each statement
 
@@ -38,6 +34,26 @@ Floating point arithmetic
 
 Idea: compile to x86 assembly (which we can then assemble to machine code..)
     https://cs.lmu.edu/~ray/notes/nasmtutorial/
+
+Like python, but compiled to assembly and statically type-checked
+    print(3 + 7)
+    x: int = 27
+
+    if x < 30 {
+        print("A") 
+    }
+
+    print("B")
+    x = true #this will report an error
+
+    for i in 10..3 by -2 {
+        print(i)
+    }
+
+    fun my_add(a: int, b: int) returns (int) {
+        x: int = a + b
+        return x 
+    }
 
 Get entire language compiling for arithmetic expressions
     Error
