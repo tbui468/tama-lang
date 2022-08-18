@@ -1,15 +1,61 @@
 Read a little more of 'Computer Systems: A Programmer's Perspective'
-    next chapter is about how numbers are stored in memory
+    next chapter - ...
 
-Write function to free nodes - we need to start worrying about memory soon
+Variables
 
-make a struct to hold error message - will need line info inside of tokens so that we can report error location
+    Compile the three nodes into assembly
 
-variables - name needs to be associated with a position in the stack
     variables need to a type to be specified in the declaration too
         eg, x: int = 6, y: bool = true, z: float = 42.32
 
     ints and a floats are 4 bytes, and bools are 1 byte
+
+    x: int = 5 
+    y: int = 1
+    x = 4
+    print(x)
+
+    Then compiler should track how tall the stack is currently and were in memory the variable is...
+        then when we see x in print(x), the compiler can just read the correct location on the stack
+
+    We had a set_local and get_local operations in the VM last time 
+        Did we use a hash table to track names/locations of variables?
+        No, we didn't...?  Each declaration is just one more value on the stack
+        Just find it by offset from the stack base pointer.
+
+    How do we associate variable names with the locations in the stack?
+        Each needs its own scope too
+
+    Each scope has its own hash table with variable name and location in stack
+    Create a struct Scope that also links the hash tables together that that we can check higher scopes
+
+    NodeDeclVar
+        Adds variable identifier and index in the stack to variable data structure in the compiler
+        pushes initial value onto the stack (where it will stay until the scope ends)
+        just keep an array of variables in the compiler for now (can hold the token and also the stack index)
+            then just iterate through it to find the matching variable name to get the stack index
+            can switch to something else (eg, hash table) later if necessary
+    NodeGetVar
+        Use the variable identifier and the variable data structure to push value onto stack
+    NodeSetVar
+        Use variable identifier and the variable data structure to set value in the stack
+
+Free Allocated Memory
+    Wrap ALL allocations in a macro (just use realloc) and track allocated/freed bytes
+    check that memory is free at end of program before ending
+    start by creating a free function for the structs that allocate memory
+
+    All arrays use the same realloc pattern - abstract into a macro instead of repeating it everywhere
+        this will make the code so much easier to work with
+
+Error Reporting System
+    make a struct to hold error message - will need line info inside of tokens so that we can report error location
+    need to make error holders for each phase of compilation:
+        Lexing, Parsing, Typing, Compiling
+    rearrange the messages by line number - merge sort of something to sort messages by line number
+
+blocks (needed for if/else/loops and also scoping)
+    when a block ends we need to pop the stack of any local variables
 
 boolean data type
 
@@ -26,6 +72,8 @@ Need to deal with overflow with multiplication/add
 
 Floating point arithmetic
     This will require a bit of testing in assembly to see how it works
+
+mmap for dynamic memory allocation ....???
 
 Idea: compile to x86 assembly (which we can then assemble to machine code..)
     https://cs.lmu.edu/~ray/notes/nasmtutorial/

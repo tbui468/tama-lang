@@ -4,7 +4,8 @@
 #include <stdbool.h>
 
 static char* code = "print((11/-10) * (2 -- 100))\n"
-                    "print(-5)";
+                    "x: int = 32\n"
+                    "x = 23";
 
 
 /*
@@ -22,7 +23,12 @@ enum TokenType {
     T_NEWLINE,
     T_PRINT,
     T_NIL,
-    T_EOF
+    T_EOF,
+    T_COLON,
+    T_INT_TYPE,
+    T_NIL_TYPE,
+    T_EQUALS,
+    T_IDENTIFIER,
 };
 
 struct Token {
@@ -48,7 +54,10 @@ enum NodeType {
     NODE_UNARY,
     NODE_LITERAL,
     NODE_PRINT,
-    NODE_EXPR_STMT
+    NODE_EXPR_STMT,
+    NODE_DECL_VAR,
+    NODE_GET_VAR,
+    NODE_SET_VAR
 };
 
 struct Node {
@@ -81,6 +90,24 @@ struct NodePrint {
 
 struct NodeExprStmt {
     struct Node n;
+    struct Node *expr;
+};
+
+struct NodeDeclVar {
+    struct Node n;
+    struct Token var;
+    struct Token type;
+    struct Node *expr;
+};
+
+struct NodeGetVar {
+    struct Node n;
+    struct Token var;
+};
+
+struct NodeSetVar {
+    struct Node n;
+    struct Token var;
     struct Node *expr;
 };
 
@@ -146,6 +173,30 @@ struct Node *node_expr_stmt(struct Node *expr) {
     return (struct Node*)node;
 }
 
+struct Node *node_decl_var(struct Token var, struct Token type, struct Node *expr) {
+    struct NodeDeclVar *node = realloc(NULL, sizeof(struct NodeDeclVar));
+    node->n.type = NODE_DECL_VAR;
+    node->var = var;
+    node->type = type;
+    node->expr = expr;
+    return (struct Node*)node;
+}
+
+struct Node *node_get_var(struct Token var) {
+    struct NodeGetVar *node = realloc(NULL, sizeof(struct NodeGetVar));
+    node->n.type = NODE_GET_VAR;
+    node->var = var;
+    return (struct Node*)node;
+}
+
+struct Node *node_set_var(struct Token var, struct Node *expr) {
+    struct NodeSetVar *node = realloc(NULL, sizeof(struct NodeSetVar));
+    node->n.type = NODE_SET_VAR;
+    node->var = var;
+    node->expr = expr;
+    return (struct Node*)node;
+}
+
 void ast_print(struct Node* n) {
     switch (n->type) {
         case NODE_LITERAL: {
@@ -178,6 +229,18 @@ void ast_print(struct Node* n) {
             printf("NODE_EXPR_STMT");  
             break;
         }
+        case NODE_DECL_VAR: {
+            printf("NODE_DECL_VAR");  
+            break;
+        }
+        case NODE_GET_VAR: {
+            printf("NODE_GET_VAR");  
+            break;
+        }
+        case NODE_SET_VAR: {
+            printf("NODE_SET_VAR");  
+            break;
+        }
         default:
             printf("Node type not recognized\n");
             break;
@@ -188,6 +251,68 @@ void ast_print(struct Node* n) {
 /*
  * Compiler
  */
+
+struct VarData {
+    struct Token var;
+    struct Token type;
+    int stack_index;
+};
+
+struct VarData vd_create(struct Token var, struct Token type, int stack_index) {
+    struct VarData vd;
+    vd.var = var;
+    vd.type = type;
+    vd.stack_index = stack_index;
+    return vd;
+}
+
+struct VarDataArray {
+    struct VarData *vd;
+    int count;
+    int max_count;
+};
+
+void vda_init(struct VarDataArray *vda) {
+    vda->vd = NULL;
+    vda->count = 0;
+    vda->max_count = 0;
+}
+
+void vda_free(struct VarDataArray *vda) {
+    if (vda->vd)
+        free(vda->vd);
+}
+
+void vda_add(struct VarDataArray *vda, struct VarData vd) {
+    if (vda->max_count == 0) {
+        vda->max_count = 8;
+        vda->vd = realloc(NULL, sizeof(struct VarData) * vda->max_count);
+    }
+
+    vda->vd[vda->count] = vd;
+    vda->count++;
+}
+
+struct VarData *vda_get(struct VarDataArray *vda, struct Token var) {
+    for (int i = 0; i < vda->count; i++) {
+        struct VarData *vd = &(vda->vd[i]);
+        if (strncmp(vd->var.start,  var.start, var.len) == 0) {
+            return vd;
+        }
+    }
+    
+    return NULL;
+}
+
+bool vda_exists(struct VarDataArray* vda, struct Token var) {
+    for (int i = 0; i < vda->count; i++) {
+        struct VarData vd = vda->vd[i];
+        if (strncmp(vd.var.start,  var.start, var.len) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
 
 struct CharArray {
     char* chars;
@@ -350,7 +475,14 @@ struct Parser {
     int current;
 };
 
-struct Token parser_peek(struct Parser *p) {
+struct Token parser_peek_two(struct Parser *p) {
+    int next = p->current + 1;
+    if (next >= p->ta->count)
+        next = p->ta->count - 1;
+    return p->ta->tokens[next];
+}
+
+struct Token parser_peek_one(struct Parser *p) {
     return p->ta->tokens[p->current];
 }
 
@@ -385,16 +517,18 @@ struct Node *parse_group(struct Parser *p) {
 }
 
 struct Node* parse_literal(struct Parser *p) {
-    struct Token next = parser_peek(p);
+    struct Token next = parser_peek_one(p);
     if (next.type == T_L_PAREN) {
         return parse_group(p);
+    } else if (next.type == T_IDENTIFIER) {
+        return node_get_var(parser_next(p));
     } else {
         return node_literal(parser_next(p));
     }
 }
 
 struct Node* parse_unary(struct Parser *p) {
-    struct Token next = parser_peek(p);
+    struct Token next = parser_peek_one(p);
     if (next.type == T_MINUS) {
         struct Token op = parser_next(p);
         return node_unary(op, parse_unary(p));
@@ -407,7 +541,7 @@ struct Node* parse_mul_div(struct Parser *p) {
     struct Node *left = parse_unary(p);
 
     while (1) {
-        struct Token next = parser_peek(p);
+        struct Token next = parser_peek_one(p);
         if (next.type != T_STAR && next.type != T_SLASH)
             break;
 
@@ -423,7 +557,7 @@ struct Node* parse_add_sub(struct Parser *p) {
     struct Node *left = parse_mul_div(p);
 
     while (1) {
-        struct Token next = parser_peek(p);
+        struct Token next = parser_peek_one(p);
         if (next.type != T_MINUS && next.type != T_PLUS)
             break;
 
@@ -435,22 +569,41 @@ struct Node* parse_add_sub(struct Parser *p) {
     return left;
 }
 
+struct Node* parse_assignment(struct Parser *p) {
+    if (parser_peek_one(p).type == T_IDENTIFIER && parser_peek_two(p).type == T_EQUALS) {
+        struct Token var = parser_consume(p, T_IDENTIFIER);
+        parser_consume(p, T_EQUALS);
+        struct Node *expr = parse_expr(p);
+        return node_set_var(var, expr);
+    } else {
+        return parse_add_sub(p);
+    }
+}
+
 struct Node* parse_expr(struct Parser *p) {
-    return parse_add_sub(p); 
+    return parse_assignment(p); 
 }
 
 struct Node *parse_stmt(struct Parser *p) {
-    struct Token next = parser_peek(p);
+    struct Token next = parser_peek_one(p);
     if (next.type == T_PRINT) {
         parser_consume(p, T_PRINT);
         parser_consume(p, T_L_PAREN);
         struct Node* arg = parse_expr(p);
         parser_consume(p, T_R_PAREN);
         return node_print(arg);
+    } else if (next.type == T_IDENTIFIER && parser_peek_two(p).type == T_COLON) {
+        struct Token var = parser_consume(p, T_IDENTIFIER);
+        parser_consume(p, T_COLON);
+        struct Token type = parser_next(p);
+        parser_consume(p, T_EQUALS);
+        struct Node *expr = parse_expr(p);
+        return node_decl_var(var, type, expr);
     } else {
         return node_expr_stmt(parse_expr(p));
     }
 }
+
 /*
  * Lexer
  */
@@ -498,7 +651,7 @@ bool is_char(char c) {
 }
 
 //Could be a keyword or a user defined word
-struct Token lexer_read_identifier(struct Lexer *l) {
+struct Token lexer_read_word(struct Lexer *l) {
     struct Token t;
     t.start = &l->code[l->current];
     t.len = 1;
@@ -510,12 +663,12 @@ struct Token lexer_read_identifier(struct Lexer *l) {
         t.len++;
     }
 
-    //TODO: just check for 'print' keyword for now
-    if (strncmp("print", t.start, 5) == 0) {
+    if (t.len == 5 && strncmp("print", t.start, 5) == 0) {
         t.type = T_PRINT;
+    } else if (t.len == 3 && strncmp("int", t.start, 3) == 0) {
+        t.type = T_INT_TYPE;
     } else {
-        printf("Parser error!  Unrecognized keyword!\n");
-        exit(1);
+        t.type = T_IDENTIFIER;
     }
     return t;
 }
@@ -589,11 +742,21 @@ struct Token lexer_next_token(struct Lexer *l) {
             t.start = &l->code[l->current];
             t.len = 1;
             break;
+        case ':':
+            t.type = T_COLON;
+            t.start = &l->code[l->current];
+            t.len = 1;
+            break;
+        case '=':
+            t.type = T_EQUALS;
+            t.start = &l->code[l->current];
+            t.len = 1;
+            break;
         default:
             if (is_digit(c)) {
                 t = lexer_read_number(l);
             } else {
-                t = lexer_read_identifier(l);
+                t = lexer_read_word(l);
             }
             break;
     }
@@ -605,34 +768,81 @@ struct Token lexer_next_token(struct Lexer *l) {
  * Type Checker
  */
 
-enum TokenType type_check(struct Node* n) {
+enum TokenType type_check(struct Node* n, struct VarDataArray* vda) {
     enum TokenType t;
     switch(n->type) {
         case NODE_LITERAL: {
             struct NodeLiteral *l = (struct NodeLiteral*)n;
-            t = l->value.type;
+            switch (l->value.type) {
+                case T_INT:
+                    t = T_INT_TYPE;
+                    break;
+                default:
+                    t = T_NIL_TYPE;
+                    break;
+            }
             break;
         }
         case NODE_UNARY: {
             struct NodeUnary *u = (struct NodeUnary*)n;
             //TODO: don't allow - for string/boolean
             //TODO: don't allow ! for int/float/string types
-            t = type_check(u->right);
+            t = type_check(u->right, vda);
             break;
         }
         case NODE_BINARY: {
             struct NodeBinary* b = (struct NodeBinary*)n;
-            enum TokenType left_type = type_check(b->left);
-            enum TokenType right_type = type_check(b->right);
+            enum TokenType left_type = type_check(b->left, vda);
+            enum TokenType right_type = type_check(b->right, vda);
             if (left_type != right_type) {
                 printf("Left and right types don't match!\n");
-                exit(0); //TODO: Need to display static type checker error message
+                exit(1); //TODO: Need to display static type checker error message
             }
             t = left_type;
             break;
         }
+        case NODE_DECL_VAR: {
+            struct NodeDeclVar *dv = (struct NodeDeclVar*)n;
+            enum TokenType expr_t = type_check(dv->expr, vda);
+            if (expr_t != dv->type.type) {
+                printf("Declaration type and assigned value type don't match!\n");
+                exit(1);
+            }
+            if (vda_get(vda, dv->var)) {
+                printf("Variable already declared!\n");
+                exit(1);
+            }
+            vda_add(vda, vd_create(dv->var, dv->type, 0));
+            t = expr_t;
+            break;
+        }
+        case NODE_GET_VAR: {
+            struct NodeGetVar *gv = (struct NodeGetVar*)n;
+            struct VarData* vd = vda_get(vda, gv->var);
+            if (!vd) {
+                printf("Variable not declared!\n");
+                exit(1);
+            }
+            t = vd->type.type;
+            break;
+        }
+        case NODE_SET_VAR: {
+            struct NodeSetVar *sv = (struct NodeSetVar*)n;
+            struct VarData* vd = vda_get(vda, sv->var);
+            if (!vd) {
+                printf("Variable not declared!\n");
+                exit(1);
+            }
+            enum TokenType expr_t = type_check(sv->expr, vda);
+            if (vd->type.type != expr_t) {
+                printf("Declaration type and assigned value don't match!\n");
+                exit(1);
+            }
+            t = expr_t;
+            break;
+        }
         default:
-            t = T_NIL;
+            t = T_NIL_TYPE;
             break;
     }
     return t;
@@ -662,31 +872,34 @@ int main (int argc, char **argv) {
     t.len = 0;
     ta_add(&ta, t);
 
-/*
     for (int i = 0; i < ta.count; i++) {
         printf("%.*s\n", ta.tokens[i].len, ta.tokens[i].start);
-    }*/
+    }
 
     //Parse tokens into AST
-    
     struct Parser p;
     parser_init(&p, &ta);
     struct NodeArray na;
     na_init(&na);
-    while (parser_peek(&p).type != T_EOF) {
+    while (parser_peek_one(&p).type != T_EOF) {
         na_add(&na, parse_stmt(&p));
     }
 
-    /*
+
     for (int i = 0; i < na.count; i++) {
         ast_print(na.nodes[i]);
         printf("\n");
-    }*/
-    
-    //Static Type checking
-    for (int i = 0; i < na.count; i++) {
-        type_check(na.nodes[i]);
     }
+
+    //Static Type checking
+    struct VarDataArray vda;
+    vda_init(&vda);
+    for (int i = 0; i < na.count; i++) {
+        type_check(na.nodes[i], &vda);
+    }
+
+    /*
+    //Could optimize AST at this point?
 
     //Compile into IA32 (Intel syntax)
     struct Compiler c;
@@ -695,9 +908,11 @@ int main (int argc, char **argv) {
         compiler_compile(&c, na.nodes[i]);
     }
     compiler_output_assembly(&c);
+*/
 
-
-    //Assemble into machine code using nasm (or similar) and gcc
+    //Could assemble to object files here?
+    
+    //Could link here and create executable?
 
     return 0;
 }
