@@ -3,9 +3,10 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-static char* code = "print((11/-10) * (2 -- 100))\n"
+static char* code = "print(11)\n"
                     "x: int = 32\n"
-                    "x = 23";
+                    "x = -5\n"
+                    "print(x)";
 
 
 /*
@@ -29,6 +30,11 @@ enum TokenType {
     T_NIL_TYPE,
     T_EQUALS,
     T_IDENTIFIER,
+    T_TRUE,
+    T_FALSE,
+    T_BOOL_TYPE,
+    T_L_BRACE,
+    T_R_BRACE
 };
 
 struct Token {
@@ -44,6 +50,27 @@ struct TokenArray {
     int max_count;
 };
 
+
+struct VarData {
+    struct Token var;
+    struct Token type;
+};
+
+struct VarData vd_create(struct Token var, struct Token type) {
+    struct VarData vd;
+    vd.var = var;
+    vd.type = type;
+    return vd;
+}
+
+struct VarDataArray {
+    struct VarData *vd;
+    int count;
+    int max_count;
+};
+
+
+int vda_get_idx(struct VarDataArray *vda, struct Token var);
 
 /*
  * AST Nodes
@@ -252,26 +279,6 @@ void ast_print(struct Node* n) {
  * Compiler
  */
 
-struct VarData {
-    struct Token var;
-    struct Token type;
-    int stack_index;
-};
-
-struct VarData vd_create(struct Token var, struct Token type, int stack_index) {
-    struct VarData vd;
-    vd.var = var;
-    vd.type = type;
-    vd.stack_index = stack_index;
-    return vd;
-}
-
-struct VarDataArray {
-    struct VarData *vd;
-    int count;
-    int max_count;
-};
-
 void vda_init(struct VarDataArray *vda) {
     vda->vd = NULL;
     vda->count = 0;
@@ -293,25 +300,15 @@ void vda_add(struct VarDataArray *vda, struct VarData vd) {
     vda->count++;
 }
 
-struct VarData *vda_get(struct VarDataArray *vda, struct Token var) {
+int vda_get_idx(struct VarDataArray *vda, struct Token var) {
     for (int i = 0; i < vda->count; i++) {
         struct VarData *vd = &(vda->vd[i]);
         if (strncmp(vd->var.start,  var.start, var.len) == 0) {
-            return vd;
+            return i;
         }
     }
     
-    return NULL;
-}
-
-bool vda_exists(struct VarDataArray* vda, struct Token var) {
-    for (int i = 0; i < vda->count; i++) {
-        struct VarData vd = vda->vd[i];
-        if (strncmp(vd.var.start,  var.start, var.len) == 0) {
-            return true;
-        }
-    }
-    return false;
+    return -1;
 }
 
 struct CharArray {
@@ -323,7 +320,8 @@ struct CharArray {
 struct Compiler {
     struct CharArray text;
     struct CharArray data;
-    int data_offset; //in bytes
+    int data_offset; //in bytes TODO: Not using this, are we?
+    struct VarDataArray *vda;
 };
 
 void ca_init(struct CharArray* ca) {
@@ -347,10 +345,11 @@ void ca_append(struct CharArray* ca, char* s, int len) {
     ca->count += len;
 }
 
-void compiler_init(struct Compiler *c) {
+void compiler_init(struct Compiler *c, struct VarDataArray *vda) {
     ca_init(&c->text);
     ca_init(&c->data);
     c->data_offset = 0;
+    c->vda = vda;
 }
 
 //appends to text section (op codes)
@@ -377,7 +376,8 @@ void compiler_output_assembly(struct Compiler *c) {
               "global      _start\n"
               "%include \"../../assembly_test/fun.asm\""
               "\n"
-              "_start:\n";
+              "_start:\n"
+              "    mov     ebp, esp\n";
     char *e = "\n"
               "    mov     eax, 0x1\n"
               "    xor     ebx, ebx\n"
@@ -456,6 +456,41 @@ void compiler_compile(struct Compiler *c, struct Node *n) {
                             "    call    _print_char\n"
                             "    add     esp, 4\n";
             compiler_append_text(c, newline, strlen(newline));
+            break;
+        }
+        case NODE_DECL_VAR: {
+            struct NodeDeclVar *dv = (struct NodeDeclVar*)n;
+            compiler_compile(c, dv->expr);
+            //variable should already be in VarDataArray (added when running typechecker)
+            break;
+        }
+        case NODE_GET_VAR: {
+            struct NodeGetVar *gv = (struct NodeGetVar*)n;
+            int idx = vda_get_idx(c->vda, gv->var);
+            if (idx == -1) {
+                printf("Variable not declared!\n");
+            }
+            char s[64];
+            sprintf(s, "    mov     eax, [ebp - %d]\n", 4 * (idx + 1));
+            compiler_append_text(c, s, strlen(s));
+            char* push_op = "    push    eax\n\0";
+            compiler_append_text(c, push_op, strlen(push_op));
+            break;
+        }
+        case NODE_SET_VAR: {
+            struct NodeSetVar *sv = (struct NodeSetVar*)n;
+            compiler_compile(c, sv->expr);
+            int idx = vda_get_idx(c->vda, sv->var);
+            if (idx == -1) {
+                printf("Variable not declared!\n");
+            }
+            char* pop = "    pop     eax\n\0";
+            compiler_append_text(c, pop, strlen(pop));
+            char s[64];
+            sprintf(s, "    mov     [ebp - %d], eax\n", 4 * (idx + 1));
+            compiler_append_text(c, s, strlen(s));
+            char* push_op = "    push    eax\n\0";
+            compiler_append_text(c, push_op, strlen(push_op));
             break;
         }
         default:
@@ -667,6 +702,12 @@ struct Token lexer_read_word(struct Lexer *l) {
         t.type = T_PRINT;
     } else if (t.len == 3 && strncmp("int", t.start, 3) == 0) {
         t.type = T_INT_TYPE;
+    } else if (t.len == 4 && strncmp("bool", t.start, 4) == 0) {
+        t.type = T_BOOL_TYPE;
+    } else if (t.len == 4 && strncmp("true", t.start, 4) == 0) {
+        t.type = T_TRUE;
+    } else if (t.len == 5 && strncmp("false", t.start, 5) == 0) {
+        t.type = T_FALSE;
     } else {
         t.type = T_IDENTIFIER;
     }
@@ -752,6 +793,16 @@ struct Token lexer_next_token(struct Lexer *l) {
             t.start = &l->code[l->current];
             t.len = 1;
             break;
+        case '{':
+            t.type = T_L_BRACE;
+            t.start = &l->code[l->current];
+            t.len = 1;
+            break;
+        case '}':
+            t.type = T_R_BRACE;
+            t.start = &l->code[l->current];
+            t.len = 1;
+            break;
         default:
             if (is_digit(c)) {
                 t = lexer_read_number(l);
@@ -808,33 +859,33 @@ enum TokenType type_check(struct Node* n, struct VarDataArray* vda) {
                 printf("Declaration type and assigned value type don't match!\n");
                 exit(1);
             }
-            if (vda_get(vda, dv->var)) {
+            if (vda_get_idx(vda, dv->var) != -1) {
                 printf("Variable already declared!\n");
                 exit(1);
             }
-            vda_add(vda, vd_create(dv->var, dv->type, 0));
+            vda_add(vda, vd_create(dv->var, dv->type));
             t = expr_t;
             break;
         }
         case NODE_GET_VAR: {
             struct NodeGetVar *gv = (struct NodeGetVar*)n;
-            struct VarData* vd = vda_get(vda, gv->var);
-            if (!vd) {
+            int idx = vda_get_idx(vda, gv->var);
+            if (idx == -1) {
                 printf("Variable not declared!\n");
                 exit(1);
             }
-            t = vd->type.type;
+            t = vda->vd[idx].type.type;
             break;
         }
         case NODE_SET_VAR: {
             struct NodeSetVar *sv = (struct NodeSetVar*)n;
-            struct VarData* vd = vda_get(vda, sv->var);
-            if (!vd) {
+            int idx = vda_get_idx(vda, sv->var);
+            if (idx == -1) {
                 printf("Variable not declared!\n");
                 exit(1);
             }
             enum TokenType expr_t = type_check(sv->expr, vda);
-            if (vd->type.type != expr_t) {
+            if (vda->vd[idx].type.type != expr_t) {
                 printf("Declaration type and assigned value don't match!\n");
                 exit(1);
             }
@@ -898,17 +949,17 @@ int main (int argc, char **argv) {
         type_check(na.nodes[i], &vda);
     }
 
-    /*
+    
     //Could optimize AST at this point?
 
     //Compile into IA32 (Intel syntax)
     struct Compiler c;
-    compiler_init(&c);
+    compiler_init(&c, &vda);
     for (int i = 0; i < na.count; i++) {
         compiler_compile(&c, na.nodes[i]);
     }
     compiler_output_assembly(&c);
-*/
+
 
     //Could assemble to object files here?
     

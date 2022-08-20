@@ -1,44 +1,38 @@
 Read a little more of 'Computer Systems: A Programmer's Perspective'
     next chapter - ...
 
+Write the compiler branches for NodeGetVar and NodeSetVar
+    Note: [ebp - 4] is the first value pushed onto the stack
+
+braces, booleans, and boolean types are recognized as tokens now
+Parse them (need a NodeBlock to store info)
+VarData needs to take variables in outer scopes into account
+    can read variables from outer scope
+    declaring variables with same name will shadow variables in outer scope with same name
+    should store VarDataArray inside of compiler since it will need to use it 
+        also, make the compiler hold a linked list of VarDataArray (need to add a new field to vda)
+            struct VarDataArray* next;
+            can detach next (free and null pointers) when popping scopes
+        so that we can jump to next link to go up the scope chain
+
 Variables
+    ebp is 0 initially, so we need to set it to esp before doing anything else in main
+    mov     eax, [ebp - 4] gives the first value on stack (for some reason)  Why isn't it just [ebp]?
+        ANSWER!!!! - we read four bytes starting from the byte with the lowest address!  The first 4 bytes
+            pushed onto the stack start on the address [ebp - 4]
 
-    Compile the three nodes into assembly
+   When we declare a variable stick it inside VarDataArray - the (index + 1) * 4 is also the offset from ebp!
+        So we can access the variable using [ebp - 4 * (index + 1)]
+        getting variable value into eax:
+            mov     eax, [ebp - 4 * (idx + 1)]
+        setting to value in eax:
+            mov     [ebp - 4 * (idx + 1)], eax
 
-    variables need to a type to be specified in the declaration too
-        eg, x: int = 6, y: bool = true, z: float = 42.32
+Booleans (so that we can test the type checker and also prep for conditionals statements)
+    include boolean operators (and, or, not, xor)
 
-    ints and a floats are 4 bytes, and bools are 1 byte
-
-    x: int = 5 
-    y: int = 1
-    x = 4
-    print(x)
-
-    Then compiler should track how tall the stack is currently and were in memory the variable is...
-        then when we see x in print(x), the compiler can just read the correct location on the stack
-
-    We had a set_local and get_local operations in the VM last time 
-        Did we use a hash table to track names/locations of variables?
-        No, we didn't...?  Each declaration is just one more value on the stack
-        Just find it by offset from the stack base pointer.
-
-    How do we associate variable names with the locations in the stack?
-        Each needs its own scope too
-
-    Each scope has its own hash table with variable name and location in stack
-    Create a struct Scope that also links the hash tables together that that we can check higher scopes
-
-    NodeDeclVar
-        Adds variable identifier and index in the stack to variable data structure in the compiler
-        pushes initial value onto the stack (where it will stay until the scope ends)
-        just keep an array of variables in the compiler for now (can hold the token and also the stack index)
-            then just iterate through it to find the matching variable name to get the stack index
-            can switch to something else (eg, hash table) later if necessary
-    NodeGetVar
-        Use the variable identifier and the variable data structure to push value onto stack
-    NodeSetVar
-        Use variable identifier and the variable data structure to set value in the stack
+Scopes (blocks) so we can do conditionals
+    need to think about how variables are popped off stack when scope ends
 
 Free Allocated Memory
     Wrap ALL allocations in a macro (just use realloc) and track allocated/freed bytes
@@ -56,8 +50,6 @@ Error Reporting System
 
 blocks (needed for if/else/loops and also scoping)
     when a block ends we need to pop the stack of any local variables
-
-boolean data type
 
 conditional statements
     NODE_IF - can have elif/else inside of here too

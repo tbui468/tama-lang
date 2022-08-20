@@ -47,6 +47,10 @@ _print_int:
     mov     eax, [ebp + 8] 
     mov     edi, 0      ;counter to keep track of how many digits we pushed so that they can be popped/printed in order
 
+    ;if zero
+    cmp     eax, 0
+    je      print_zero
+
     test    eax, 0x80000000 ;hex for 2^31
     jnz     do_negative
     jmp     negative_done
@@ -61,7 +65,7 @@ do_negative:
 
 negative_done: 
 
-    push_digit:
+push_digit:
     cmp     eax, 0
     je      print_all
   
@@ -72,6 +76,10 @@ negative_done:
     push    edx         ;push remainder for later printing
     inc     edi
     jmp     push_digit
+
+print_zero:
+    push    eax
+    inc     edi
 
 print_all: 
     call    _print_digit
