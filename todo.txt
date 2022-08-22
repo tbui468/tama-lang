@@ -1,8 +1,20 @@
 Read a little more of 'Computer Systems: A Programmer's Perspective'
     next chapter - ...
 
-Write the compiler branches for NodeGetVar and NodeSetVar
-    Note: [ebp - 4] is the first value pushed onto the stack
+Need to get Error messages for each step
+    How to deal with errors in lexing, parsing and type checking?
+        if error encounter while lexing, skip all characters until the next valid token...?
+        if error encountered while parsing, skip line?
+        if error encountered while type checking ... what should we do?
+
+    Sort error messages by line number
+
+Free memory for ALL data
+    wrap ALL realloc, malloc, alloc and compute bytes allocated and freed at the end of the program
+    also need to deal with errors from system calls
+    no leaks allowed!!!
+
+Add macro for all array memory allocations (including adding/appending to array) to simplify code
 
 braces, booleans, and boolean types are recognized as tokens now
 Parse them (need a NodeBlock to store info)
@@ -14,19 +26,6 @@ VarData needs to take variables in outer scopes into account
             struct VarDataArray* next;
             can detach next (free and null pointers) when popping scopes
         so that we can jump to next link to go up the scope chain
-
-Variables
-    ebp is 0 initially, so we need to set it to esp before doing anything else in main
-    mov     eax, [ebp - 4] gives the first value on stack (for some reason)  Why isn't it just [ebp]?
-        ANSWER!!!! - we read four bytes starting from the byte with the lowest address!  The first 4 bytes
-            pushed onto the stack start on the address [ebp - 4]
-
-   When we declare a variable stick it inside VarDataArray - the (index + 1) * 4 is also the offset from ebp!
-        So we can access the variable using [ebp - 4 * (index + 1)]
-        getting variable value into eax:
-            mov     eax, [ebp - 4 * (idx + 1)]
-        setting to value in eax:
-            mov     [ebp - 4 * (idx + 1)], eax
 
 Booleans (so that we can test the type checker and also prep for conditionals statements)
     include boolean operators (and, or, not, xor)

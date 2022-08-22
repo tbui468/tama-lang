@@ -2,16 +2,16 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdarg.h>
 
 static char* code = "print(11)\n"
-                    "x: int = 32\n"
+                    "x: int = 3..2\n"
                     "x = -5\n"
-                    "print(x)";
+                    "print(x)\n"
+                    "y: int = 74..\n"
+                    "print(y)";
 
 
-/*
- * Tokens
- */
 enum TokenType {
     T_INT,
     T_FLOAT,
@@ -41,8 +41,70 @@ struct Token {
     enum TokenType type;
     char *start;
     int len; 
+    int line;
 };
 
+/*
+ * Errors
+ */
+
+struct Error {
+    char* msg;
+    int line;
+};
+
+
+struct ErrorMsgs {
+    struct Error *errors;
+    int count;
+    int max_count;
+};
+
+struct ErrorMsgs ems;
+
+void ems_init(struct ErrorMsgs *ems) {
+    ems->errors = NULL;
+    ems->count = 0;
+    ems->max_count = 0;
+}
+
+void ems_add(struct ErrorMsgs *ems, int line, char* format, ...) {
+    if (ems->count + 1 > ems->max_count) {
+        if (ems->max_count == 0) {
+            ems->max_count = 8;
+        } else {
+            ems->max_count *= 2;
+        }
+        ems->errors = realloc(ems->errors, sizeof(struct Error) * ems->max_count);
+    }
+
+    va_list ap;
+    va_start(ap, format);
+    size_t n = 256;
+    char* s = malloc(n);
+    int written = snprintf(s, n, "[%d] ", line);
+    vsnprintf(s + written, n - written, format, ap);
+    va_end(ap);
+
+    struct Error e;
+    e.msg = s;
+    e.line = line;
+
+    ems->errors[ems->count++] = e;
+}
+
+void ems_print(struct ErrorMsgs *ems) {
+    //reorder error messages here (since we will get ALL lexing errors before parsing errors, etc)
+    //  but we want to order them by line number
+    //  use the line number in each Error to reorder
+    for (int i = 0; i < ems->count; i++) {
+        printf("%s\n", ems->errors[i].msg); 
+    }
+}
+
+/*
+ * Tokens
+ */
 
 struct TokenArray {
     struct Token *tokens;
@@ -469,6 +531,7 @@ void compiler_compile(struct Compiler *c, struct Node *n) {
             int idx = vda_get_idx(c->vda, gv->var);
             if (idx == -1) {
                 printf("Variable not declared!\n");
+                //exit(1);
             }
             char s[64];
             sprintf(s, "    mov     eax, [ebp - %d]\n", 4 * (idx + 1));
@@ -483,6 +546,7 @@ void compiler_compile(struct Compiler *c, struct Node *n) {
             int idx = vda_get_idx(c->vda, sv->var);
             if (idx == -1) {
                 printf("Variable not declared!\n");
+                //exit(1);
             }
             char* pop = "    pop     eax\n\0";
             compiler_append_text(c, pop, strlen(pop));
@@ -528,7 +592,7 @@ struct Token parser_next(struct Parser *p) {
 struct Token parser_consume(struct Parser *p, enum TokenType tt) {
     struct Token t = p->ta->tokens[p->current++];
     if (t.type != tt) {
-        printf("Parsing error!\n");  //TODO: put in proper error message into a struct to display after all parsing is done
+        ems_add(&ems, t.line, "Unexpected token!");
     }
     return t;
 }
@@ -646,6 +710,7 @@ struct Node *parse_stmt(struct Parser *p) {
 struct Lexer {
     char* code;
     int current;
+    int line;
 };
 
 void ta_init(struct TokenArray *ta) {
@@ -670,6 +735,7 @@ void ta_add(struct TokenArray *ta, struct Token t) {
 void lexer_init(struct Lexer *l) {
     l->code = code;
     l->current = 0;
+    l->line = 1;
 }
 
 void lexer_skip_ws(struct Lexer *l) {
@@ -690,6 +756,7 @@ struct Token lexer_read_word(struct Lexer *l) {
     struct Token t;
     t.start = &l->code[l->current];
     t.len = 1;
+    t.line = l->line;
 
     while (1) {
         char next = l->code[l->current + t.len];
@@ -718,6 +785,7 @@ struct Token lexer_read_number(struct Lexer *l) {
     struct Token t;
     t.start = &l->code[l->current];
     t.len = 1;
+    t.line = l->line;
     bool has_decimal = *t.start == '.';
 
     while (1) {
@@ -727,8 +795,7 @@ struct Token lexer_read_number(struct Lexer *l) {
         } else if (next == '.') {
             t.len++;
             if (has_decimal) {
-                printf("Parser error!  Too many decimals!\n"); //TODO: Need to have real error added to array of error messages
-                exit(1);    
+                ems_add(&ems, l->line, "Too many decimals!");
             } else {
                 has_decimal = true;
             }
@@ -746,6 +813,7 @@ struct Token lexer_next_token(struct Lexer *l) {
     lexer_skip_ws(l);
 
     struct Token t;
+    t.line = l->line;
     char c = l->code[l->current];
     switch (c) {
         case '\n':
@@ -846,8 +914,7 @@ enum TokenType type_check(struct Node* n, struct VarDataArray* vda) {
             enum TokenType left_type = type_check(b->left, vda);
             enum TokenType right_type = type_check(b->right, vda);
             if (left_type != right_type) {
-                printf("Left and right types don't match!\n");
-                exit(1); //TODO: Need to display static type checker error message
+                ems_add(&ems, b->op.line, "Left and right types don't match!");
             }
             t = left_type;
             break;
@@ -856,12 +923,10 @@ enum TokenType type_check(struct Node* n, struct VarDataArray* vda) {
             struct NodeDeclVar *dv = (struct NodeDeclVar*)n;
             enum TokenType expr_t = type_check(dv->expr, vda);
             if (expr_t != dv->type.type) {
-                printf("Declaration type and assigned value type don't match!\n");
-                exit(1);
+                ems_add(&ems, dv->var.line, "Declaration type and assigned value type don't match!");
             }
             if (vda_get_idx(vda, dv->var) != -1) {
-                printf("Variable already declared!\n");
-                exit(1);
+                ems_add(&ems, dv->var.line, "Variable already declared!");
             }
             vda_add(vda, vd_create(dv->var, dv->type));
             t = expr_t;
@@ -871,23 +936,21 @@ enum TokenType type_check(struct Node* n, struct VarDataArray* vda) {
             struct NodeGetVar *gv = (struct NodeGetVar*)n;
             int idx = vda_get_idx(vda, gv->var);
             if (idx == -1) {
-                printf("Variable not declared!\n");
-                exit(1);
+                ems_add(&ems, gv->var.line, "Variable not declared!");
+            } else {
+                t = vda->vd[idx].type.type;
             }
-            t = vda->vd[idx].type.type;
             break;
         }
         case NODE_SET_VAR: {
             struct NodeSetVar *sv = (struct NodeSetVar*)n;
             int idx = vda_get_idx(vda, sv->var);
             if (idx == -1) {
-                printf("Variable not declared!\n");
-                exit(1);
+                ems_add(&ems, sv->var.line, "Variable not declared!");
             }
             enum TokenType expr_t = type_check(sv->expr, vda);
             if (vda->vd[idx].type.type != expr_t) {
-                printf("Declaration type and assigned value don't match!\n");
-                exit(1);
+                ems_add(&ems, sv->var.line, "Declaration type and assigned value type don't match!");
             }
             t = expr_t;
             break;
@@ -903,6 +966,8 @@ int main (int argc, char **argv) {
     argc = argc;
     argv = argv;
 
+    ems_init(&ems);
+
 
     //Tokenize source code
     struct Lexer l;
@@ -915,6 +980,8 @@ int main (int argc, char **argv) {
         struct Token t = lexer_next_token(&l);
         if (t.type != T_NEWLINE)
             ta_add(&ta, t);
+        else
+            l.line++;
     }
 
     struct Token t;
@@ -924,7 +991,7 @@ int main (int argc, char **argv) {
     ta_add(&ta, t);
 
     for (int i = 0; i < ta.count; i++) {
-        printf("%.*s\n", ta.tokens[i].len, ta.tokens[i].start);
+//        printf("%.*s\n", ta.tokens[i].len, ta.tokens[i].start);
     }
 
     //Parse tokens into AST
@@ -932,14 +999,15 @@ int main (int argc, char **argv) {
     parser_init(&p, &ta);
     struct NodeArray na;
     na_init(&na);
+    
     while (parser_peek_one(&p).type != T_EOF) {
         na_add(&na, parse_stmt(&p));
     }
 
 
     for (int i = 0; i < na.count; i++) {
-        ast_print(na.nodes[i]);
-        printf("\n");
+//        ast_print(na.nodes[i]);
+//        printf("\n");
     }
 
     //Static Type checking
@@ -958,12 +1026,17 @@ int main (int argc, char **argv) {
     for (int i = 0; i < na.count; i++) {
         compiler_compile(&c, na.nodes[i]);
     }
-    compiler_output_assembly(&c);
+
+    if (ems.count <= 0) {
+        compiler_output_assembly(&c);
+    }
 
 
     //Could assemble to object files here?
     
     //Could link here and create executable?
+   
+    ems_print(&ems);
 
     return 0;
 }
