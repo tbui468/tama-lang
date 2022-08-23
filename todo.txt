@@ -1,18 +1,32 @@
 Read a little more of 'Computer Systems: A Programmer's Perspective'
     next chapter - ...
+Read a little more of 'Linkers and Loaders'
+    try to build project in C
+
+GOAL: Get conditionals/loops/functions working, then make a assembler/linker for it
+
+
+    vda->vd = NULL; //TODO: this should be vds (make it pluaral since it's an array of vds)
+    vda->count = 0;
+    vda->max_count = 0;
+
+struct CharArray?  What's up with this?  Can't we just use a char*????
+
+Free structs
+    Lexer
+    Parser
+    Typer?
+    Compiler
+    ErrorMsgs
+
+    Current program mememory allocation: 2688
+    Goal: 0!!!
 
 Need to get Error messages for each step
     How to deal with errors in lexing, parsing and type checking?
         if error encounter while lexing, skip all characters until the next valid token...?
         if error encountered while parsing, skip line?
         if error encountered while type checking ... what should we do?
-
-Free memory for ALL data
-    wrap ALL realloc, malloc, alloc and compute bytes allocated and freed at the end of the program
-    also need to deal with errors from system calls
-    no leaks allowed!!!
-
-Add macro for all array memory allocations (including adding/appending to array) to simplify code
 
 braces, booleans, and boolean types are recognized as tokens now
 Parse them (need a NodeBlock to store info)
@@ -30,20 +44,6 @@ Booleans (so that we can test the type checker and also prep for conditionals st
 
 Scopes (blocks) so we can do conditionals
     need to think about how variables are popped off stack when scope ends
-
-Free Allocated Memory
-    Wrap ALL allocations in a macro (just use realloc) and track allocated/freed bytes
-    check that memory is free at end of program before ending
-    start by creating a free function for the structs that allocate memory
-
-    All arrays use the same realloc pattern - abstract into a macro instead of repeating it everywhere
-        this will make the code so much easier to work with
-
-Error Reporting System
-    make a struct to hold error message - will need line info inside of tokens so that we can report error location
-    need to make error holders for each phase of compilation:
-        Lexing, Parsing, Typing, Compiling
-    rearrange the messages by line number - merge sort of something to sort messages by line number
 
 blocks (needed for if/else/loops and also scoping)
     when a block ends we need to pop the stack of any local variables

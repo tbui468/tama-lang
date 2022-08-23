@@ -4,12 +4,44 @@
 #include <stdbool.h>
 #include <stdarg.h>
 
-static char* code = "print(11)\n"
-                    "x: int = 3..2\n"
-                    "x = -5\n"
+#define MAX_MSG_LEN 256
+
+
+static char* code = "print(1)\n"
+                    "x: int = 28\n"
+                    "x = 2\n"
                     "print(x)\n"
-                    "y: int = 74..\n"
+                    "y: int = 3\n"
                     "print(y)";
+
+
+size_t allocated;
+
+
+void* alloc_arr(void *vptr, size_t unit_size, int old_count, int new_count) {
+    allocated += unit_size * (new_count - old_count);
+    void* ret;
+    
+    if (!(ret = realloc(vptr, unit_size * new_count))) {
+        printf("System Error: realloc failed\n");
+        exit(1);
+    }
+
+    return ret;
+}
+
+void* alloc_unit(size_t unit_size) {
+    return alloc_arr(NULL, unit_size, 0, 1);
+}
+
+void free_arr(void *vtpr, size_t unit_size, int count) {
+    free(vtpr);
+    allocated -= unit_size * count;
+}
+
+void free_unit(void *vptr, size_t unit_size) {
+    free_arr(vptr, unit_size, 1);
+}
 
 
 enum TokenType {
@@ -68,22 +100,29 @@ void ems_init(struct ErrorMsgs *ems) {
     ems->max_count = 0;
 }
 
+void ems_free(struct ErrorMsgs *ems) {
+    for (int i = 0; i < ems->count; i++) {
+        free_unit(ems->errors[i].msg, MAX_MSG_LEN);
+    }
+    free_arr(ems->errors, sizeof(struct Error), ems->max_count);
+}
+
 void ems_add(struct ErrorMsgs *ems, int line, char* format, ...) {
     if (ems->count + 1 > ems->max_count) {
+        int old_max = ems->max_count;
         if (ems->max_count == 0) {
             ems->max_count = 8;
         } else {
             ems->max_count *= 2;
         }
-        ems->errors = realloc(ems->errors, sizeof(struct Error) * ems->max_count);
+        ems->errors = alloc_arr(ems->errors, sizeof(struct Error), old_max, ems->max_count);
     }
 
     va_list ap;
     va_start(ap, format);
-    size_t n = 256;
-    char* s = malloc(n);
-    int written = snprintf(s, n, "[%d] ", line);
-    vsnprintf(s + written, n - written, format, ap);
+    char* s = alloc_unit(MAX_MSG_LEN);
+    int written = snprintf(s, MAX_MSG_LEN, "[%d] ", line);
+    vsnprintf(s + written, MAX_MSG_LEN - written, format, ap);
     va_end(ap);
 
     struct Error e;
@@ -137,7 +176,7 @@ struct VarData vd_create(struct Token var, struct Token type) {
 }
 
 struct VarDataArray {
-    struct VarData *vd;
+    struct VarData *vds;
     int count;
     int max_count;
 };
@@ -223,27 +262,37 @@ void na_init(struct NodeArray *na) {
     na->max_count = 0;
 }
 
+void ast_free(struct Node* n);
+
+
+void na_free(struct NodeArray *na) {
+    for (int i = 0; i < na->count; i++) {
+        ast_free(na->nodes[i]); 
+    }
+    free_arr(na->nodes, sizeof(struct Node*), na->max_count);
+}
+
 void na_add(struct NodeArray *na, struct Node* n) {
+    int old_max = na->max_count;
     if (na->max_count == 0) {
         na->max_count = 8;
-        na->nodes = realloc(NULL, sizeof(struct Node*) * na->max_count);
     } else if (na->count + 1 > na->max_count) {
         na->max_count *= 2;
-        na->nodes = realloc(na->nodes, sizeof(struct Node*) * na->max_count);
     }
+    na->nodes = alloc_arr(na->nodes, sizeof(struct Node*), old_max, na->max_count);
 
     na->nodes[na->count++] = n;
 }
 
 struct Node* node_literal(struct Token value) {
-    struct NodeLiteral *node = realloc(NULL, sizeof(struct NodeLiteral));
+    struct NodeLiteral *node = alloc_unit(sizeof(struct NodeLiteral));
     node->n.type = NODE_LITERAL;
     node->value = value;
     return (struct Node*)node;
 }
 
 struct Node* node_unary(struct Token op, struct Node* right) {
-    struct NodeUnary *node = realloc(NULL, sizeof(struct NodeUnary));
+    struct NodeUnary *node = alloc_unit(sizeof(struct NodeUnary));
     node->n.type = NODE_UNARY;
     node->op = op;
     node->right = right;
@@ -251,7 +300,7 @@ struct Node* node_unary(struct Token op, struct Node* right) {
 }
 
 struct Node* node_binary(struct Node* left, struct Token op, struct Node* right) {
-    struct NodeBinary *node = realloc(NULL, sizeof(struct NodeBinary));
+    struct NodeBinary *node = alloc_unit(sizeof(struct NodeBinary));
     node->n.type = NODE_BINARY;
     node->left = left;
     node->op = op;
@@ -260,21 +309,21 @@ struct Node* node_binary(struct Node* left, struct Token op, struct Node* right)
 }
 
 struct Node *node_print(struct Node* arg) {
-    struct NodePrint *node = realloc(NULL, sizeof(struct NodePrint));
+    struct NodePrint *node = alloc_unit(sizeof(struct NodePrint));
     node->n.type = NODE_PRINT;
     node->arg = arg;
     return (struct Node*)node;
 }
 
 struct Node *node_expr_stmt(struct Node *expr) {
-    struct NodeExprStmt *node = realloc(NULL, sizeof(struct NodeExprStmt));
+    struct NodeExprStmt *node = alloc_unit(sizeof(struct NodeExprStmt));
     node->n.type = NODE_EXPR_STMT;
     node->expr = expr;
     return (struct Node*)node;
 }
 
 struct Node *node_decl_var(struct Token var, struct Token type, struct Node *expr) {
-    struct NodeDeclVar *node = realloc(NULL, sizeof(struct NodeDeclVar));
+    struct NodeDeclVar *node = alloc_unit(sizeof(struct NodeDeclVar));
     node->n.type = NODE_DECL_VAR;
     node->var = var;
     node->type = type;
@@ -283,14 +332,14 @@ struct Node *node_decl_var(struct Token var, struct Token type, struct Node *exp
 }
 
 struct Node *node_get_var(struct Token var) {
-    struct NodeGetVar *node = realloc(NULL, sizeof(struct NodeGetVar));
+    struct NodeGetVar *node = alloc_unit(sizeof(struct NodeGetVar));
     node->n.type = NODE_GET_VAR;
     node->var = var;
     return (struct Node*)node;
 }
 
 struct Node *node_set_var(struct Token var, struct Node *expr) {
-    struct NodeSetVar *node = realloc(NULL, sizeof(struct NodeSetVar));
+    struct NodeSetVar *node = alloc_unit(sizeof(struct NodeSetVar));
     node->n.type = NODE_SET_VAR;
     node->var = var;
     node->expr = expr;
@@ -347,35 +396,92 @@ void ast_print(struct Node* n) {
     }
 }
 
+void ast_free(struct Node* n) {
+    switch (n->type) {
+        case NODE_LITERAL: {
+            struct NodeLiteral* l = (struct NodeLiteral*)n;
+            free_unit(l, sizeof(struct NodeLiteral));
+            break;
+        }
+        case NODE_UNARY: {
+            struct NodeUnary *u = (struct NodeUnary*)n;
+            ast_free(u->right);
+            free_unit(u, sizeof(struct NodeUnary));
+            break;
+        }
+        case NODE_BINARY: {
+            struct NodeBinary* b = (struct NodeBinary*)n;
+            ast_free(b->left);
+            ast_free(b->right);
+            free_unit(b, sizeof(struct NodeBinary));
+            break;
+        }
+        case NODE_PRINT: {
+            struct NodePrint* np = (struct NodePrint*)n;
+            ast_free(np->arg);
+            free_unit(np, sizeof(struct NodePrint));
+            break;
+        }
+        case NODE_EXPR_STMT: {
+            struct NodeExprStmt* es = (struct NodeExprStmt*)n;
+            ast_free(es->expr);
+            free_unit(es, sizeof(struct NodeExprStmt));
+            break;
+        }
+        case NODE_DECL_VAR: {
+            struct NodeDeclVar *dv = (struct NodeDeclVar*)n;
+            ast_free(dv->expr);
+            free_unit(dv, sizeof(struct NodeDeclVar));
+            break;
+        }
+        case NODE_GET_VAR: {
+            struct NodeGetVar *gv = (struct NodeGetVar*)n;
+            free_unit(gv, sizeof(struct NodeGetVar));
+            break;
+        }
+        case NODE_SET_VAR: {
+            struct NodeSetVar *sv = (struct NodeSetVar*)n;
+            ast_free(sv->expr);
+            free_unit(sv, sizeof(struct NodeSetVar));
+            break;
+        }
+        default:
+            printf("Node type not recognized\n");
+            break;
+    }
+}
+
 
 /*
  * Compiler
  */
 
 void vda_init(struct VarDataArray *vda) {
-    vda->vd = NULL;
+    vda->vds = NULL;
     vda->count = 0;
     vda->max_count = 0;
 }
 
 void vda_free(struct VarDataArray *vda) {
-    if (vda->vd)
-        free(vda->vd);
+    free_arr(vda->vds, sizeof(struct VarData), vda->max_count);
 }
 
 void vda_add(struct VarDataArray *vda, struct VarData vd) {
+    int old_max = vda->max_count;
     if (vda->max_count == 0) {
         vda->max_count = 8;
-        vda->vd = realloc(NULL, sizeof(struct VarData) * vda->max_count);
+    } else if (vda->count + 1 > vda->max_count) {
+        vda->max_count *= 2;
     }
+    vda->vds = alloc_arr(vda->vds, sizeof(struct VarData), old_max, vda->max_count);
 
-    vda->vd[vda->count] = vd;
+    vda->vds[vda->count] = vd;
     vda->count++;
 }
 
 int vda_get_idx(struct VarDataArray *vda, struct Token var) {
     for (int i = 0; i < vda->count; i++) {
-        struct VarData *vd = &(vda->vd[i]);
+        struct VarData *vd = &(vda->vds[i]);
         if (strncmp(vd->var.start,  var.start, var.len) == 0) {
             return i;
         }
@@ -403,15 +509,21 @@ void ca_init(struct CharArray* ca) {
     ca->max_count = 0;
 }
 
+void ca_free(struct CharArray* ca) {
+    free_arr(ca->chars, sizeof(char), ca->max_count);
+}
+
 void ca_append(struct CharArray* ca, char* s, int len) {
+    int old_max = ca->max_count;
     if (ca->max_count == 0) {
         ca->max_count = 8;
-        ca->chars = realloc(NULL, sizeof(char) * ca->max_count);
+        ca->chars = alloc_arr(ca->chars, sizeof(char), old_max, ca->max_count);
     }
 
     while (ca->count + len > ca->max_count) {
+        old_max = ca->max_count;
         ca->max_count *= 2;
-        ca->chars = realloc(ca->chars, sizeof(char) * ca->max_count);
+        ca->chars = alloc_arr(ca->chars, sizeof(char), old_max, ca->max_count);
     }
 
     memcpy(&ca->chars[ca->count], s, len);
@@ -423,6 +535,11 @@ void compiler_init(struct Compiler *c, struct VarDataArray *vda) {
     ca_init(&c->data);
     c->data_offset = 0;
     c->vda = vda;
+}
+
+void compiler_free(struct Compiler *c) {
+    ca_free(&c->text);
+    ca_free(&c->data);
 }
 
 //appends to text section (op codes)
@@ -439,7 +556,7 @@ int compiler_append_data(struct Compiler *c, char *s, int len) {
 
     int previous_offset = c->data_offset;
     c->data_offset += 8;
-    return previous_offset; 
+    return previous_offset;
 }
 
 //write out assembly file
@@ -730,14 +847,18 @@ void ta_init(struct TokenArray *ta) {
     ta->max_count = 0;
 }
 
+void ta_free(struct TokenArray *ta) {
+    free_arr(ta->tokens, sizeof(struct Token), ta->max_count); 
+}
+
 void ta_add(struct TokenArray *ta, struct Token t) {
+    int old_max = ta->max_count;
     if (ta->max_count == 0) {
-        ta->tokens = realloc(NULL, sizeof(struct Token) * 8); //TODO: Need to check for errors with sys calls
         ta->max_count = 8;
     }else if (ta->count + 1 > ta->max_count) {
         ta->max_count *= 2;
-        ta->tokens = realloc(ta->tokens, sizeof(struct Token) * ta->max_count); //TODO: check for errors
     }
+    ta->tokens = alloc_arr(ta->tokens, sizeof(struct Token), old_max, ta->max_count);
 
     ta->tokens[ta->count] = t;
     ta->count++;
@@ -949,7 +1070,7 @@ enum TokenType type_check(struct Node* n, struct VarDataArray* vda) {
             if (idx == -1) {
                 ems_add(&ems, gv->var.line, "Type Error: Variable not declared!");
             } else {
-                t = vda->vd[idx].type.type;
+                t = vda->vds[idx].type.type;
             }
             break;
         }
@@ -960,7 +1081,7 @@ enum TokenType type_check(struct Node* n, struct VarDataArray* vda) {
                 ems_add(&ems, sv->var.line, "Type Error: Variable not declared!");
             }
             enum TokenType expr_t = type_check(sv->expr, vda);
-            if (vda->vd[idx].type.type != expr_t) {
+            if (vda->vds[idx].type.type != expr_t) {
                 ems_add(&ems, sv->var.line, "Type Error: Declaration type and assigned value type don't match!");
             }
             t = expr_t;
@@ -977,6 +1098,7 @@ int main (int argc, char **argv) {
     argc = argc;
     argv = argv;
 
+    allocated = 0;
     ems_init(&ems);
 
 
@@ -1048,6 +1170,15 @@ int main (int argc, char **argv) {
     //Could link here and create executable?
    
     ems_print(&ems);
+    
+    //cleanup
+    printf("Memory allocated: %ld\n", allocated);
+    compiler_free(&c);
+    vda_free(&vda);
+    na_free(&na);
+    ta_free(&ta);
+    ems_free(&ems);
+    printf("Allocated memory remaining: %ld\n", allocated);
 
     return 0;
 }
