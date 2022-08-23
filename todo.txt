@@ -7,8 +7,6 @@ Need to get Error messages for each step
         if error encountered while parsing, skip line?
         if error encountered while type checking ... what should we do?
 
-    Sort error messages by line number
-
 Free memory for ALL data
     wrap ALL realloc, malloc, alloc and compute bytes allocated and freed at the end of the program
     also need to deal with errors from system calls

@@ -93,10 +93,21 @@ void ems_add(struct ErrorMsgs *ems, int line, char* format, ...) {
     ems->errors[ems->count++] = e;
 }
 
+void ems_sort(struct ErrorMsgs *ems) {
+    for (int end = ems->count - 1; end > 0; end--) {
+        for (int i = 0; i < end; i++) {
+            struct Error left = ems->errors[i];
+            struct Error right = ems->errors[i + 1];
+            if (left.line > right.line) {
+                ems->errors[i] = right;
+                ems->errors[i + 1] = left;
+            }
+        }
+    }
+}
+
 void ems_print(struct ErrorMsgs *ems) {
-    //reorder error messages here (since we will get ALL lexing errors before parsing errors, etc)
-    //  but we want to order them by line number
-    //  use the line number in each Error to reorder
+    ems_sort(ems);
     for (int i = 0; i < ems->count; i++) {
         printf("%s\n", ems->errors[i].msg); 
     }
@@ -795,7 +806,7 @@ struct Token lexer_read_number(struct Lexer *l) {
         } else if (next == '.') {
             t.len++;
             if (has_decimal) {
-                ems_add(&ems, l->line, "Too many decimals!");
+                ems_add(&ems, l->line, "Token Error: Too many decimals!");
             } else {
                 has_decimal = true;
             }
@@ -914,7 +925,7 @@ enum TokenType type_check(struct Node* n, struct VarDataArray* vda) {
             enum TokenType left_type = type_check(b->left, vda);
             enum TokenType right_type = type_check(b->right, vda);
             if (left_type != right_type) {
-                ems_add(&ems, b->op.line, "Left and right types don't match!");
+                ems_add(&ems, b->op.line, "Type Error: Left and right types don't match!");
             }
             t = left_type;
             break;
@@ -923,10 +934,10 @@ enum TokenType type_check(struct Node* n, struct VarDataArray* vda) {
             struct NodeDeclVar *dv = (struct NodeDeclVar*)n;
             enum TokenType expr_t = type_check(dv->expr, vda);
             if (expr_t != dv->type.type) {
-                ems_add(&ems, dv->var.line, "Declaration type and assigned value type don't match!");
+                ems_add(&ems, dv->var.line, "Type Error: Declaration type and assigned value type don't match!");
             }
             if (vda_get_idx(vda, dv->var) != -1) {
-                ems_add(&ems, dv->var.line, "Variable already declared!");
+                ems_add(&ems, dv->var.line, "Type Error: Variable already declared!");
             }
             vda_add(vda, vd_create(dv->var, dv->type));
             t = expr_t;
@@ -936,7 +947,7 @@ enum TokenType type_check(struct Node* n, struct VarDataArray* vda) {
             struct NodeGetVar *gv = (struct NodeGetVar*)n;
             int idx = vda_get_idx(vda, gv->var);
             if (idx == -1) {
-                ems_add(&ems, gv->var.line, "Variable not declared!");
+                ems_add(&ems, gv->var.line, "Type Error: Variable not declared!");
             } else {
                 t = vda->vd[idx].type.type;
             }
@@ -946,11 +957,11 @@ enum TokenType type_check(struct Node* n, struct VarDataArray* vda) {
             struct NodeSetVar *sv = (struct NodeSetVar*)n;
             int idx = vda_get_idx(vda, sv->var);
             if (idx == -1) {
-                ems_add(&ems, sv->var.line, "Variable not declared!");
+                ems_add(&ems, sv->var.line, "Type Error: Variable not declared!");
             }
             enum TokenType expr_t = type_check(sv->expr, vda);
             if (vda->vd[idx].type.type != expr_t) {
-                ems_add(&ems, sv->var.line, "Declaration type and assigned value type don't match!");
+                ems_add(&ems, sv->var.line, "Type Error: Declaration type and assigned value type don't match!");
             }
             t = expr_t;
             break;
