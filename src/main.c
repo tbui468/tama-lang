@@ -8,8 +8,15 @@
 
 
 static char* code = "print(3)\n"
-                    "x: int = 48\n"
-                    "x = 2\n"
+                    "z: int = 10\n"
+                    "{\n"
+                    "   z = - 1\n"
+                    "   x: int = 48\n"
+                    "   x = 2\n"
+                    "   print(x)\n"
+                    "}\n"
+                    "print(z)\n"
+                    "x: int = 0\n"
                     "print(x)\n"
                     "y: int = 1\n"
                     "print(y)";
@@ -166,6 +173,7 @@ struct TokenArray {
 struct VarData {
     struct Token var;
     struct Token type;
+    int bp_offset;
 };
 
 struct VarData vd_create(struct Token var, struct Token type) {
@@ -183,7 +191,7 @@ struct VarDataArray {
 };
 
 
-int vda_get_idx(struct VarDataArray *vda, struct Token var);
+struct VarData* vda_get_local(struct VarDataArray *vda, struct Token var);
 
 /*
  * AST Nodes
@@ -509,15 +517,15 @@ void vda_add(struct VarDataArray *vda, struct VarData vd) {
     vda->count++;
 }
 
-int vda_get_idx(struct VarDataArray *vda, struct Token var) {
+struct VarData* vda_get_local(struct VarDataArray *vda, struct Token var) {
     for (int i = 0; i < vda->count; i++) {
         struct VarData *vd = &(vda->vds[i]);
         if (strncmp(vd->var.start,  var.start, var.len) == 0) {
-            return i;
+            return vd;
         }
     }
     
-    return -1;
+    return NULL;
 }
 
 struct CharArray {
@@ -530,7 +538,7 @@ struct Compiler {
     struct CharArray text;
     struct CharArray data;
     int data_offset; //in bytes TODO: Not using this, are we?
-    struct VarDataArray *vda;
+    struct VarDataArray *head;
 };
 
 void ca_init(struct CharArray* ca) {
@@ -560,16 +568,64 @@ void ca_append(struct CharArray* ca, char* s, int len) {
     ca->count += len;
 }
 
-void compiler_init(struct Compiler *c, struct VarDataArray *vda) {
+void compiler_init(struct Compiler *c, struct VarDataArray *head) {
     ca_init(&c->text);
     ca_init(&c->data);
     c->data_offset = 0;
-    c->vda = vda;
+    c->head = head;
 }
 
 void compiler_free(struct Compiler *c) {
     ca_free(&c->text);
     ca_free(&c->data);
+}
+
+void compiler_decl_local(struct Compiler *c, struct Token var, struct Token type) {
+    struct VarData vd;
+    vd.var = var;
+    vd.type = type;
+    int offset = 0;
+
+    struct VarDataArray *current = c->head;
+    while (current) {
+        offset += current->count;
+        current = current->next;
+    }
+
+    vd.bp_offset = offset;
+    vda_add(c->head, vd);
+}
+
+struct VarData* compiler_get_local(struct Compiler* c, struct Token var) {
+    struct VarData* vd = NULL;
+
+    struct VarDataArray *current = c->head;
+    while (current) {
+        vd = vda_get_local(current, var);
+        if (vd) {
+            break;
+        } else {
+            current = current->next;
+        }
+    }
+
+    return vd;
+}
+
+void compiler_begin_scope(struct Compiler *c) {
+    struct VarDataArray *scope = alloc_unit(sizeof(struct VarDataArray));
+    vda_init(scope);
+    scope->next = c->head;
+    c->head = scope;
+}
+
+int compiler_end_scope(struct Compiler *c) {
+    struct VarDataArray *scope = c->head;
+    c->head = scope->next;
+    int len = scope->count;
+    vda_free(scope);
+    free_unit(scope, sizeof(struct VarDataArray));
+    return len;
 }
 
 //appends to text section (op codes)
@@ -714,10 +770,10 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             if (right_type != dv->type.type) {
                 ems_add(&ems, dv->var.line, "Type Error: Declaration type and assigned value type don't match!");
             }
-            if (vda_get_idx(c->vda, dv->var) != -1) {
+            if (compiler_get_local(c, dv->var)) {
                 ems_add(&ems, dv->var.line, "Type Error: Variable already declared!");
             }
-            vda_add(c->vda, vd_create(dv->var, dv->type));
+            compiler_decl_local(c, dv->var, dv->type);
             ret_type = right_type;
 
             //local variable is on stack at this point
@@ -726,16 +782,16 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
         case NODE_GET_VAR: {
             struct NodeGetVar *gv = (struct NodeGetVar*)n;
 
-            int idx = vda_get_idx(c->vda, gv->var);
-            if (idx == -1) {
+            struct VarData* vd = compiler_get_local(c, gv->var);
+            if (!vd) {
                 ems_add(&ems, gv->var.line, "Type Error: Variable not declared!");
                 ret_type = T_NIL_TYPE; //TODO: Should be error type to avoid multiple error messages
             } else {
-                ret_type = c->vda->vds[idx].type.type;
+                ret_type = vd->type.type;
             }
 
             char s[64];
-            sprintf(s, "    mov     eax, [ebp - %d]\n", 4 * (idx + 1));
+            sprintf(s, "    mov     eax, [ebp - %d]\n", 4 * (vd->bp_offset + 1));
             compiler_append_text(c, s, strlen(s));
             char* push_op = "    push    eax\n\0";
             compiler_append_text(c, push_op, strlen(push_op));
@@ -744,13 +800,13 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
         case NODE_SET_VAR: {
             struct NodeSetVar *sv = (struct NodeSetVar*)n;
 
-            int idx = vda_get_idx(c->vda, sv->var);
-            if (idx == -1) {
+            struct VarData* vd = compiler_get_local(c, sv->var);
+            if (!vd) {
                 ems_add(&ems, sv->var.line, "Type Error: Variable not declared!");
                 ret_type = T_NIL_TYPE; //TODO: should have special error type to avoid repeated error messages
             } else {
                 enum TokenType assigned_type = compiler_compile(c, sv->expr);
-                if (c->vda->vds[idx].type.type != assigned_type) {
+                if (vd->type.type != assigned_type) {
                     ems_add(&ems, sv->var.line, "Type Error: Declaration type and assigned value type don't match!");
                     ret_type = T_NIL_TYPE; //TODO: should have special error type to avoid repeated type error messages
                 } else {
@@ -761,7 +817,7 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             char* pop = "    pop     eax\n\0";
             compiler_append_text(c, pop, strlen(pop));
             char s[64];
-            sprintf(s, "    mov     [ebp - %d], eax\n", 4 * (idx + 1));
+            sprintf(s, "    mov     [ebp - %d], eax\n", 4 * (vd->bp_offset + 1));
             compiler_append_text(c, s, strlen(s));
             char* push_op = "    push    eax\n\0";
             compiler_append_text(c, push_op, strlen(push_op));
@@ -769,9 +825,15 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
         }
         case NODE_BLOCK: {
             struct NodeBlock *b = (struct NodeBlock*)n;
-            //compiler_start_scope
-            //compile each of the statements here
-            //compiler_end_scope
+            compiler_begin_scope(c);
+            for (int i = 0; i < b->stmts->count; i++) {
+                compiler_compile(c, b->stmts->nodes[i]);
+            }
+            int pop_count = compiler_end_scope(c);
+            for (int i = 0; i < pop_count; i++) {
+                char* pop = "    pop     eax\n\0";
+                compiler_append_text(c, pop, strlen(pop));
+            }
             break;
         }
         default:
@@ -1180,9 +1242,12 @@ int main (int argc, char **argv) {
     //Compile into IA32 (Intel syntax)
     struct Compiler c;
     compiler_init(&c, &vda);
+
+    compiler_begin_scope(&c);
     for (int i = 0; i < na.count; i++) {
         compiler_compile(&c, na.nodes[i]);
     }
+    compiler_end_scope(&c);
 
     if (ems.count <= 0) {
         compiler_output_assembly(&c);

@@ -5,25 +5,21 @@ Read a little more of 'Linkers and Loaders'
 
 GOAL: Get conditionals/loops/functions working, then make a assembler/linker for it
 
-Move type checking to compiler
-    have compiler_compile return an enum TokenType
-    the return value can be used to do type checking
+BUG!!!!
+    The following syntax error (an extra } in code) does NOT trigger error and still compiles to assembly - should display error
+                    "print(3)\n"
+                    "{\n"
+                    "x: int = 48\n"
+                    "x = 2\n"
+                    "print(x)}\n" <--- having two right braces doesn't give parsing error!??! Should give an error
+                    "}\n"
+                    "y: int = 1\n"
+                    "print(y)";
 
-Compile NodeBlock (also need to fill in VarData and VarDataArray correctly with scopes)
-    create a start_scope() and end_scope() functions to 
-
-    VarDataArray will contain a pointer to the next scope
-
-    vda_get_idx should be called by compiler_get_var_idx (which iterates through all scopes to find correct variable)
-        will need to refactor and not call vda_get_idx directly in compiler/type checker - compiler_get_var_idx iterates through vdas
-        note: compiler_get_var_idx will have to offset the index to include locals in outerscopes 
-            eg, add vda->count from each higher scope to the current idx
-
-    start_scope will add a new VarDataArray at beginning of linked list
-   
-    end_scope will remove first node in beginning of linked list
-
-    compile NodeBlock
+BUG!!!
+    Right now a variable in inner scope can't shadow variable in outer scope - should allow this
+        When declaring a new variable, only don't allow it IF a variable already exists in that scope
+        otherwise allow it to shadow variables in outer scopes
 
 Booleans (so that we can test the type checker and also prep for conditionals statements)
     include boolean operators (and, or, not, xor)
