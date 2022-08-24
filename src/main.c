@@ -7,11 +7,11 @@
 #define MAX_MSG_LEN 256
 
 
-static char* code = "print(1)\n"
-                    "x: int = 28\n"
+static char* code = "print(3)\n"
+                    "x: int = 48\n"
                     "x = 2\n"
                     "print(x)\n"
-                    "y: int = 3\n"
+                    "y: int = 1\n"
                     "print(y)";
 
 
@@ -179,6 +179,7 @@ struct VarDataArray {
     struct VarData *vds;
     int count;
     int max_count;
+    struct VarDataArray* next;
 };
 
 
@@ -196,7 +197,8 @@ enum NodeType {
     NODE_EXPR_STMT,
     NODE_DECL_VAR,
     NODE_GET_VAR,
-    NODE_SET_VAR
+    NODE_SET_VAR,
+    NODE_BLOCK
 };
 
 struct Node {
@@ -254,6 +256,13 @@ struct NodeArray {
     struct Node **nodes;
     int count;
     int max_count;
+};
+
+struct NodeBlock {
+    struct Node n;
+    struct Token l_brace;
+    struct Token r_brace;
+    struct NodeArray* stmts;
 };
 
 void na_init(struct NodeArray *na) {
@@ -346,6 +355,15 @@ struct Node *node_set_var(struct Token var, struct Node *expr) {
     return (struct Node*)node;
 }
 
+struct Node *node_block(struct Token l_brace, struct Token r_brace, struct NodeArray* na) {
+    struct NodeBlock *node = alloc_unit(sizeof(struct NodeBlock));
+    node->n.type = NODE_BLOCK;
+    node->l_brace = l_brace;
+    node->r_brace = r_brace;
+    node->stmts = na;
+    return (struct Node*)node;
+}
+
 void ast_print(struct Node* n) {
     switch (n->type) {
         case NODE_LITERAL: {
@@ -388,6 +406,10 @@ void ast_print(struct Node* n) {
         }
         case NODE_SET_VAR: {
             printf("NODE_SET_VAR");  
+            break;
+        }
+        case NODE_BLOCK: {
+            printf("NODE_BLOCK");  
             break;
         }
         default:
@@ -445,6 +467,13 @@ void ast_free(struct Node* n) {
             free_unit(sv, sizeof(struct NodeSetVar));
             break;
         }
+        case NODE_BLOCK: {
+            struct NodeBlock *b = (struct NodeBlock*)n;
+            na_free(b->stmts);
+            free_unit(b->stmts, sizeof(struct NodeArray));
+            free_unit(b, sizeof(struct NodeBlock));
+            break;
+        }
         default:
             printf("Node type not recognized\n");
             break;
@@ -460,6 +489,7 @@ void vda_init(struct VarDataArray *vda) {
     vda->vds = NULL;
     vda->count = 0;
     vda->max_count = 0;
+    vda->next = NULL;
 }
 
 void vda_free(struct VarDataArray *vda) {
@@ -581,10 +611,21 @@ void compiler_output_assembly(struct Compiler *c) {
     fclose(f);
 }
 
-void compiler_compile(struct Compiler *c, struct Node *n) {
+enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
+    enum TokenType ret_type;
     switch (n->type) {
         case NODE_LITERAL: {
             struct NodeLiteral* l = (struct NodeLiteral*)n;
+
+            switch (l->value.type) {
+                case T_INT:
+                    ret_type = T_INT_TYPE;
+                    break;
+                default:
+                    ret_type = T_NIL_TYPE;
+                    break;
+            }
+
             char s[64];
             sprintf(s, "    push    %.*s\n", l->value.len, l->value.start);
             compiler_append_text(c, s, strlen(s));
@@ -592,7 +633,9 @@ void compiler_compile(struct Compiler *c, struct Node *n) {
         }
         case NODE_UNARY: {
             struct NodeUnary *u = (struct NodeUnary*)n;
-            compiler_compile(c, u->right);
+
+            ret_type = compiler_compile(c, u->right);
+
             char* pop_right = "    pop     eax\n\0";
             compiler_append_text(c, pop_right, strlen(pop_right));
             char* neg_op = "    neg     eax\n\0";
@@ -603,8 +646,16 @@ void compiler_compile(struct Compiler *c, struct Node *n) {
         }
         case NODE_BINARY: {
             struct NodeBinary* b = (struct NodeBinary*)n;
-            compiler_compile(c, b->left);
-            compiler_compile(c, b->right);
+
+            enum TokenType left_type = compiler_compile(c, b->left);
+            enum TokenType right_type = compiler_compile(c, b->right);
+            if (left_type != right_type) {
+                ems_add(&ems, b->op.line, "Type Error: Left and right types don't match!");
+                ret_type = T_NIL_TYPE; //TODO: Should be error type to avoid same error messages
+            } else {
+                ret_type = left_type;
+            }
+
             char* pop_right = "    pop     ebx\n\0";
             compiler_append_text(c, pop_right, strlen(pop_right));
             char* pop_left = "    pop     eax\n\0";
@@ -630,14 +681,22 @@ void compiler_compile(struct Compiler *c, struct Node *n) {
         }
         case NODE_EXPR_STMT: {
             struct NodeExprStmt *es = (struct NodeExprStmt*)n;
-            compiler_compile(c, es->expr);
+
+            enum TokenType expr_type = compiler_compile(c, es->expr);
+            expr_type = expr_type; //silencing warning of unused expr_type
+            ret_type = T_NIL_TYPE;
+
             char* pop = "    pop     ebx\n\0";
             compiler_append_text(c, pop, strlen(pop));
             break;
         }
         case NODE_PRINT: {
             struct NodePrint *np = (struct NodePrint*)n;
-            compiler_compile(c, np->arg);
+
+            enum TokenType arg_type = compiler_compile(c, np->arg);
+            arg_type = arg_type; //silencing warning of unused arg_type
+            ret_type = T_NIL_TYPE;
+
             char* call = "    call    _print_int\n\0";
             compiler_append_text(c, call, strlen(call));
             char* clear = "    add     esp, 4\n\0"; //TODO: assuming one 4 byte argument
@@ -650,17 +709,31 @@ void compiler_compile(struct Compiler *c, struct Node *n) {
         }
         case NODE_DECL_VAR: {
             struct NodeDeclVar *dv = (struct NodeDeclVar*)n;
-            compiler_compile(c, dv->expr);
-            //variable should already be in VarDataArray (added when running typechecker)
+
+            enum TokenType right_type = compiler_compile(c, dv->expr);
+            if (right_type != dv->type.type) {
+                ems_add(&ems, dv->var.line, "Type Error: Declaration type and assigned value type don't match!");
+            }
+            if (vda_get_idx(c->vda, dv->var) != -1) {
+                ems_add(&ems, dv->var.line, "Type Error: Variable already declared!");
+            }
+            vda_add(c->vda, vd_create(dv->var, dv->type));
+            ret_type = right_type;
+
+            //local variable is on stack at this point
             break;
         }
         case NODE_GET_VAR: {
             struct NodeGetVar *gv = (struct NodeGetVar*)n;
+
             int idx = vda_get_idx(c->vda, gv->var);
             if (idx == -1) {
-                printf("Variable not declared!\n");
-                //exit(1);
+                ems_add(&ems, gv->var.line, "Type Error: Variable not declared!");
+                ret_type = T_NIL_TYPE; //TODO: Should be error type to avoid multiple error messages
+            } else {
+                ret_type = c->vda->vds[idx].type.type;
             }
+
             char s[64];
             sprintf(s, "    mov     eax, [ebp - %d]\n", 4 * (idx + 1));
             compiler_append_text(c, s, strlen(s));
@@ -670,12 +743,21 @@ void compiler_compile(struct Compiler *c, struct Node *n) {
         }
         case NODE_SET_VAR: {
             struct NodeSetVar *sv = (struct NodeSetVar*)n;
-            compiler_compile(c, sv->expr);
+
             int idx = vda_get_idx(c->vda, sv->var);
             if (idx == -1) {
-                printf("Variable not declared!\n");
-                //exit(1);
+                ems_add(&ems, sv->var.line, "Type Error: Variable not declared!");
+                ret_type = T_NIL_TYPE; //TODO: should have special error type to avoid repeated error messages
+            } else {
+                enum TokenType assigned_type = compiler_compile(c, sv->expr);
+                if (c->vda->vds[idx].type.type != assigned_type) {
+                    ems_add(&ems, sv->var.line, "Type Error: Declaration type and assigned value type don't match!");
+                    ret_type = T_NIL_TYPE; //TODO: should have special error type to avoid repeated type error messages
+                } else {
+                    ret_type = assigned_type;
+                }
             }
+
             char* pop = "    pop     eax\n\0";
             compiler_append_text(c, pop, strlen(pop));
             char s[64];
@@ -685,10 +767,19 @@ void compiler_compile(struct Compiler *c, struct Node *n) {
             compiler_append_text(c, push_op, strlen(push_op));
             break;
         }
+        case NODE_BLOCK: {
+            struct NodeBlock *b = (struct NodeBlock*)n;
+            //compiler_start_scope
+            //compile each of the statements here
+            //compiler_end_scope
+            break;
+        }
         default:
             printf("Node type not recognized\n");
             break;
     }
+    
+    return ret_type;
 }
 
 
@@ -826,6 +917,16 @@ struct Node *parse_stmt(struct Parser *p) {
         parser_consume(p, T_EQUALS);
         struct Node *expr = parse_expr(p);
         return node_decl_var(var, type, expr);
+    } else if (next.type == T_L_BRACE) {
+        struct Token l_brace = parser_next(p);
+        struct NodeArray* na = alloc_unit(sizeof(struct NodeArray));
+        na_init(na);
+        while (parser_peek_one(p).type != T_R_BRACE) {
+            struct Node* stmt = parse_stmt(p);
+            na_add(na, stmt);
+        }
+        struct Token r_brace = parser_next(p);
+        return node_block(l_brace, r_brace, na);
     } else {
         return node_expr_stmt(parse_expr(p));
     }
@@ -1015,84 +1116,6 @@ struct Token lexer_next_token(struct Lexer *l) {
     return t;
 }
 
-/*
- * Type Checker
- */
-
-enum TokenType type_check(struct Node* n, struct VarDataArray* vda) {
-    enum TokenType t;
-    switch(n->type) {
-        case NODE_LITERAL: {
-            struct NodeLiteral *l = (struct NodeLiteral*)n;
-            switch (l->value.type) {
-                case T_INT:
-                    t = T_INT_TYPE;
-                    break;
-                default:
-                    t = T_NIL_TYPE;
-                    break;
-            }
-            break;
-        }
-        case NODE_UNARY: {
-            struct NodeUnary *u = (struct NodeUnary*)n;
-            //TODO: don't allow - for string/boolean
-            //TODO: don't allow ! for int/float/string types
-            t = type_check(u->right, vda);
-            break;
-        }
-        case NODE_BINARY: {
-            struct NodeBinary* b = (struct NodeBinary*)n;
-            enum TokenType left_type = type_check(b->left, vda);
-            enum TokenType right_type = type_check(b->right, vda);
-            if (left_type != right_type) {
-                ems_add(&ems, b->op.line, "Type Error: Left and right types don't match!");
-            }
-            t = left_type;
-            break;
-        }
-        case NODE_DECL_VAR: {
-            struct NodeDeclVar *dv = (struct NodeDeclVar*)n;
-            enum TokenType expr_t = type_check(dv->expr, vda);
-            if (expr_t != dv->type.type) {
-                ems_add(&ems, dv->var.line, "Type Error: Declaration type and assigned value type don't match!");
-            }
-            if (vda_get_idx(vda, dv->var) != -1) {
-                ems_add(&ems, dv->var.line, "Type Error: Variable already declared!");
-            }
-            vda_add(vda, vd_create(dv->var, dv->type));
-            t = expr_t;
-            break;
-        }
-        case NODE_GET_VAR: {
-            struct NodeGetVar *gv = (struct NodeGetVar*)n;
-            int idx = vda_get_idx(vda, gv->var);
-            if (idx == -1) {
-                ems_add(&ems, gv->var.line, "Type Error: Variable not declared!");
-            } else {
-                t = vda->vds[idx].type.type;
-            }
-            break;
-        }
-        case NODE_SET_VAR: {
-            struct NodeSetVar *sv = (struct NodeSetVar*)n;
-            int idx = vda_get_idx(vda, sv->var);
-            if (idx == -1) {
-                ems_add(&ems, sv->var.line, "Type Error: Variable not declared!");
-            }
-            enum TokenType expr_t = type_check(sv->expr, vda);
-            if (vda->vds[idx].type.type != expr_t) {
-                ems_add(&ems, sv->var.line, "Type Error: Declaration type and assigned value type don't match!");
-            }
-            t = expr_t;
-            break;
-        }
-        default:
-            t = T_NIL_TYPE;
-            break;
-    }
-    return t;
-}
 
 int main (int argc, char **argv) {
     argc = argc;
@@ -1146,9 +1169,10 @@ int main (int argc, char **argv) {
     //Static Type checking
     struct VarDataArray vda;
     vda_init(&vda);
+    /*
     for (int i = 0; i < na.count; i++) {
         type_check(na.nodes[i], &vda);
-    }
+    }*/
 
     
     //Could optimize AST at this point?

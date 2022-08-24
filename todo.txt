@@ -1,43 +1,29 @@
 Read a little more of 'Computer Systems: A Programmer's Perspective'
-    next chapter - ...
+    next section on control
 Read a little more of 'Linkers and Loaders'
-    try to build project in C
+    read chapter 2
 
 GOAL: Get conditionals/loops/functions working, then make a assembler/linker for it
 
+Move type checking to compiler
+    have compiler_compile return an enum TokenType
+    the return value can be used to do type checking
 
-    vda->vd = NULL; //TODO: this should be vds (make it pluaral since it's an array of vds)
-    vda->count = 0;
-    vda->max_count = 0;
+Compile NodeBlock (also need to fill in VarData and VarDataArray correctly with scopes)
+    create a start_scope() and end_scope() functions to 
 
-struct CharArray?  What's up with this?  Can't we just use a char*????
+    VarDataArray will contain a pointer to the next scope
 
-Free structs
-    Lexer
-    Parser
-    Typer?
-    Compiler
-    ErrorMsgs
+    vda_get_idx should be called by compiler_get_var_idx (which iterates through all scopes to find correct variable)
+        will need to refactor and not call vda_get_idx directly in compiler/type checker - compiler_get_var_idx iterates through vdas
+        note: compiler_get_var_idx will have to offset the index to include locals in outerscopes 
+            eg, add vda->count from each higher scope to the current idx
 
-    Current program mememory allocation: 2688
-    Goal: 0!!!
+    start_scope will add a new VarDataArray at beginning of linked list
+   
+    end_scope will remove first node in beginning of linked list
 
-Need to get Error messages for each step
-    How to deal with errors in lexing, parsing and type checking?
-        if error encounter while lexing, skip all characters until the next valid token...?
-        if error encountered while parsing, skip line?
-        if error encountered while type checking ... what should we do?
-
-braces, booleans, and boolean types are recognized as tokens now
-Parse them (need a NodeBlock to store info)
-VarData needs to take variables in outer scopes into account
-    can read variables from outer scope
-    declaring variables with same name will shadow variables in outer scope with same name
-    should store VarDataArray inside of compiler since it will need to use it 
-        also, make the compiler hold a linked list of VarDataArray (need to add a new field to vda)
-            struct VarDataArray* next;
-            can detach next (free and null pointers) when popping scopes
-        so that we can jump to next link to go up the scope chain
+    compile NodeBlock
 
 Booleans (so that we can test the type checker and also prep for conditionals statements)
     include boolean operators (and, or, not, xor)
@@ -52,6 +38,12 @@ conditional statements
     NODE_IF - can have elif/else inside of here too
         else is a single pointer to 
         elif needs to be an array of pointers since there could be none or many elifs
+
+Need to get Error messages for each step
+    How to deal with errors in lexing, parsing and type checking?
+        if error encounter while lexing, skip all characters until the next valid token...?
+        if error encountered while parsing, skip line?
+        if error encountered while type checking ... what should we do?
 
 Add in modulus operator 
     should be easy...right?  One of the registers holds the remainder when using 'div' operation
