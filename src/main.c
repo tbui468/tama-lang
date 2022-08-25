@@ -10,6 +10,9 @@ static char* code = "a: bool = true\n"
                     "b: bool = false\n"
                     "print(a)\n"
                     "print(b)\n"
+                    "print(!a)\n"
+                    "print(!b)\n"
+                    //"print(1 < 5)\n"
                     "print(1)\n"
                     "x: int = 10\n"
                     "{\n"
@@ -67,13 +70,20 @@ enum TokenType {
     T_COLON,
     T_INT_TYPE,
     T_NIL_TYPE,
-    T_EQUALS,
+    T_EQUAL,
     T_IDENTIFIER,
     T_TRUE,
     T_FALSE,
     T_BOOL_TYPE,
     T_L_BRACE,
-    T_R_BRACE
+    T_R_BRACE,
+    T_LESS,
+    T_GREATER,
+    T_LESS_EQUAL,
+    T_GREATER_EQUAL,
+    T_EQUAL_EQUAL,
+    T_NOT_EQUAL,
+    T_NOT
 };
 
 struct Token {
@@ -705,8 +715,15 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
 
             char* pop_right = "    pop     eax\n\0";
             compiler_append_text(c, pop_right, strlen(pop_right));
-            char* neg_op = "    neg     eax\n\0";
+
+            char* neg_op;
+            if (ret_type == T_INT_TYPE) {
+                neg_op = "    neg     eax\n\0";
+            } else if (ret_type == T_BOOL_TYPE) {
+                neg_op = "    xor     eax, 1\n\0";
+            }
             compiler_append_text(c, neg_op, strlen(neg_op));
+
             char* push_op = "    push    eax\n\0";
             compiler_append_text(c, push_op, strlen(push_op));
             break;
@@ -941,7 +958,7 @@ struct Node* parse_literal(struct Parser *p) {
 
 struct Node* parse_unary(struct Parser *p) {
     struct Token next = parser_peek_one(p);
-    if (next.type == T_MINUS) {
+    if (next.type == T_MINUS || next.type == T_NOT) {
         struct Token op = parser_next(p);
         return node_unary(op, parse_unary(p));
     } else {
@@ -982,9 +999,9 @@ struct Node* parse_add_sub(struct Parser *p) {
 }
 
 struct Node* parse_assignment(struct Parser *p) {
-    if (parser_peek_one(p).type == T_IDENTIFIER && parser_peek_two(p).type == T_EQUALS) {
+    if (parser_peek_one(p).type == T_IDENTIFIER && parser_peek_two(p).type == T_EQUAL) {
         struct Token var = parser_consume(p, T_IDENTIFIER);
-        parser_consume(p, T_EQUALS);
+        parser_consume(p, T_EQUAL);
         struct Node *expr = parse_expr(p);
         return node_set_var(var, expr);
     } else {
@@ -1008,7 +1025,7 @@ struct Node *parse_stmt(struct Parser *p) {
         struct Token var = parser_consume(p, T_IDENTIFIER);
         parser_consume(p, T_COLON);
         struct Token type = parser_next(p);
-        parser_consume(p, T_EQUALS);
+        parser_consume(p, T_EQUAL);
         struct Node *expr = parse_expr(p);
         return node_decl_var(var, type, expr);
     } else if (next.type == T_L_BRACE) {
@@ -1183,10 +1200,45 @@ struct Token lexer_next_token(struct Lexer *l) {
             t.start = &l->code[l->current];
             t.len = 1;
             break;
-        case '=':
-            t.type = T_EQUALS;
+        case '<':
             t.start = &l->code[l->current];
-            t.len = 1;
+            if (l->current + 1 < (int)strlen(l->code) && l->code[l->current + 1] == '=') {
+                t.type = T_LESS_EQUAL;
+                t.len = 2;
+            } else {
+                t.type = T_LESS;
+                t.len = 1;
+            }
+            break;
+        case '>':
+            t.start = &l->code[l->current];
+            if (l->current + 1 < (int)strlen(l->code) && l->code[l->current + 1] == '=') {
+                t.type = T_GREATER_EQUAL;
+                t.len = 2;
+            } else {
+                t.type = T_GREATER;
+                t.len = 1;
+            }
+            break;
+        case '=':
+            t.start = &l->code[l->current];
+            if (l->current + 1 < (int)strlen(l->code) && l->code[l->current + 1] == '=') {
+                t.type = T_EQUAL_EQUAL;
+                t.len = 2;
+            } else {
+                t.type = T_EQUAL;
+                t.len = 1;
+            }
+            break;
+        case '!':
+            t.start = &l->code[l->current];
+            if (l->current + 1 < (int)strlen(l->code) && l->code[l->current + 1] == '=') {
+                t.type = T_NOT_EQUAL;
+                t.len = 2;
+            } else {
+                t.type = T_NOT;
+                t.len = 1;
+            }
             break;
         case '{':
             t.type = T_L_BRACE;

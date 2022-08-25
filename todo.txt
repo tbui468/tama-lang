@@ -5,24 +5,24 @@ Read a little more of 'Linkers and Loaders'
 
 GOAL: Get conditionals/loops/functions working, then make a assembler/linker for it
 
-Make a print_bool routine in assembly
+Have parser parse the seven boolean operators (check precedence table)
+    ! (DONE)
+    <-------arithmetic operators go here------->
+    <, <=, >, >=
+    ==, !=
+    and
+    or
 
-Printing booleans:
-    Have compiler track the type of the argument inside of the print function
-        if it's an integer, use print_int routine
-        if it's a boolean, use print_bool routine (true if 0x1, and false if 0x0)
+Have compiler compile the seven boolean operators (need to figure out assembly to compare 0x1 and 0x0)
 
-Booleans (so that we can test the type checker and also prep for conditionals statements)
-    true, false
-    <, >, <=, >=, ==, !=
+Boolean operators (so that we can test the type checker and also prep for conditionals statements)
+    <, >, <=, >=, ==, !=, !
+    and, or, xor
 
 conditional statements
     NODE_IF - can have elif/else inside of here too
         else is a single pointer to 
         elif needs to be an array of pointers since there could be none or many elifs
-
-Compound boolean expressions
-    and, or
 
 Need to get Error messages for each step
     How to deal with errors in lexing, parsing and type checking?
@@ -69,6 +69,14 @@ Like python, but compiled to assembly and statically type-checked
 
     z := 25
     print(z + 4)
+
+    a: int32 = 232
+    b: int64 = 23
+    c: float32
+    d: float64
+    e: bool
+    f: char
+    g: str
 
 Get entire language compiling for arithmetic expressions
     Error
