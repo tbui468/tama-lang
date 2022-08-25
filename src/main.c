@@ -6,8 +6,11 @@
 
 #define MAX_MSG_LEN 256
 
-
-static char* code = "print(1)\n"
+static char* code = "a: bool = true\n"
+                    "b: bool = false\n"
+                    "print(a)\n"
+                    "print(b)\n"
+                    "print(1)\n"
                     "x: int = 10\n"
                     "{\n"
                     "   x = 3\n"
@@ -18,7 +21,6 @@ static char* code = "print(1)\n"
                     "print(x)\n"
                     "y: int = 4\n"
                     "print(y)";
-
 
 size_t allocated;
 
@@ -676,13 +678,23 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
                 case T_INT:
                     ret_type = T_INT_TYPE;
                     break;
+                case T_TRUE:
+                case T_FALSE:
+                    ret_type = T_BOOL_TYPE;
+                    break;
                 default:
                     ret_type = T_NIL_TYPE;
                     break;
             }
 
             char s[64];
-            sprintf(s, "    push    %.*s\n", l->value.len, l->value.start);
+            if (ret_type == T_INT_TYPE) {
+                sprintf(s, "    push    %.*s\n", l->value.len, l->value.start);
+            } else if (l->value.type == T_TRUE) {
+                sprintf(s, "    push    1\n");
+            } else if (l->value.type == T_FALSE) {
+                sprintf(s, "    push    0\n");
+            }
             compiler_append_text(c, s, strlen(s));
             break;
         }
@@ -749,11 +761,17 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             struct NodePrint *np = (struct NodePrint*)n;
 
             enum TokenType arg_type = compiler_compile(c, np->arg);
-            arg_type = arg_type; //silencing warning of unused arg_type
             ret_type = T_NIL_TYPE;
 
-            char* call = "    call    _print_int\n\0";
+            char* call;
+            if (arg_type == T_INT_TYPE) {
+                call = "    call    _print_int\n\0";
+            } else if (arg_type == T_BOOL_TYPE) {
+                call = "    call    _print_bool\n\0";
+            }
             compiler_append_text(c, call, strlen(call));
+
+
             char* clear = "    add     esp, 4\n\0"; //TODO: assuming one 4 byte argument
             compiler_append_text(c, clear, strlen(clear));
             char* newline = "    push    0xa\n"

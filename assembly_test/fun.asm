@@ -1,4 +1,3 @@
-
 _print_char:
     push    ebp
     mov     ebp, esp
@@ -91,3 +90,57 @@ print_all:
     pop     ebp
     xor     eax, eax
     ret
+
+_print_bool:
+    push    ebp
+    mov     ebp, esp
+
+    mov     eax, [ebp + 8] 
+    cmp     eax, 0
+    jg      print_true
+
+    push    0x66
+    call    _print_char
+    add     esp, 4
+
+    push    0x61
+    call    _print_char
+    add     esp, 4
+
+    push    0x6c
+    call    _print_char
+    add     esp, 4
+
+    push    0x73
+    call    _print_char
+    add     esp, 4
+
+    push    0x65
+    call    _print_char
+    add     esp, 4
+
+    jmp     print_bool_end
+
+print_true:
+    push    0x74
+    call    _print_char
+    add     esp, 4
+
+    push    0x72
+    call    _print_char
+    add     esp, 4
+
+    push    0x75
+    call    _print_char
+    add     esp, 4
+
+    push    0x65
+    call    _print_char
+    add     esp, 4
+
+print_bool_end:
+
+    pop     ebp
+    xor     eax, eax
+    ret
+

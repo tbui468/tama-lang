@@ -5,13 +5,24 @@ Read a little more of 'Linkers and Loaders'
 
 GOAL: Get conditionals/loops/functions working, then make a assembler/linker for it
 
+Make a print_bool routine in assembly
+
+Printing booleans:
+    Have compiler track the type of the argument inside of the print function
+        if it's an integer, use print_int routine
+        if it's a boolean, use print_bool routine (true if 0x1, and false if 0x0)
+
 Booleans (so that we can test the type checker and also prep for conditionals statements)
-    include boolean operators (and, or, not, xor)
+    true, false
+    <, >, <=, >=, ==, !=
 
 conditional statements
     NODE_IF - can have elif/else inside of here too
         else is a single pointer to 
         elif needs to be an array of pointers since there could be none or many elifs
+
+Compound boolean expressions
+    and, or
 
 Need to get Error messages for each step
     How to deal with errors in lexing, parsing and type checking?
@@ -20,9 +31,11 @@ Need to get Error messages for each step
 
 When too big ~2000 lines, break program up into smaller files
 
-Add in modulus operator 
-    should be easy...right?  One of the registers holds the remainder when using 'div' operation
-    but what about trying to modulus with negative numbers?
+Function definitions
+    fun add(a: int, b: int) -> int {
+        result: int = a + b
+        -> result
+    }
 
 Need to deal with overflow with multiplication/add
 
@@ -49,10 +62,13 @@ Like python, but compiled to assembly and statically type-checked
         print(i)
     }
 
-    fun my_add(a: int, b: int) returns (int) {
+    fun my_add(a: int, b: int) -> {
         x: int = a + b
-        return x 
+        -> x 
     }
+
+    z := 25
+    print(z + 4)
 
 Get entire language compiling for arithmetic expressions
     Error
@@ -69,3 +85,7 @@ Get entire language compiling for arithmetic expressions
         traverse AST once to catch type errors
     Compiler
         traverse AST again to generate IA32 assembly
+
+    Assembler
+
+    Linker
