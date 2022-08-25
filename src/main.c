@@ -863,15 +863,23 @@ struct Token parser_peek_two(struct Parser *p) {
 }
 
 struct Token parser_peek_one(struct Parser *p) {
-    return p->ta->tokens[p->current];
+    int next = p->current;
+    if (next >= p->ta->count)
+        next = p->ta->count - 1;
+    return p->ta->tokens[next];
 }
 
 struct Token parser_next(struct Parser *p) {
-    return p->ta->tokens[p->current++];
+    int next = p->current;
+    if (next >= p->ta->count)
+        next = p->ta->count - 1;
+    struct Token ret = p->ta->tokens[next];
+    p->current++;
+    return ret;
 }
 
 struct Token parser_consume(struct Parser *p, enum TokenType tt) {
-    struct Token t = p->ta->tokens[p->current++];
+    struct Token t = parser_next(p);
     if (t.type != tt) {
         ems_add(&ems, t.line, "Unexpected token!");
     }
@@ -902,7 +910,14 @@ struct Node* parse_literal(struct Parser *p) {
         return parse_group(p);
     } else if (next.type == T_IDENTIFIER) {
         return node_get_var(parser_next(p));
+    } else if (next.type == T_INT) {
+        return node_literal(parser_next(p));
+    } else if (next.type == T_TRUE) {
+        return node_literal(parser_next(p));
+    } else if (next.type == T_FALSE) {
+        return node_literal(parser_next(p));
     } else {
+        ems_add(&ems, next.line, "Parse Error: Unexpected token.");
         return node_literal(parser_next(p));
     }
 }
@@ -967,7 +982,7 @@ struct Node* parse_expr(struct Parser *p) {
 struct Node *parse_stmt(struct Parser *p) {
     struct Token next = parser_peek_one(p);
     if (next.type == T_PRINT) {
-        parser_consume(p, T_PRINT);
+        parser_next(p);
         parser_consume(p, T_L_PAREN);
         struct Node* arg = parse_expr(p);
         parser_consume(p, T_R_PAREN);
@@ -983,11 +998,11 @@ struct Node *parse_stmt(struct Parser *p) {
         struct Token l_brace = parser_next(p);
         struct NodeArray* na = alloc_unit(sizeof(struct NodeArray));
         na_init(na);
-        while (parser_peek_one(p).type != T_R_BRACE) {
+        while (parser_peek_one(p).type != T_R_BRACE && parser_peek_one(p).type != T_EOF) {
             struct Node* stmt = parse_stmt(p);
             na_add(na, stmt);
         }
-        struct Token r_brace = parser_next(p);
+        struct Token r_brace = parser_consume(p, T_R_BRACE);
         return node_block(l_brace, r_brace, na);
     } else {
         return node_expr_stmt(parse_expr(p));
@@ -1206,6 +1221,7 @@ int main (int argc, char **argv) {
     t.type = T_EOF;
     t.start = NULL;
     t.len = 0;
+    t.line = l.line;
     ta_add(&ta, t);
 
     for (int i = 0; i < ta.count; i++) {
@@ -1228,18 +1244,12 @@ int main (int argc, char **argv) {
 //        printf("\n");
     }
 
-    //Static Type checking
-    struct VarDataArray vda;
-    vda_init(&vda);
-    /*
-    for (int i = 0; i < na.count; i++) {
-        type_check(na.nodes[i], &vda);
-    }*/
-
     
     //Could optimize AST at this point?
 
     //Compile into IA32 (Intel syntax)
+    struct VarDataArray vda;
+    vda_init(&vda);
     struct Compiler c;
     compiler_init(&c, &vda);
 

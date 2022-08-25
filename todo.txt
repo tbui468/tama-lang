@@ -5,17 +5,6 @@ Read a little more of 'Linkers and Loaders'
 
 GOAL: Get conditionals/loops/functions working, then make a assembler/linker for it
 
-BUG!!!!
-    The following syntax error (an extra } in code) does NOT trigger error and still compiles to assembly - should display error
-                    "print(3)\n"
-                    "{\n"
-                    "x: int = 48\n"
-                    "x = 2\n"
-                    "print(x)}\n" <--- having two right braces doesn't give parsing error!??! Should give an error
-                    "}\n"
-                    "y: int = 1\n"
-                    "print(y)";
-
 BUG!!!
     Right now a variable in inner scope can't shadow variable in outer scope - should allow this
         When declaring a new variable, only don't allow it IF a variable already exists in that scope
