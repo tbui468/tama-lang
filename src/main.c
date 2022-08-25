@@ -7,18 +7,16 @@
 #define MAX_MSG_LEN 256
 
 
-static char* code = "print(3)\n"
-                    "z: int = 10\n"
+static char* code = "print(1)\n"
+                    "x: int = 10\n"
                     "{\n"
-                    "   z = - 1\n"
+                    "   x = 3\n"
                     "   x: int = 48\n"
                     "   x = 2\n"
                     "   print(x)\n"
                     "}\n"
-                    "print(z)\n"
-                    "x: int = 0\n"
                     "print(x)\n"
-                    "y: int = 1\n"
+                    "y: int = 4\n"
                     "print(y)";
 
 
@@ -612,6 +610,7 @@ struct VarData* compiler_get_local(struct Compiler* c, struct Token var) {
     return vd;
 }
 
+
 void compiler_begin_scope(struct Compiler *c) {
     struct VarDataArray *scope = alloc_unit(sizeof(struct VarDataArray));
     vda_init(scope);
@@ -770,7 +769,7 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             if (right_type != dv->type.type) {
                 ems_add(&ems, dv->var.line, "Type Error: Declaration type and assigned value type don't match!");
             }
-            if (compiler_get_local(c, dv->var)) {
+            if (vda_get_local(c->head, dv->var)) {
                 ems_add(&ems, dv->var.line, "Type Error: Variable already declared!");
             }
             compiler_decl_local(c, dv->var, dv->type);

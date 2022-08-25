@@ -5,19 +5,8 @@ Read a little more of 'Linkers and Loaders'
 
 GOAL: Get conditionals/loops/functions working, then make a assembler/linker for it
 
-BUG!!!
-    Right now a variable in inner scope can't shadow variable in outer scope - should allow this
-        When declaring a new variable, only don't allow it IF a variable already exists in that scope
-        otherwise allow it to shadow variables in outer scopes
-
 Booleans (so that we can test the type checker and also prep for conditionals statements)
     include boolean operators (and, or, not, xor)
-
-Scopes (blocks) so we can do conditionals
-    need to think about how variables are popped off stack when scope ends
-
-blocks (needed for if/else/loops and also scoping)
-    when a block ends we need to pop the stack of any local variables
 
 conditional statements
     NODE_IF - can have elif/else inside of here too
@@ -28,7 +17,8 @@ Need to get Error messages for each step
     How to deal with errors in lexing, parsing and type checking?
         if error encounter while lexing, skip all characters until the next valid token...?
         if error encountered while parsing, skip line?
-        if error encountered while type checking ... what should we do?
+
+When too big ~2000 lines, break program up into smaller files
 
 Add in modulus operator 
     should be easy...right?  One of the registers holds the remainder when using 'div' operation
