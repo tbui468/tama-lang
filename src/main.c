@@ -8,12 +8,8 @@
 
 static char* code = "a: bool = true\n"
                     "b: bool = false\n"
-                    "print(a)\n"
-                    "print(b)\n"
-                    "print(!a)\n"
-                    "print(!b)\n"
-                    //"print(1 < 5)\n"
-                    "print(1)\n"
+                    "print(5 <= 5)\n"
+                    "print(-10 <= -10)\n"
                     "x: int = 10\n"
                     "{\n"
                     "   x = 3\n"
@@ -678,6 +674,49 @@ void compiler_output_assembly(struct Compiler *c) {
     fclose(f);
 }
 
+enum Register {
+    R_EAX,
+    R_EDX,
+    R_ECX,
+    R_EBX,
+    R_ESI,
+    R_EDI,
+    R_ESP,
+    R_EBP
+};
+
+void pop_stack(struct Compiler *c, enum Register r) {
+    char* s;
+    switch (r) {
+        case R_EAX: s = "    pop     eax\n\0"; break;
+        case R_EDX: s = "    pop     edx\n\0"; break;
+        case R_ECX: s = "    pop     ecx\n\0"; break;
+        case R_EBX: s = "    pop     ebx\n\0"; break;
+        case R_ESI: s = "    pop     esi\n\0"; break;
+        case R_EDI: s = "    pop     edi\n\0"; break;
+        case R_ESP: s = "    pop     esp\n\0"; break;
+        case R_EBP: s = "    pop     ebp\n\0"; break;
+        default: s = "";
+    }
+    compiler_append_text(c, s, strlen(s));
+}
+
+void push_stack(struct Compiler *c, enum Register r) {
+    char* s;
+    switch (r) {
+        case R_EAX: s = "    push    eax\n\0"; break;
+        case R_EDX: s = "    push    edx\n\0"; break;
+        case R_ECX: s = "    push    ecx\n\0"; break;
+        case R_EBX: s = "    push    ebx\n\0"; break;
+        case R_ESI: s = "    push    esi\n\0"; break;
+        case R_EDI: s = "    push    edi\n\0"; break;
+        case R_ESP: s = "    push    esp\n\0"; break;
+        case R_EBP: s = "    push    ebp\n\0"; break;
+        default: s = "";
+    }
+    compiler_append_text(c, s, strlen(s));
+}
+
 enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
     enum TokenType ret_type;
     switch (n->type) {
@@ -713,8 +752,7 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
 
             ret_type = compiler_compile(c, u->right);
 
-            char* pop_right = "    pop     eax\n\0";
-            compiler_append_text(c, pop_right, strlen(pop_right));
+            pop_stack(c, R_EAX);
 
             char* neg_op;
             if (ret_type == T_INT_TYPE) {
@@ -724,8 +762,7 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             }
             compiler_append_text(c, neg_op, strlen(neg_op));
 
-            char* push_op = "    push    eax\n\0";
-            compiler_append_text(c, push_op, strlen(push_op));
+            push_stack(c, R_EAX);
             break;
         }
         case NODE_BINARY: {
@@ -740,11 +777,10 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
                 ret_type = left_type;
             }
 
-            char* pop_right = "    pop     ebx\n\0";
-            compiler_append_text(c, pop_right, strlen(pop_right));
-            char* pop_left = "    pop     eax\n\0";
-            compiler_append_text(c, pop_left, strlen(pop_left));
-            if (*b->op.start == '+') {
+            pop_stack(c, R_EBX);
+            pop_stack(c, R_EAX);
+
+            if (*b->op.start == '+') { //TODO: Just check token type for all these - no need to look at characters
                 char* add = "    add     eax, ebx\n\0";
                 compiler_append_text(c, add, strlen(add)); 
             } else if (*b->op.start == '-') {
@@ -758,9 +794,40 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
                 compiler_append_text(c, cdq, strlen(cdq));
                 char* div = "    idiv    ebx\n\0";
                 compiler_append_text(c, div, strlen(div)); 
+            } else if (b->op.type == T_LESS) {
+                char* cmp = "    cmp     eax, ebx\n\0";
+                compiler_append_text(c, cmp, strlen(cmp));
+                char* set = "    setl    al\n\0"; //set byte to 0 or 1
+                compiler_append_text(c, set, strlen(set)); 
+                char* mov = "    movzx   eax, al\n\0";
+                compiler_append_text(c, mov, strlen(mov));
+                ret_type = T_BOOL_TYPE;
+            } else if (b->op.type == T_GREATER) {
+                char* cmp = "    cmp     eax, ebx\n\0";
+                compiler_append_text(c, cmp, strlen(cmp));
+                char* set = "    setg    al\n\0"; //set byte to 0 or 1
+                compiler_append_text(c, set, strlen(set)); 
+                char* mov = "    movzx   eax, al\n\0";
+                compiler_append_text(c, mov, strlen(mov));
+                ret_type = T_BOOL_TYPE;
+            } else if (b->op.type == T_LESS_EQUAL) {
+                char* cmp = "    cmp     eax, ebx\n\0";
+                compiler_append_text(c, cmp, strlen(cmp));
+                char* set = "    setle   al\n\0"; //set byte to 0 or 1
+                compiler_append_text(c, set, strlen(set)); 
+                char* mov = "    movzx   eax, al\n\0";
+                compiler_append_text(c, mov, strlen(mov));
+                ret_type = T_BOOL_TYPE;
+            } else if (b->op.type == T_GREATER_EQUAL) {
+                char* cmp = "    cmp     eax, ebx\n\0";
+                compiler_append_text(c, cmp, strlen(cmp));
+                char* set = "    setge   al\n\0"; //set byte to 0 or 1
+                compiler_append_text(c, set, strlen(set)); 
+                char* mov = "    movzx   eax, al\n\0";
+                compiler_append_text(c, mov, strlen(mov));
+                ret_type = T_BOOL_TYPE;
             }
-            char* push_op = "    push    eax\n\0";
-            compiler_append_text(c, push_op, strlen(push_op));
+            push_stack(c, R_EAX);
             break;
         }
         case NODE_EXPR_STMT: {
@@ -770,8 +837,7 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             expr_type = expr_type; //silencing warning of unused expr_type
             ret_type = T_NIL_TYPE;
 
-            char* pop = "    pop     ebx\n\0";
-            compiler_append_text(c, pop, strlen(pop));
+            pop_stack(c, R_EBX);
             break;
         }
         case NODE_PRINT: {
@@ -827,8 +893,7 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             char s[64];
             sprintf(s, "    mov     eax, [ebp - %d]\n", 4 * (vd->bp_offset + 1));
             compiler_append_text(c, s, strlen(s));
-            char* push_op = "    push    eax\n\0";
-            compiler_append_text(c, push_op, strlen(push_op));
+            push_stack(c, R_EAX);
             break;
         }
         case NODE_SET_VAR: {
@@ -848,13 +913,11 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
                 }
             }
 
-            char* pop = "    pop     eax\n\0";
-            compiler_append_text(c, pop, strlen(pop));
+            pop_stack(c, R_EAX);
             char s[64];
             sprintf(s, "    mov     [ebp - %d], eax\n", 4 * (vd->bp_offset + 1));
             compiler_append_text(c, s, strlen(s));
-            char* push_op = "    push    eax\n\0";
-            compiler_append_text(c, push_op, strlen(push_op));
+            push_stack(c, R_EAX);
             break;
         }
         case NODE_BLOCK: {
@@ -865,8 +928,7 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             }
             int pop_count = compiler_end_scope(c);
             for (int i = 0; i < pop_count; i++) {
-                char* pop = "    pop     eax\n\0";
-                compiler_append_text(c, pop, strlen(pop));
+                pop_stack(c, R_EAX);
             }
             break;
         }
@@ -998,6 +1060,24 @@ struct Node* parse_add_sub(struct Parser *p) {
     return left;
 }
 
+struct Node* parse_comparison(struct Parser *p) {
+    struct Node *left = parse_add_sub(p);
+
+    while (1) {
+        struct Token next = parser_peek_one(p);
+        if (next.type != T_LESS && next.type != T_LESS_EQUAL &&
+            next.type != T_GREATER && next.type != T_GREATER_EQUAL) {
+            break;
+        }
+
+        struct Token op = parser_next(p);
+        struct Node *right = parse_add_sub(p);
+        left = node_binary(left, op, right);
+    }
+
+    return left;
+}
+
 struct Node* parse_assignment(struct Parser *p) {
     if (parser_peek_one(p).type == T_IDENTIFIER && parser_peek_two(p).type == T_EQUAL) {
         struct Token var = parser_consume(p, T_IDENTIFIER);
@@ -1005,7 +1085,7 @@ struct Node* parse_assignment(struct Parser *p) {
         struct Node *expr = parse_expr(p);
         return node_set_var(var, expr);
     } else {
-        return parse_add_sub(p);
+        return parse_comparison(p);
     }
 }
 

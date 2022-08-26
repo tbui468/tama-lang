@@ -1,14 +1,15 @@
 Read a little more of 'Computer Systems: A Programmer's Perspective'
     next section on control
-Read a little more of 'Linkers and Loaders'
+Read a little more of 'Linkers and Loaders' and/or LLD docs/source
     read chapter 2
 
 GOAL: Get conditionals/loops/functions working, then make a assembler/linker for it
 
+
 Have parser parse the seven boolean operators (check precedence table)
     ! (DONE)
     <-------arithmetic operators go here------->
-    <, <=, >, >=
+    <, <=, >, >= (DONE!)
     ==, !=
     and
     or
@@ -30,6 +31,20 @@ Need to get Error messages for each step
         if error encountered while parsing, skip line?
 
 When too big ~2000 lines, break program up into smaller files
+
+Switch statements using jump tables (call them 'when' statements)
+    x: int = 7
+    when x {
+        is 5 {
+            print("it's 5!")
+        }
+        is 6 {
+            print("it's 6!")
+        }
+        is 7 {
+            print("it's 7!")
+        }
+    }
 
 Function definitions
     fun add(a: int, b: int) -> int {
