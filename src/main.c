@@ -10,6 +10,8 @@ static char* code = "a: bool = true\n"
                     "b: bool = false\n"
                     "print(5 <= 5)\n"
                     "print(-10 <= -10)\n"
+                    "print(true != true)\n"
+                    "print(false == false)\n"
                     "x: int = 10\n"
                     "{\n"
                     "   x = 3\n"
@@ -826,6 +828,22 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
                 char* mov = "    movzx   eax, al\n\0";
                 compiler_append_text(c, mov, strlen(mov));
                 ret_type = T_BOOL_TYPE;
+            } else if (b->op.type == T_EQUAL_EQUAL) {
+                char* cmp = "    cmp     eax, ebx\n\0";
+                compiler_append_text(c, cmp, strlen(cmp));
+                char* set = "    sete    al\n\0"; //set byte to 0 or 1
+                compiler_append_text(c, set, strlen(set)); 
+                char* mov = "    movzx   eax, al\n\0";
+                compiler_append_text(c, mov, strlen(mov));
+                ret_type = T_BOOL_TYPE;
+            } else if (b->op.type == T_NOT_EQUAL) {
+                char* cmp = "    cmp     eax, ebx\n\0";
+                compiler_append_text(c, cmp, strlen(cmp));
+                char* set = "    setne   al\n\0"; //set byte to 0 or 1
+                compiler_append_text(c, set, strlen(set)); 
+                char* mov = "    movzx   eax, al\n\0";
+                compiler_append_text(c, mov, strlen(mov));
+                ret_type = T_BOOL_TYPE;
             }
             push_stack(c, R_EAX);
             break;
@@ -1060,7 +1078,7 @@ struct Node* parse_add_sub(struct Parser *p) {
     return left;
 }
 
-struct Node* parse_comparison(struct Parser *p) {
+struct Node* parse_inequality(struct Parser *p) {
     struct Node *left = parse_add_sub(p);
 
     while (1) {
@@ -1078,6 +1096,23 @@ struct Node* parse_comparison(struct Parser *p) {
     return left;
 }
 
+struct Node *parse_equality(struct Parser *p) {
+    struct Node *left = parse_inequality(p);
+
+    while (1) {
+        struct Token next = parser_peek_one(p);
+        if (next.type != T_EQUAL_EQUAL && next.type != T_NOT_EQUAL) {
+            break;
+        }
+
+        struct Token op = parser_next(p);
+        struct Node *right = parse_inequality(p);
+        left = node_binary(left, op, right);
+    }
+
+    return left;
+}
+
 struct Node* parse_assignment(struct Parser *p) {
     if (parser_peek_one(p).type == T_IDENTIFIER && parser_peek_two(p).type == T_EQUAL) {
         struct Token var = parser_consume(p, T_IDENTIFIER);
@@ -1085,7 +1120,7 @@ struct Node* parse_assignment(struct Parser *p) {
         struct Node *expr = parse_expr(p);
         return node_set_var(var, expr);
     } else {
-        return parse_comparison(p);
+        return parse_equality(p);
     }
 }
 
