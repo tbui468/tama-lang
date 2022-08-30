@@ -3,17 +3,32 @@ Read a little more of 'Computer Systems: A Programmer's Perspective'
 Read a little more of 'Linkers and Loaders' and/or LLD docs/source
     read chapter 2
 
-GOAL: Get conditionals/loops/functions working, then make a assembler/linker for it
+GOAL 1: Get loops/functions working, then make a assembler/linker for it
+GOAL 2: Get switch statements, arrays and structs working
 
-push_stack and pop_stack are so confusing with the enums for registers
-    just make the second argument a string, eg "eax", and then format the resulting string with that
+When file too big to manage, break program up into smaller .c and .h files
 
-Need to get Error messages for each step
-    How to deal with errors in lexing, parsing and type checking?
-        if error encounter while lexing, skip all characters until the next valid token...?
-        if error encountered while parsing, skip line?
+make a function call write_op(char* format, char* op, ...) that takes in variable arguments
+    this will simplify the compiling steps significantly!!!
+    write_op("pop eax");
+    write_op("push eax, ebx");
+    write_op("jmp   "else_block%d", c->conditional_label_counter);
 
-When too big ~2000 lines, break program up into smaller files
+fun.asm should be inserted directly into out.asm (to make it a complete asm file - just need system calls)
+
+Tests for testing features (it's annoying to have to change test code to retest everything)
+    Need way to compare input and expected output
+    Make a directory called test with test .tmd files, and expected .txt(?) files
+    Make a bash script to run all test and display output
+    Sample output:
+        locals:         passed
+        conditionals:   passed
+        loops:          failed
+
+    Need tests for checking error messages too:
+        tokenizing errors:  passed
+        type errors:        passed
+        parse errors:       failed
 
 TODO!!! Need to maintain conventions of registers being clobbered or preserved on function calls:
     eax, edx, and ecx are clobbered

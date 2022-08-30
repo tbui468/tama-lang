@@ -6,39 +6,6 @@
 
 #define MAX_MSG_LEN 256
 
-static char* code = "x: int = 6\n"
-                    "if x == 6 {\n"
-                    "   print(1)\n"
-                    "} else {\n"
-                    "   print(2)\n"
-                    "}\n"
-                    "if x == 5 {\n"
-                    "   print(3)\n"
-                    "} else {\n"
-                    "   print(4)\n"
-                    "}\n"
-                    "if x == 8 {\n"
-                    "   print(5)\n"
-                    "}\n"
-                    "print(6)";
-
-/*
-static char* code = "a: bool = true\n"
-                    "b: bool = false\n"
-                    "print(true and true)\n"
-                    "print(true or false)\n"
-                    "print(true and false)\n"
-                    "print(false or false)\n"
-                    "x: int = 10\n"
-                    "{\n"
-                    "   x = 3\n"
-                    "   x: int = 48\n"
-                    "   x = 2\n"
-                    "   print(x)\n"
-                    "}\n"
-                    "print(x)\n"
-                    "y: int = 4\n"
-                    "print(y)";*/
 
 size_t allocated;
 
@@ -1304,7 +1271,7 @@ void ta_add(struct TokenArray *ta, struct Token t) {
     ta->count++;
 }
 
-void lexer_init(struct Lexer *l) {
+void lexer_init(struct Lexer *l, char* code) {
     l->code = code;
     l->current = 0;
     l->line = 1;
@@ -1501,18 +1468,33 @@ struct Token lexer_next_token(struct Lexer *l) {
     return t;
 }
 
+char *load_code(char* filename) {
+    FILE *f = fopen(filename, "r");
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET); //rewind(f);
+    char *string = malloc(fsize + 1);
+    fread(string, fsize, 1, f);
+    fclose(f);
+    string[fsize] = 0;
+    return string;
+}
+
 
 int main (int argc, char **argv) {
-    argc = argc;
-    argv = argv;
 
     allocated = 0;
     ems_init(&ems);
 
+    if (argc < 2) {
+        printf("Usage: tama <filename>\n");
+        exit(1);
+    }
+    char *code = load_code(argv[1]);
 
     //Tokenize source code
     struct Lexer l;
-    lexer_init(&l);
+    lexer_init(&l, code);
 
     struct TokenArray ta;
     ta_init(&ta);
