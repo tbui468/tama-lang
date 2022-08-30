@@ -732,46 +732,15 @@ void compiler_output_assembly(struct Compiler *c) {
     fclose(f);
 }
 
-enum Register {
-    R_EAX,
-    R_EDX,
-    R_ECX,
-    R_EBX,
-    R_ESI,
-    R_EDI,
-    R_ESP,
-    R_EBP
-};
-
-void pop_stack(struct Compiler *c, enum Register r) {
-    char* s;
-    switch (r) {
-        case R_EAX: s = "    pop     eax\n\0"; break;
-        case R_EDX: s = "    pop     edx\n\0"; break;
-        case R_ECX: s = "    pop     ecx\n\0"; break;
-        case R_EBX: s = "    pop     ebx\n\0"; break;
-        case R_ESI: s = "    pop     esi\n\0"; break;
-        case R_EDI: s = "    pop     edi\n\0"; break;
-        case R_ESP: s = "    pop     esp\n\0"; break;
-        case R_EBP: s = "    pop     ebp\n\0"; break;
-        default: s = "";
-    }
+void pop_stack(struct Compiler *c, char* reg) {
+    char s[64];
+    sprintf(s, "    pop     %s\n", reg);
     compiler_append_text(c, s, strlen(s));
 }
 
-void push_stack(struct Compiler *c, enum Register r) {
-    char* s;
-    switch (r) {
-        case R_EAX: s = "    push    eax\n\0"; break;
-        case R_EDX: s = "    push    edx\n\0"; break;
-        case R_ECX: s = "    push    ecx\n\0"; break;
-        case R_EBX: s = "    push    ebx\n\0"; break;
-        case R_ESI: s = "    push    esi\n\0"; break;
-        case R_EDI: s = "    push    edi\n\0"; break;
-        case R_ESP: s = "    push    esp\n\0"; break;
-        case R_EBP: s = "    push    ebp\n\0"; break;
-        default: s = "";
-    }
+void push_stack(struct Compiler *c, char* reg) {
+    char s[64];
+    sprintf(s, "    push    %s\n", reg);
     compiler_append_text(c, s, strlen(s));
 }
 
@@ -810,7 +779,7 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
 
             ret_type = compiler_compile(c, u->right);
 
-            pop_stack(c, R_EAX);
+            pop_stack(c, "eax");
 
             char* neg_op;
             if (ret_type == T_INT_TYPE) {
@@ -820,7 +789,7 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             }
             compiler_append_text(c, neg_op, strlen(neg_op));
 
-            push_stack(c, R_EAX);
+            push_stack(c, "eax");
             break;
         }
         case NODE_BINARY: {
@@ -835,8 +804,8 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
                 ret_type = left_type;
             }
 
-            pop_stack(c, R_EBX);
-            pop_stack(c, R_EAX);
+            pop_stack(c, "ebx");
+            pop_stack(c, "eax");
 
             //TODO: use switch statement on b->op.type instead of a bunch of elifs
             if (*b->op.start == '+') {
@@ -910,7 +879,7 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
                 compiler_append_text(c, cmp, strlen(cmp));
                 ret_type = T_BOOL_TYPE;
             }
-            push_stack(c, R_EAX);
+            push_stack(c, "eax");
             break;
         }
         case NODE_EXPR_STMT: {
@@ -920,7 +889,7 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             expr_type = expr_type; //silencing warning of unused expr_type
             ret_type = T_NIL_TYPE;
 
-            pop_stack(c, R_EBX);
+            pop_stack(c, "ebx");
             break;
         }
         case NODE_PRINT: {
@@ -976,7 +945,7 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             char s[64];
             sprintf(s, "    mov     eax, [ebp - %d]\n", 4 * (vd->bp_offset + 1));
             compiler_append_text(c, s, strlen(s));
-            push_stack(c, R_EAX);
+            push_stack(c, "eax");
             break;
         }
         case NODE_SET_VAR: {
@@ -996,11 +965,11 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
                 }
             }
 
-            pop_stack(c, R_EAX);
+            pop_stack(c, "eax");
             char s[64];
             sprintf(s, "    mov     [ebp - %d], eax\n", 4 * (vd->bp_offset + 1));
             compiler_append_text(c, s, strlen(s));
-            push_stack(c, R_EAX);
+            push_stack(c, "eax");
             break;
         }
         case NODE_BLOCK: {
@@ -1011,7 +980,7 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             }
             int pop_count = compiler_end_scope(c);
             for (int i = 0; i < pop_count; i++) {
-                pop_stack(c, R_EAX);
+                pop_stack(c, "eax");
             }
             ret_type = T_NIL_TYPE;
             break;
