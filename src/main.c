@@ -6,12 +6,29 @@
 
 #define MAX_MSG_LEN 256
 
+static char* code = "x: int = 6\n"
+                    "if x == 6 {\n"
+                    "   print(1)\n"
+                    "} else {\n"
+                    "   print(2)\n"
+                    "}\n"
+                    "if x == 5 {\n"
+                    "   print(3)\n"
+                    "} else {\n"
+                    "   print(4)\n"
+                    "}\n"
+                    "if x == 8 {\n"
+                    "   print(5)\n"
+                    "}\n"
+                    "print(6)";
+
+/*
 static char* code = "a: bool = true\n"
                     "b: bool = false\n"
-                    "print(5 <= 5)\n"
-                    "print(-10 <= -10)\n"
-                    "print(true != true)\n"
-                    "print(false == false)\n"
+                    "print(true and true)\n"
+                    "print(true or false)\n"
+                    "print(true and false)\n"
+                    "print(false or false)\n"
                     "x: int = 10\n"
                     "{\n"
                     "   x = 3\n"
@@ -21,7 +38,7 @@ static char* code = "a: bool = true\n"
                     "}\n"
                     "print(x)\n"
                     "y: int = 4\n"
-                    "print(y)";
+                    "print(y)";*/
 
 size_t allocated;
 
@@ -81,7 +98,12 @@ enum TokenType {
     T_GREATER_EQUAL,
     T_EQUAL_EQUAL,
     T_NOT_EQUAL,
-    T_NOT
+    T_NOT,
+    T_AND,
+    T_OR,
+    T_IF,
+    T_ELIF,
+    T_ELSE
 };
 
 struct Token {
@@ -214,7 +236,8 @@ enum NodeType {
     NODE_DECL_VAR,
     NODE_GET_VAR,
     NODE_SET_VAR,
-    NODE_BLOCK
+    NODE_BLOCK,
+    NODE_IF
 };
 
 struct Node {
@@ -279,6 +302,14 @@ struct NodeBlock {
     struct Token l_brace;
     struct Token r_brace;
     struct NodeArray* stmts;
+};
+
+struct NodeIf {
+    struct Node n;
+    struct Token if_token;
+    struct Node* condition;
+    struct Node* then_block;
+    struct Node* else_block;
 };
 
 void na_init(struct NodeArray *na) {
@@ -380,6 +411,16 @@ struct Node *node_block(struct Token l_brace, struct Token r_brace, struct NodeA
     return (struct Node*)node;
 }
 
+struct Node *node_if(struct Token if_token, struct Node *condition, struct Node *then_block, struct Node *else_block) {
+    struct NodeIf *node = alloc_unit(sizeof(struct NodeIf));
+    node->n.type = NODE_IF;
+    node->if_token = if_token;
+    node->condition = condition;
+    node->then_block = then_block;
+    node->else_block = else_block;
+    return (struct Node*)node;
+}
+
 void ast_print(struct Node* n) {
     switch (n->type) {
         case NODE_LITERAL: {
@@ -428,6 +469,10 @@ void ast_print(struct Node* n) {
             printf("NODE_BLOCK");  
             break;
         }
+        case NODE_IF: {
+            printf("NODE_IF");
+            break;
+        }
         default:
             printf("Node type not recognized\n");
             break;
@@ -435,6 +480,7 @@ void ast_print(struct Node* n) {
 }
 
 void ast_free(struct Node* n) {
+    if (!n) return;
     switch (n->type) {
         case NODE_LITERAL: {
             struct NodeLiteral* l = (struct NodeLiteral*)n;
@@ -488,6 +534,14 @@ void ast_free(struct Node* n) {
             na_free(b->stmts);
             free_unit(b->stmts, sizeof(struct NodeArray));
             free_unit(b, sizeof(struct NodeBlock));
+            break;
+        }
+        case NODE_IF: {
+            struct NodeIf *i = (struct NodeIf*)n;
+            ast_free(i->condition);
+            ast_free(i->then_block);
+            ast_free(i->else_block);
+            free_unit(i, sizeof(struct NodeIf));
             break;
         }
         default:
@@ -547,6 +601,7 @@ struct Compiler {
     struct CharArray data;
     int data_offset; //in bytes TODO: Not using this, are we?
     struct VarDataArray *head;
+    unsigned conditional_label_id;
 };
 
 void ca_init(struct CharArray* ca) {
@@ -581,6 +636,7 @@ void compiler_init(struct Compiler *c, struct VarDataArray *head) {
     ca_init(&c->data);
     c->data_offset = 0;
     c->head = head;
+    c->conditional_label_id = 0;
 }
 
 void compiler_free(struct Compiler *c) {
@@ -782,7 +838,8 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             pop_stack(c, R_EBX);
             pop_stack(c, R_EAX);
 
-            if (*b->op.start == '+') { //TODO: Just check token type for all these - no need to look at characters
+            //TODO: use switch statement on b->op.type instead of a bunch of elifs
+            if (*b->op.start == '+') {
                 char* add = "    add     eax, ebx\n\0";
                 compiler_append_text(c, add, strlen(add)); 
             } else if (*b->op.start == '-') {
@@ -843,6 +900,14 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
                 compiler_append_text(c, set, strlen(set)); 
                 char* mov = "    movzx   eax, al\n\0";
                 compiler_append_text(c, mov, strlen(mov));
+                ret_type = T_BOOL_TYPE;
+            } else if (b->op.type == T_AND) {
+                char* cmp = "    and     eax, ebx\n\0";
+                compiler_append_text(c, cmp, strlen(cmp));
+                ret_type = T_BOOL_TYPE;
+            } else if (b->op.type == T_OR) {
+                char* cmp = "    or      eax, ebx\n\0";
+                compiler_append_text(c, cmp, strlen(cmp));
                 ret_type = T_BOOL_TYPE;
             }
             push_stack(c, R_EAX);
@@ -948,6 +1013,35 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             for (int i = 0; i < pop_count; i++) {
                 pop_stack(c, R_EAX);
             }
+            ret_type = T_NIL_TYPE;
+            break;
+        }
+        case NODE_IF: {
+            struct NodeIf *i = (struct NodeIf*)n;
+            enum TokenType condition_type = compiler_compile(c, i->condition);
+            if (condition_type != T_BOOL_TYPE) {
+                ems_add(&ems, i->if_token.line, "Type Error: 'if' keyword must be followed by boolean expression.");
+            }
+            char* check_jump = "    pop     eax\n"
+                               "    cmp     eax, 0\n\0";
+            compiler_append_text(c, check_jump, strlen(check_jump));
+            char s[64];
+            sprintf(s, "    je      else_block%d\n", c->conditional_label_id);
+            compiler_append_text(c, s, strlen(s));
+
+            compiler_compile(c, i->then_block);
+            sprintf(s, "    jmp     if_end%d\n", c->conditional_label_id);
+            compiler_append_text(c, s, strlen(s));
+            sprintf(s, "else_block%d:\n", c->conditional_label_id);
+            compiler_append_text(c, s, strlen(s));
+            if (i->else_block) {
+                compiler_compile(c, i->else_block);
+            }
+            sprintf(s, "if_end%d:\n", c->conditional_label_id);
+            compiler_append_text(c, s, strlen(s));
+
+            c->conditional_label_id++;
+            ret_type = T_NIL_TYPE;
             break;
         }
         default:
@@ -1113,6 +1207,40 @@ struct Node *parse_equality(struct Parser *p) {
     return left;
 }
 
+struct Node *parse_and(struct Parser *p) {
+    struct Node *left = parse_equality(p);
+
+    while (1) {
+        struct Token next = parser_peek_one(p);
+        if (next.type != T_AND) {
+            break;
+        }
+
+        struct Token op = parser_next(p);
+        struct Node *right = parse_equality(p);
+        left = node_binary(left, op, right);
+    }
+
+    return left;
+}
+
+struct Node *parse_or(struct Parser *p) {
+    struct Node *left = parse_and(p);
+
+    while (1) {
+        struct Token next = parser_peek_one(p);
+        if (next.type != T_OR) {
+            break;
+        }
+
+        struct Token op = parser_next(p);
+        struct Node *right = parse_and(p);
+        left = node_binary(left, op, right);
+    }
+
+    return left;
+}
+
 struct Node* parse_assignment(struct Parser *p) {
     if (parser_peek_one(p).type == T_IDENTIFIER && parser_peek_two(p).type == T_EQUAL) {
         struct Token var = parser_consume(p, T_IDENTIFIER);
@@ -1120,12 +1248,26 @@ struct Node* parse_assignment(struct Parser *p) {
         struct Node *expr = parse_expr(p);
         return node_set_var(var, expr);
     } else {
-        return parse_equality(p);
+        return parse_or(p);
     }
 }
 
 struct Node* parse_expr(struct Parser *p) {
     return parse_assignment(p); 
+}
+
+struct Node *parse_stmt(struct Parser *p);
+
+struct Node* parse_block(struct Parser *p) {
+    struct Token l_brace = parser_consume(p, T_L_BRACE);
+    struct NodeArray* na = alloc_unit(sizeof(struct NodeArray));
+    na_init(na);
+    while (parser_peek_one(p).type != T_R_BRACE && parser_peek_one(p).type != T_EOF) {
+        struct Node* stmt = parse_stmt(p);
+        na_add(na, stmt);
+    }
+    struct Token r_brace = parser_consume(p, T_R_BRACE);
+    return node_block(l_brace, r_brace, na);
 }
 
 struct Node *parse_stmt(struct Parser *p) {
@@ -1144,15 +1286,17 @@ struct Node *parse_stmt(struct Parser *p) {
         struct Node *expr = parse_expr(p);
         return node_decl_var(var, type, expr);
     } else if (next.type == T_L_BRACE) {
-        struct Token l_brace = parser_next(p);
-        struct NodeArray* na = alloc_unit(sizeof(struct NodeArray));
-        na_init(na);
-        while (parser_peek_one(p).type != T_R_BRACE && parser_peek_one(p).type != T_EOF) {
-            struct Node* stmt = parse_stmt(p);
-            na_add(na, stmt);
+        return parse_block(p);
+    } else if (next.type == T_IF) {
+        struct Token if_token = parser_next(p);
+        struct Node* condition = parse_expr(p);
+        struct Node* then_block = parse_block(p);
+        struct Node *else_block = NULL;
+        if (parser_peek_one(p).type == T_ELSE) {
+            parser_next(p);
+            else_block = parse_block(p);
         }
-        struct Token r_brace = parser_consume(p, T_R_BRACE);
-        return node_block(l_brace, r_brace, na);
+        return node_if(if_token, condition, then_block, else_block);
     } else {
         return node_expr_stmt(parse_expr(p));
     }
@@ -1224,6 +1368,7 @@ struct Token lexer_read_word(struct Lexer *l) {
         t.len++;
     }
 
+    //TODO: make this a switch to go a lot faster
     if (t.len == 5 && strncmp("print", t.start, 5) == 0) {
         t.type = T_PRINT;
     } else if (t.len == 3 && strncmp("int", t.start, 3) == 0) {
@@ -1234,6 +1379,16 @@ struct Token lexer_read_word(struct Lexer *l) {
         t.type = T_TRUE;
     } else if (t.len == 5 && strncmp("false", t.start, 5) == 0) {
         t.type = T_FALSE;
+    } else if (t.len == 3 && strncmp("and", t.start, 3) == 0) {
+        t.type = T_AND;
+    } else if (t.len == 2 && strncmp("or", t.start, 2) == 0) {
+        t.type = T_OR; 
+    } else if (t.len == 2 && strncmp("if", t.start, 2) == 0) {
+        t.type = T_IF;
+    } else if (t.len == 4 && strncmp("elif", t.start, 4) == 0) {
+        t.type = T_ELIF;
+    } else if (t.len == 4 && strncmp("else", t.start, 4) == 0) {
+        t.type = T_ELSE;
     } else {
         t.type = T_IDENTIFIER;
     }

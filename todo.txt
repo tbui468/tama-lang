@@ -6,24 +6,8 @@ Read a little more of 'Linkers and Loaders' and/or LLD docs/source
 GOAL: Get conditionals/loops/functions working, then make a assembler/linker for it
 
 
-Have parser parse the seven boolean operators (check precedence table)
-    ! (DONE)
-    <-------arithmetic operators go here------->
-    <, <=, >, >= (DONE!)
-    ==, !=
-    and
-    or
-
-Have compiler compile the seven boolean operators (need to figure out assembly to compare 0x1 and 0x0)
-
-Boolean operators (so that we can test the type checker and also prep for conditionals statements)
-    <, >, <=, >=, ==, !=, !
-    and, or, xor
-
-conditional statements
-    NODE_IF - can have elif/else inside of here too
-        else is a single pointer to 
-        elif needs to be an array of pointers since there could be none or many elifs
+push_stack and pop_stack are so confusing with the enums for registers
+    just make the second argument a string, eg "eax", and then format the resulting string with that
 
 Need to get Error messages for each step
     How to deal with errors in lexing, parsing and type checking?
@@ -31,6 +15,12 @@ Need to get Error messages for each step
         if error encountered while parsing, skip line?
 
 When too big ~2000 lines, break program up into smaller files
+
+TODO!!! Need to maintain conventions of registers being clobbered or preserved on function calls:
+    eax, edx, and ecx are clobbered
+    ebx, esi, and edi are preserved
+
+    I'm using ebx right now to arithmetic - I should replace it with edx, ecx OR save ebx/esi/edi on stack and then restore them    
 
 Switch statements using jump tables (call them 'when' statements)
     x: int = 7
@@ -51,6 +41,10 @@ Function definitions
         result: int = a + b
         -> result
     }
+
+Arrays
+
+Structs
 
 Need to deal with overflow with multiplication/add
 

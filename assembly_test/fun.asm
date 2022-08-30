@@ -1,3 +1,7 @@
+_get_eip:
+    mov     eax, [esp]
+    ret
+
 _print_char:
     push    ebp
     mov     ebp, esp
