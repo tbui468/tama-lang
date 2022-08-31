@@ -699,15 +699,14 @@ void compiler_output_assembly(struct Compiler *c) {
     fclose(f);
 }
 
-void pop_stack(struct Compiler *c, char* reg) {
-    char s[64];
-    sprintf(s, "    pop     %s\n", reg);
-    compiler_append_text(c, s, strlen(s));
-}
-
-void push_stack(struct Compiler *c, char* reg) {
-    char s[64];
-    sprintf(s, "    push    %s\n", reg);
+void write_op(struct Compiler *c, const char* format, ...) {
+    va_list ap;
+    va_start(ap, format);
+    char s[MAX_MSG_LEN];
+    int n = vsprintf(s, format, ap);
+    va_end(ap);
+    s[n] = '\n';
+    s[n + 1] = '\0';
     compiler_append_text(c, s, strlen(s));
 }
 
@@ -730,15 +729,13 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
                     break;
             }
 
-            char s[64];
             if (ret_type == T_INT_TYPE) {
-                sprintf(s, "    push    %.*s\n", l->value.len, l->value.start);
+                write_op(c, "    push    %.*s", l->value.len, l->value.start);
             } else if (l->value.type == T_TRUE) {
-                sprintf(s, "    push    1\n");
+                write_op(c, "    push    %d", 1);
             } else if (l->value.type == T_FALSE) {
-                sprintf(s, "    push    0\n");
+                write_op(c, "    push    %d", 0);
             }
-            compiler_append_text(c, s, strlen(s));
             break;
         }
         case NODE_UNARY: {
@@ -746,17 +743,15 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
 
             ret_type = compiler_compile(c, u->right);
 
-            pop_stack(c, "eax");
+            write_op(c, "    pop     %s", "eax");
 
-            char* neg_op;
             if (ret_type == T_INT_TYPE) {
-                neg_op = "    neg     eax\n\0";
+                write_op(c, "    neg     %s", "eax");
             } else if (ret_type == T_BOOL_TYPE) {
-                neg_op = "    xor     eax, 1\n\0";
+                write_op(c, "    xor     %s, %d", "eax", 1); 
             }
-            compiler_append_text(c, neg_op, strlen(neg_op));
 
-            push_stack(c, "eax");
+            write_op(c, "    push    %s", "eax");
             break;
         }
         case NODE_BINARY: {
@@ -766,87 +761,56 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             enum TokenType right_type = compiler_compile(c, b->right);
             if (left_type != right_type) {
                 ems_add(&ems, b->op.line, "Type Error: Left and right types don't match!");
-                ret_type = T_NIL_TYPE; //TODO: Should be error type to avoid same error messages
+                ret_type = T_NIL_TYPE; //TODO: Should be error type to avoid same error message cascade 
+            } else if (b->op.type == T_PLUS || b->op.type == T_MINUS || b->op.type == T_SLASH || b->op.type == T_STAR) {
+                ret_type = T_INT_TYPE;
             } else {
-                ret_type = left_type;
+                ret_type = T_BOOL_TYPE;
             }
 
-            pop_stack(c, "ebx");
-            pop_stack(c, "eax");
+            write_op(c, "    pop     %s", "ebx");
+            write_op(c, "    pop     %s", "eax");
 
             //TODO: use switch statement on b->op.type instead of a bunch of elifs
             if (*b->op.start == '+') {
-                char* add = "    add     eax, ebx\n\0";
-                compiler_append_text(c, add, strlen(add)); 
+                write_op(c, "    add     %s, %s", "eax", "ebx");
             } else if (*b->op.start == '-') {
-                char* sub = "    sub     eax, ebx\n\0";
-                compiler_append_text(c, sub, strlen(sub)); 
+                write_op(c, "    sub     %s, %s", "eax", "ebx");
             } else if (*b->op.start == '*') {
-                char* mul = "    imul    eax, ebx\n\0";
-                compiler_append_text(c, mul, strlen(mul)); 
+                write_op(c, "    imul    %s, %s", "eax", "ebx");
             } else if (*b->op.start == '/') {
-                char* cdq = "    cdq\n\0";
-                compiler_append_text(c, cdq, strlen(cdq));
-                char* div = "    idiv    ebx\n\0";
-                compiler_append_text(c, div, strlen(div)); 
+                write_op(c, "    cdq");
+                write_op(c, "    idiv    %s", "ebx");
             } else if (b->op.type == T_LESS) {
-                char* cmp = "    cmp     eax, ebx\n\0";
-                compiler_append_text(c, cmp, strlen(cmp));
-                char* set = "    setl    al\n\0"; //set byte to 0 or 1
-                compiler_append_text(c, set, strlen(set)); 
-                char* mov = "    movzx   eax, al\n\0";
-                compiler_append_text(c, mov, strlen(mov));
-                ret_type = T_BOOL_TYPE;
+                write_op(c, "    cmp     %s, %s", "eax", "ebx");
+                write_op(c, "    setl    %s", "al"); //set byte to 0 or 1
+                write_op(c, "    movzx   %s, %s", "eax", "al");
             } else if (b->op.type == T_GREATER) {
-                char* cmp = "    cmp     eax, ebx\n\0";
-                compiler_append_text(c, cmp, strlen(cmp));
-                char* set = "    setg    al\n\0"; //set byte to 0 or 1
-                compiler_append_text(c, set, strlen(set)); 
-                char* mov = "    movzx   eax, al\n\0";
-                compiler_append_text(c, mov, strlen(mov));
-                ret_type = T_BOOL_TYPE;
+                write_op(c, "    cmp     %s, %s", "eax", "ebx");
+                write_op(c, "    setg    %s", "al"); //set byte to 0 or 1
+                write_op(c, "    movzx   %s, %s", "eax", "al");
             } else if (b->op.type == T_LESS_EQUAL) {
-                char* cmp = "    cmp     eax, ebx\n\0";
-                compiler_append_text(c, cmp, strlen(cmp));
-                char* set = "    setle   al\n\0"; //set byte to 0 or 1
-                compiler_append_text(c, set, strlen(set)); 
-                char* mov = "    movzx   eax, al\n\0";
-                compiler_append_text(c, mov, strlen(mov));
-                ret_type = T_BOOL_TYPE;
+                write_op(c, "    cmp     %s, %s", "eax", "ebx");
+                write_op(c, "    setle   %s", "al"); //set byte to 0 or 1
+                write_op(c, "    movzx   %s, %s", "eax", "al");
             } else if (b->op.type == T_GREATER_EQUAL) {
-                char* cmp = "    cmp     eax, ebx\n\0";
-                compiler_append_text(c, cmp, strlen(cmp));
-                char* set = "    setge   al\n\0"; //set byte to 0 or 1
-                compiler_append_text(c, set, strlen(set)); 
-                char* mov = "    movzx   eax, al\n\0";
-                compiler_append_text(c, mov, strlen(mov));
-                ret_type = T_BOOL_TYPE;
+                write_op(c, "    cmp     %s, %s", "eax", "ebx");
+                write_op(c, "    setge   %s", "al");; //set byte to 0 or 1
+                write_op(c, "    movzx   %s, %s", "eax", "al");
             } else if (b->op.type == T_EQUAL_EQUAL) {
-                char* cmp = "    cmp     eax, ebx\n\0";
-                compiler_append_text(c, cmp, strlen(cmp));
-                char* set = "    sete    al\n\0"; //set byte to 0 or 1
-                compiler_append_text(c, set, strlen(set)); 
-                char* mov = "    movzx   eax, al\n\0";
-                compiler_append_text(c, mov, strlen(mov));
-                ret_type = T_BOOL_TYPE;
+                write_op(c, "    cmp     %s, %s", "eax", "ebx");
+                write_op(c, "    sete    %s", "al"); //set byte to 0 or 1
+                write_op(c, "    movzx   %s, %s", "eax", "al");
             } else if (b->op.type == T_NOT_EQUAL) {
-                char* cmp = "    cmp     eax, ebx\n\0";
-                compiler_append_text(c, cmp, strlen(cmp));
-                char* set = "    setne   al\n\0"; //set byte to 0 or 1
-                compiler_append_text(c, set, strlen(set)); 
-                char* mov = "    movzx   eax, al\n\0";
-                compiler_append_text(c, mov, strlen(mov));
-                ret_type = T_BOOL_TYPE;
+                write_op(c, "    cmp     %s, %s", "eax", "ebx");
+                write_op(c, "    setne   %s", "al"); //set byte to 0 or 1
+                write_op(c, "    movzx   %s, %s", "eax", "al");
             } else if (b->op.type == T_AND) {
-                char* cmp = "    and     eax, ebx\n\0";
-                compiler_append_text(c, cmp, strlen(cmp));
-                ret_type = T_BOOL_TYPE;
+                write_op(c, "    and     %s, %s", "eax", "ebx");
             } else if (b->op.type == T_OR) {
-                char* cmp = "    or      eax, ebx\n\0";
-                compiler_append_text(c, cmp, strlen(cmp));
-                ret_type = T_BOOL_TYPE;
+                write_op(c, "    or      %s, %s", "eax", "ebx");
             }
-            push_stack(c, "eax");
+            write_op(c, "    push    %s", "eax");
             break;
         }
         case NODE_EXPR_STMT: {
@@ -856,7 +820,7 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             expr_type = expr_type; //silencing warning of unused expr_type
             ret_type = T_NIL_TYPE;
 
-            pop_stack(c, "ebx");
+            write_op(c, "    pop     %s", "ebx");
             break;
         }
         case NODE_PRINT: {
@@ -865,21 +829,16 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             enum TokenType arg_type = compiler_compile(c, np->arg);
             ret_type = T_NIL_TYPE;
 
-            char* call;
             if (arg_type == T_INT_TYPE) {
-                call = "    call    _print_int\n\0";
+                write_op(c, "    call    %s", "_print_int");
             } else if (arg_type == T_BOOL_TYPE) {
-                call = "    call    _print_bool\n\0";
+                write_op(c, "    call    %s", "_print_bool");
             }
-            compiler_append_text(c, call, strlen(call));
+            write_op(c, "    add     %s, %d", "esp", 4);
 
-
-            char* clear = "    add     esp, 4\n\0"; //TODO: assuming one 4 byte argument
-            compiler_append_text(c, clear, strlen(clear));
-            char* newline = "    push    0xa\n"
-                            "    call    _print_char\n"
-                            "    add     esp, 4\n";
-            compiler_append_text(c, newline, strlen(newline));
+            write_op(c, "    push    %s", "0xa");
+            write_op(c, "    call    %s", "_print_char");
+            write_op(c, "    add     %s, %d", "esp", 4);
             break;
         }
         case NODE_DECL_VAR: {
@@ -909,10 +868,8 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
                 ret_type = vd->type.type;
             }
 
-            char s[64];
-            sprintf(s, "    mov     eax, [ebp - %d]\n", 4 * (vd->bp_offset + 1));
-            compiler_append_text(c, s, strlen(s));
-            push_stack(c, "eax");
+            write_op(c, "    mov     %s, [%s - %d]", "eax", "ebp", 4 * (vd->bp_offset + 1));
+            write_op(c, "    push    %s", "eax");
             break;
         }
         case NODE_SET_VAR: {
@@ -932,11 +889,9 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
                 }
             }
 
-            pop_stack(c, "eax");
-            char s[64];
-            sprintf(s, "    mov     [ebp - %d], eax\n", 4 * (vd->bp_offset + 1));
-            compiler_append_text(c, s, strlen(s));
-            push_stack(c, "eax");
+            write_op(c, "    pop     %s", "eax");
+            write_op(c, "    mov     [%s - %d], %s", "ebp", 4 * (vd->bp_offset + 1), "eax");
+            write_op(c, "    push    %s", "eax");
             break;
         }
         case NODE_BLOCK: {
@@ -947,7 +902,7 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             }
             int pop_count = compiler_end_scope(c);
             for (int i = 0; i < pop_count; i++) {
-                pop_stack(c, "eax");
+                write_op(c, "    pop     %s", "eax");
             }
             ret_type = T_NIL_TYPE;
             break;
@@ -958,23 +913,19 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             if (condition_type != T_BOOL_TYPE) {
                 ems_add(&ems, i->if_token.line, "Type Error: 'if' keyword must be followed by boolean expression.");
             }
-            char* check_jump = "    pop     eax\n"
-                               "    cmp     eax, 0\n\0";
-            compiler_append_text(c, check_jump, strlen(check_jump));
-            char s[64];
-            sprintf(s, "    je      else_block%d\n", c->conditional_label_id);
-            compiler_append_text(c, s, strlen(s));
+
+            write_op(c, "    pop     %s", "eax");
+            write_op(c, "    cmp     %s, %d", "eax", 0);
+            write_op(c, "    je      else_block%d", c->conditional_label_id);
 
             compiler_compile(c, i->then_block);
-            sprintf(s, "    jmp     if_end%d\n", c->conditional_label_id);
-            compiler_append_text(c, s, strlen(s));
-            sprintf(s, "else_block%d:\n", c->conditional_label_id);
-            compiler_append_text(c, s, strlen(s));
+            write_op(c, "    jmp     if_end%d", c->conditional_label_id);
+
+            write_op(c, "else_block%d:", c->conditional_label_id);
             if (i->else_block) {
                 compiler_compile(c, i->else_block);
             }
-            sprintf(s, "if_end%d:\n", c->conditional_label_id);
-            compiler_append_text(c, s, strlen(s));
+            write_op(c, "if_end%d:", c->conditional_label_id);
 
             c->conditional_label_id++;
             ret_type = T_NIL_TYPE;

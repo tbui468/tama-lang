@@ -4,17 +4,14 @@ Read a little more of 'Linkers and Loaders' and/or LLD docs/source
     read chapter 2
 
 GOAL 1: Get loops/functions working, then make a assembler/linker for it
+        look in linkers_and_loaders directory for notes on how to do this
 GOAL 2: Get switch statements, arrays and structs working
 
+make a function call write_op(struct Compiler *c, char* format, ...) that takes in variable arguments
+    replace remaining pop_stack/push_stack/compiler_append_text with new write_op function
+    replace giant if/else in binary branch with switch
+
 When file too big to manage, break program up into smaller .c and .h files
-
-make a function call write_op(char* format, char* op, ...) that takes in variable arguments
-    this will simplify the compiling steps significantly!!!
-    write_op("pop eax");
-    write_op("push eax, ebx");
-    write_op("jmp   "else_block%d", c->conditional_label_counter);
-
-fun.asm should be inserted directly into out.asm (to make it a complete asm file - just need system calls)
 
 Tests for testing features (it's annoying to have to change test code to retest everything)
     Need way to compare input and expected output
@@ -66,6 +63,7 @@ Floating point arithmetic
     This will require a bit of testing in assembly to see how it works
 
 mmap for dynamic memory allocation ....???
+    memory allocation + pointers/references
 
 Idea: compile to x86 assembly (which we can then assemble to machine code..)
     https://cs.lmu.edu/~ray/notes/nasmtutorial/
