@@ -70,7 +70,8 @@ enum TokenType {
     T_OR,
     T_IF,
     T_ELIF,
-    T_ELSE
+    T_ELSE,
+    T_WHILE
 };
 
 struct Token {
@@ -204,7 +205,8 @@ enum NodeType {
     NODE_GET_VAR,
     NODE_SET_VAR,
     NODE_BLOCK,
-    NODE_IF
+    NODE_IF,
+    NODE_WHILE
 };
 
 struct Node {
@@ -277,6 +279,13 @@ struct NodeIf {
     struct Node* condition;
     struct Node* then_block;
     struct Node* else_block;
+};
+
+struct NodeWhile {
+    struct Node n;
+    struct Token while_token;
+    struct Node *condition;
+    struct Node *while_block;
 };
 
 void na_init(struct NodeArray *na) {
@@ -388,6 +397,15 @@ struct Node *node_if(struct Token if_token, struct Node *condition, struct Node 
     return (struct Node*)node;
 }
 
+struct Node *node_while(struct Token while_token, struct Node *condition, struct Node *while_block) {
+    struct NodeWhile *node = alloc_unit(sizeof(struct NodeWhile));
+    node->n.type = NODE_WHILE;
+    node->while_token = while_token;
+    node->condition = condition;
+    node->while_block = while_block;
+    return (struct Node*)node;
+}
+
 void ast_print(struct Node* n) {
     switch (n->type) {
         case NODE_LITERAL: {
@@ -438,6 +456,10 @@ void ast_print(struct Node* n) {
         }
         case NODE_IF: {
             printf("NODE_IF");
+            break;
+        }
+        case NODE_WHILE: {
+            printf("NODE_WHILE");
             break;
         }
         default:
@@ -509,6 +531,13 @@ void ast_free(struct Node* n) {
             ast_free(i->then_block);
             ast_free(i->else_block);
             free_unit(i, sizeof(struct NodeIf));
+            break;
+        }
+        case NODE_WHILE: {
+            struct NodeWhile *w = (struct NodeWhile*)n;
+            ast_free(w->condition);
+            ast_free(w->while_block);
+            free_unit(w, sizeof(struct NodeWhile));
             break;
         }
         default:
@@ -931,6 +960,24 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             ret_type = T_NIL_TYPE;
             break;
         }
+        case NODE_WHILE: {
+            struct NodeWhile *w = (struct NodeWhile*)n;
+            write_op(c, "    jmp     %s%d", "while_condition", c->conditional_label_id);
+            write_op(c, "%s%d:", "while_block", c->conditional_label_id);
+            compiler_compile(c, w->while_block);
+            write_op(c, "%s%d:", "while_condition", c->conditional_label_id);
+            enum TokenType condition_type = compiler_compile(c, w->condition);
+            if (condition_type != T_BOOL_TYPE) {
+                ems_add(&ems, w->while_token.line, "Type Error: 'while' keyword must be followed by boolean expression.");
+            }
+            write_op(c, "    pop     %s", "eax");
+            write_op(c, "    cmp     %s, %d", "eax", 1);
+            write_op(c, "    je      while_block%d", c->conditional_label_id);
+
+            c->conditional_label_id++;
+            ret_type = T_NIL_TYPE;
+            break;
+        }
         default:
             printf("Node type not recognized\n");
             break;
@@ -1184,6 +1231,11 @@ struct Node *parse_stmt(struct Parser *p) {
             else_block = parse_block(p);
         }
         return node_if(if_token, condition, then_block, else_block);
+    } else if (next.type == T_WHILE) {
+        struct Token while_token = parser_next(p);
+        struct Node* condition = parse_expr(p);
+        struct Node* while_block = parse_block(p);
+        return node_while(while_token, condition, while_block);
     } else {
         return node_expr_stmt(parse_expr(p));
     }
@@ -1256,6 +1308,7 @@ struct Token lexer_read_word(struct Lexer *l) {
     }
 
     //TODO: make this a switch to go a lot faster
+    //      will need to rework how this checks strings
     if (t.len == 5 && strncmp("print", t.start, 5) == 0) {
         t.type = T_PRINT;
     } else if (t.len == 3 && strncmp("int", t.start, 3) == 0) {
@@ -1276,6 +1329,8 @@ struct Token lexer_read_word(struct Lexer *l) {
         t.type = T_ELIF;
     } else if (t.len == 4 && strncmp("else", t.start, 4) == 0) {
         t.type = T_ELSE;
+    } else if (t.len == 5 && strncmp("while", t.start, 5) == 0) {
+        t.type = T_WHILE;
     } else {
         t.type = T_IDENTIFIER;
     }

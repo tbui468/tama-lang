@@ -3,15 +3,12 @@ Read a little more of 'Computer Systems: A Programmer's Perspective'
 Read a little more of 'Linkers and Loaders' and/or LLD docs/source
     read chapter 2
 
-GOAL 1: Get loops/functions working, then make a assembler/linker for it
+GOAL 1: Make a assembler/linker for it
         look in linkers_and_loaders directory for notes on how to do this
-GOAL 2: Get switch statements, arrays and structs working
+        probably a good idea to not use fun.asm until the entire thing can
+            be successfully assembled into machine code
+GOAL 2: Get for loops, functions, switch statements, arrays and structs working
 
-make a function call write_op(struct Compiler *c, char* format, ...) that takes in variable arguments
-    replace remaining pop_stack/push_stack/compiler_append_text with new write_op function
-    replace giant if/else in binary branch with switch
-
-When file too big to manage, break program up into smaller .c and .h files
 
 Tests for testing features (it's annoying to have to change test code to retest everything)
     Need way to compare input and expected output
@@ -26,6 +23,9 @@ Tests for testing features (it's annoying to have to change test code to retest 
         tokenizing errors:  passed
         type errors:        passed
         parse errors:       failed
+
+    write a script (put in test directory) that runs 
+        and compares variable_code.tmd and variable_sol.txt
 
 TODO!!! Need to maintain conventions of registers being clobbered or preserved on function calls:
     eax, edx, and ecx are clobbered
