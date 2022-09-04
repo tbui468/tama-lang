@@ -1,14 +1,34 @@
 Read a little more of 'Computer Systems: A Programmer's Perspective'
-    next section on control
 Read a little more of 'Linkers and Loaders' and/or LLD docs/source
-    read chapter 2
+Read ELF Specification
+Watch 'Understanding Compiler Optimization - Chandler Carruth' on youtube
+
+Reference for x86 machine code
+    http://ref.x86asm.net/coder32.html
+
+assembler_append_header(struct Assembler *a) needs to be finished
 
 GOAL 1: Make a assembler/linker for it
         look in linkers_and_loaders directory for notes on how to do this
         probably a good idea to not use fun.asm until the entire thing can
-            be successfully assembled into machine code
-GOAL 2: Get for loops, functions, switch statements, arrays and structs working
+            be successfully assembled into machine code.  Let's keep it simple guys
+            Set return value to ebx (so that exit() returns it.  We can then check the return value)
 
+        The assembler needs to write bytes to a binary file
+
+        Instead of using Literal, use Immediate (eg, NodeImm)
+            and NodeReg, and NodeDeRef (for dereferencing...?)
+
+    Get assembler working
+        assembler should parse 'org' and hex (need these two to compute _start location of program)
+        write ELF header
+        write the code
+        write buffer to binary file
+
+        write elf header, and track two places where final filesize is needed (two doubles)
+        write out binary, compute the final file size, and the patch it into those two locations
+
+GOAL 2: For loops, functions, switch statements, arrays and structs (and classes?), pointers/references
 
 Tests for testing features (it's annoying to have to change test code to retest everything)
     Need way to compare input and expected output
@@ -25,7 +45,8 @@ Tests for testing features (it's annoying to have to change test code to retest 
         parse errors:       failed
 
     write a script (put in test directory) that runs 
-        and compares variable_code.tmd and variable_sol.txt
+        and compares variable_code.tmd and variable_sol.txt (example)
+        could write it in python too
 
 TODO!!! Need to maintain conventions of registers being clobbered or preserved on function calls:
     eax, edx, and ecx are clobbered
@@ -52,10 +73,6 @@ Function definitions
         result: int = a + b
         -> result
     }
-
-Arrays
-
-Structs
 
 Need to deal with overflow with multiplication/add
 

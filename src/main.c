@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include <stdint.h>
 
 #define MAX_MSG_LEN 256
 
@@ -37,7 +38,9 @@ void free_unit(void *vptr, size_t unit_size) {
 
 
 enum TokenType {
+    //tokenizing tamarind file
     T_INT,
+    T_HEX,
     T_FLOAT,
     T_PLUS,
     T_MINUS,
@@ -71,7 +74,28 @@ enum TokenType {
     T_IF,
     T_ELIF,
     T_ELSE,
-    T_WHILE
+    T_WHILE,
+    T_L_BRACKET,
+    T_R_BRACKET,
+    T_COMMA,
+
+    //tokening assembly file
+    T_MOV,
+    T_PUSH,
+    T_POP,
+    T_ADD,
+    T_EAX,
+    T_EDX,
+    T_ECX,
+    T_EBX,
+    T_ESI,
+    T_EDI,
+    T_ESP,
+    T_EBP,
+    T_INTR,
+    T_DOLLAR,   //Let's just force user to define labels instead of compiling $$
+    T_EQU,       //used to compute sizes (should compute the value and then patch immediately)
+    T_ORG,
 };
 
 struct Token {
@@ -191,6 +215,7 @@ struct VarDataArray {
 
 struct VarData* vda_get_local(struct VarDataArray *vda, struct Token var);
 
+
 /*
  * AST Nodes
  */
@@ -206,7 +231,13 @@ enum NodeType {
     NODE_SET_VAR,
     NODE_BLOCK,
     NODE_IF,
-    NODE_WHILE
+    NODE_WHILE,
+
+    //for assembler
+    ANODE_LABEL,
+    ANODE_OP,
+    ANODE_REG,
+    ANODE_IMM
 };
 
 struct Node {
@@ -288,6 +319,29 @@ struct NodeWhile {
     struct Node *while_block;
 };
 
+
+struct ANodeLabel {
+    struct Node n; 
+    struct Token t;
+};
+
+struct ANodeOp {
+    struct Node n;
+    struct Token operator;
+    struct Node *operand1;
+    struct Node *operand2;
+};
+
+struct ANodeReg {
+    struct Node n;
+    struct Token t;
+};
+
+struct ANodeImm {
+    struct Node n;
+    struct Token t;
+};
+
 void na_init(struct NodeArray *na) {
     na->nodes = NULL;
     na->count = 0;
@@ -295,7 +349,6 @@ void na_init(struct NodeArray *na) {
 }
 
 void ast_free(struct Node* n);
-
 
 void na_free(struct NodeArray *na) {
     for (int i = 0; i < na->count; i++) {
@@ -406,6 +459,36 @@ struct Node *node_while(struct Token while_token, struct Node *condition, struct
     return (struct Node*)node;
 }
 
+struct Node *anode_label(struct Token t) {
+    struct ANodeLabel *node = alloc_unit(sizeof(struct ANodeLabel));
+    node->n.type = ANODE_LABEL;
+    node->t = t;
+    return (struct Node*)node;
+}
+
+struct Node *anode_op(struct Token operator, struct Node *operand1, struct Node *operand2) {
+    struct ANodeOp *node = alloc_unit(sizeof(struct ANodeOp));
+    node->n.type = ANODE_OP;
+    node->operator = operator;
+    node->operand1 = operand1;
+    node->operand2 = operand2;
+    return (struct Node*)node;
+}
+
+struct Node *anode_reg(struct Token t) {
+    struct ANodeReg *node = alloc_unit(sizeof(struct ANodeReg));
+    node->n.type = ANODE_REG;
+    node->t = t;
+    return (struct Node*)node;
+}
+
+struct Node *anode_imm(struct Token t) {
+    struct ANodeImm *node = alloc_unit(sizeof(struct ANodeImm));
+    node->n.type = ANODE_IMM;
+    node->t = t;
+    return (struct Node*)node;
+}
+
 void ast_print(struct Node* n) {
     switch (n->type) {
         case NODE_LITERAL: {
@@ -460,6 +543,22 @@ void ast_print(struct Node* n) {
         }
         case NODE_WHILE: {
             printf("NODE_WHILE");
+            break;
+        }
+        case ANODE_LABEL: {
+            printf("ANODE_LABEL");
+            break;
+        }
+        case ANODE_OP: {
+            printf("ANODE_OP");
+            break;
+        }
+        case ANODE_REG: {
+            printf("ANODE_REG");
+            break;
+        }
+        case ANODE_IMM: {
+            printf("ANODE_IMM");
             break;
         }
         default:
@@ -540,11 +639,34 @@ void ast_free(struct Node* n) {
             free_unit(w, sizeof(struct NodeWhile));
             break;
         }
+        case ANODE_LABEL: {
+            struct ANodeLabel* l = (struct ANodeLabel*)n;
+            free_unit(l, sizeof(struct ANodeLabel));
+            break;
+        }
+        case ANODE_OP: {
+            struct ANodeOp *o = (struct ANodeOp*)n;
+            ast_free(o->operand1);
+            ast_free(o->operand2);
+            free_unit(o, sizeof(struct ANodeOp));
+            break;
+        }
+        case ANODE_REG: {
+            struct ANodeReg* r = (struct ANodeReg*)n;
+            free_unit(r, sizeof(struct ANodeReg));
+            break;
+        }
+        case ANODE_IMM: {
+            struct ANodeImm* i = (struct ANodeImm*)n;
+            free_unit(i, sizeof(struct ANodeImm));
+            break;
+        }
         default:
             printf("Node type not recognized\n");
             break;
     }
 }
+
 
 
 /*
@@ -597,7 +719,7 @@ struct Compiler {
     struct CharArray data;
     int data_offset; //in bytes TODO: Not using this, are we?
     struct VarDataArray *head;
-    unsigned conditional_label_id;
+    unsigned conditional_label_id; //used to create unique ids for labels in assembly code
 };
 
 void ca_init(struct CharArray* ca) {
@@ -1241,14 +1363,83 @@ struct Node *parse_stmt(struct Parser *p) {
     }
 }
 
+//struct Node *aparse_deref(struct Parser *p) {
+//  NOTE: should reach this point if T_L_BRACKET is encountered
+//}
+
+struct Node *aparse_literal(struct Parser *p) {
+    struct Token next = parser_next(p);
+    switch (next.type) {
+        case T_INT:
+        case T_HEX:
+            return anode_imm(next);
+        case T_EAX:
+        case T_ECX:
+        case T_EDX:
+        case T_EBX:
+        case T_ESP:
+        case T_EBP:
+        case T_ESI:
+        case T_EDI:
+            return anode_reg(next);
+        default:
+            ems_add(&ems, next.line, "Parse Error: Unrecognized token!");
+    }
+    return NULL;
+}
+
+struct Node *aparse_expr(struct Parser *p) {
+    return aparse_literal(p);
+}
+
+struct Node *aparse_stmt(struct Parser *p) {
+    struct Token next = parser_peek_one(p);
+    //if identifer followed by a colon, then it's a label
+    if (next.type == T_IDENTIFIER && parser_peek_two(p).type == T_COLON) {
+        struct Token id = parser_next(p);
+        parser_consume(p, T_COLON);
+        return anode_label(id);
+    } else {
+        struct Token op =  parser_next(p);
+        struct Node *left = NULL;
+        struct Node *right = NULL;
+        switch (next.type) {
+            //two operands
+            case T_MOV:
+            case T_ADD:
+                left = aparse_expr(p);
+                parser_consume(p, T_COMMA);
+                right = aparse_expr(p);
+                break;
+            //single operand
+            case T_POP:
+            case T_PUSH:
+            case T_INTR:
+            case T_ORG:
+                left = aparse_expr(p);
+                break;
+            //no operands
+            default:
+                ems_add(&ems, next.line, "AParse Error: Invalid token type!");
+        }
+        return anode_op(op, left, right);
+    }
+}
+
 /*
  * Lexer
  */
+
+enum SyntaxType {
+    ST_TMD,
+    ST_ASM
+};
 
 struct Lexer {
     char* code;
     int current;
     int line;
+    enum SyntaxType st;
 };
 
 void ta_init(struct TokenArray *ta) {
@@ -1274,10 +1465,11 @@ void ta_add(struct TokenArray *ta, struct Token t) {
     ta->count++;
 }
 
-void lexer_init(struct Lexer *l, char* code) {
+void lexer_init(struct Lexer *l, char* code, enum SyntaxType st) {
     l->code = code;
     l->current = 0;
     l->line = 1;
+    l->st = st;
 }
 
 void lexer_skip_ws(struct Lexer *l) {
@@ -1307,33 +1499,70 @@ struct Token lexer_read_word(struct Lexer *l) {
         t.len++;
     }
 
-    //TODO: make this a switch to go a lot faster
-    //      will need to rework how this checks strings
-    if (t.len == 5 && strncmp("print", t.start, 5) == 0) {
-        t.type = T_PRINT;
-    } else if (t.len == 3 && strncmp("int", t.start, 3) == 0) {
-        t.type = T_INT_TYPE;
-    } else if (t.len == 4 && strncmp("bool", t.start, 4) == 0) {
-        t.type = T_BOOL_TYPE;
-    } else if (t.len == 4 && strncmp("true", t.start, 4) == 0) {
-        t.type = T_TRUE;
-    } else if (t.len == 5 && strncmp("false", t.start, 5) == 0) {
-        t.type = T_FALSE;
-    } else if (t.len == 3 && strncmp("and", t.start, 3) == 0) {
-        t.type = T_AND;
-    } else if (t.len == 2 && strncmp("or", t.start, 2) == 0) {
-        t.type = T_OR; 
-    } else if (t.len == 2 && strncmp("if", t.start, 2) == 0) {
-        t.type = T_IF;
-    } else if (t.len == 4 && strncmp("elif", t.start, 4) == 0) {
-        t.type = T_ELIF;
-    } else if (t.len == 4 && strncmp("else", t.start, 4) == 0) {
-        t.type = T_ELSE;
-    } else if (t.len == 5 && strncmp("while", t.start, 5) == 0) {
-        t.type = T_WHILE;
-    } else {
-        t.type = T_IDENTIFIER;
+    if (l->st == ST_TMD) {
+        if (t.len == 5 && strncmp("print", t.start, 5) == 0) {
+            t.type = T_PRINT;
+        } else if (t.len == 3 && strncmp("int", t.start, 3) == 0) {
+            t.type = T_INT_TYPE;
+        } else if (t.len == 4 && strncmp("bool", t.start, 4) == 0) {
+            t.type = T_BOOL_TYPE;
+        } else if (t.len == 4 && strncmp("true", t.start, 4) == 0) {
+            t.type = T_TRUE;
+        } else if (t.len == 5 && strncmp("false", t.start, 5) == 0) {
+            t.type = T_FALSE;
+        } else if (t.len == 3 && strncmp("and", t.start, 3) == 0) {
+            t.type = T_AND;
+        } else if (t.len == 2 && strncmp("or", t.start, 2) == 0) {
+            t.type = T_OR; 
+        } else if (t.len == 2 && strncmp("if", t.start, 2) == 0) {
+            t.type = T_IF;
+        } else if (t.len == 4 && strncmp("elif", t.start, 4) == 0) {
+            t.type = T_ELIF;
+        } else if (t.len == 4 && strncmp("else", t.start, 4) == 0) {
+            t.type = T_ELSE;
+        } else if (t.len == 5 && strncmp("while", t.start, 5) == 0) {
+            t.type = T_WHILE;
+        } else {
+            t.type = T_IDENTIFIER;
+        }
+    } else if (l->st == ST_ASM) {
+        if (t.len == 3 && strncmp("mov", t.start, 3) == 0) {
+            t.type = T_MOV;
+        } else if (t.len == 4 && strncmp("push", t.start, 4) == 0) {
+            t.type = T_PUSH;
+        } else if (t.len == 3 && strncmp("pop", t.start, 3) == 0) {
+            t.type = T_POP;
+        } else if (t.len == 3 && strncmp("add", t.start, 3) == 0) {
+            t.type = T_ADD;
+        } else if (t.len == 3 && strncmp("eax", t.start, 3) == 0) {
+            t.type = T_EAX;
+        } else if (t.len == 3 && strncmp("edx", t.start, 3) == 0) {
+            t.type = T_EDX;
+        } else if (t.len == 3 && strncmp("ecx", t.start, 3) == 0) {
+            t.type = T_ECX;
+        } else if (t.len == 3 && strncmp("ebx", t.start, 3) == 0) {
+            t.type = T_EBX;
+        } else if (t.len == 3 && strncmp("esi", t.start, 3) == 0) {
+            t.type = T_ESI;
+        } else if (t.len == 3 && strncmp("edi", t.start, 3) == 0) {
+            t.type = T_EDI;
+        } else if (t.len == 3 && strncmp("esp", t.start, 3) == 0) {
+            t.type = T_ESP;
+        } else if (t.len == 3 && strncmp("ebp", t.start, 3) == 0) {
+            t.type = T_EBP;
+        } else if (t.len == 3 && strncmp("int", t.start, 3) == 0) {
+            t.type = T_INTR;
+        } else if (t.len == 1 && strncmp("$", t.start, 1) == 0) {
+            t.type = T_DOLLAR;
+        } else if (t.len == 3 && strncmp("equ", t.start, 3) == 0) {
+            t.type = T_EQU;
+        } else if (t.len == 3 && strncmp("org", t.start, 3) == 0) {
+            t.type = T_ORG;
+        } else {
+            t.type = T_IDENTIFIER;
+        }
     }
+
     return t;
 }
 
@@ -1343,6 +1572,12 @@ struct Token lexer_read_number(struct Lexer *l) {
     t.len = 1;
     t.line = l->line;
     bool has_decimal = *t.start == '.';
+    bool is_hex = false;
+
+    if (l->code[l->current] == '0' && l->code[l->current + 1] == 'x') {
+        is_hex = true;
+        t.len++;
+    }
 
     while (1) {
         char next = l->code[l->current + t.len];
@@ -1360,7 +1595,7 @@ struct Token lexer_read_number(struct Lexer *l) {
         }
     }
 
-    t.type = has_decimal ? T_FLOAT : T_INT;
+    t.type = has_decimal ? T_FLOAT : is_hex ? T_HEX : T_INT;
     return t;
 }
 
@@ -1462,6 +1697,21 @@ struct Token lexer_next_token(struct Lexer *l) {
             t.start = &l->code[l->current];
             t.len = 1;
             break;
+        case '[':
+            t.type = T_L_BRACKET;
+            t.start = &l->code[l->current];
+            t.len = 1;
+            break;
+        case ']':
+            t.type = T_R_BRACKET;
+            t.start = &l->code[l->current];
+            t.len = 1;
+            break;
+        case ',':
+            t.type = T_COMMA;
+            t.start = &l->code[l->current];
+            t.len = 1;
+            break;
         default:
             if (is_digit(c)) {
                 t = lexer_read_number(l);
@@ -1486,6 +1736,240 @@ char *load_code(char* filename) {
     return string;
 }
 
+/*
+ * Assembler
+ */
+struct Assembler {
+    struct CharArray buf;
+    int program_start_patch;
+    int phdr_start_patch;
+    int ehdr_size_patch;
+    int phdr_size_patch;
+    int filesz_patch;
+    int memsz_patch;
+    int vaddr_patch;
+    int paddr_patch;
+    uint32_t location;
+    uint32_t program_start_loc;
+};
+
+void assembler_init(struct Assembler *a) {
+    ca_init(&a->buf);
+    a->program_start_patch = 0;
+    a->phdr_start_patch = 0;
+    a->ehdr_size_patch = 0;
+    a->phdr_size_patch = 0;
+    a->filesz_patch = 0;
+    a->memsz_patch = 0;
+    a->vaddr_patch = 0;
+    a->paddr_patch = 0;
+    a->location = 0;
+    a->program_start_loc = 0;
+}
+
+void assembler_free(struct Assembler *a) {
+    ca_free(&a->buf);
+}
+
+void assembler_append_elf_header(struct Assembler *a) {
+    uint8_t magic[8];
+    magic[0] = 0x7f;
+    magic[1] = 'E';
+    magic[2] = 'L';
+    magic[3] = 'F';
+    magic[4] = 1;
+    magic[5] = 1;
+    magic[6] = 1;
+    magic[7] = 0;
+    ca_append(&a->buf, (char*)magic, 8);
+
+    uint8_t zeros[8] = {0};
+    ca_append(&a->buf, (char*)zeros, 8);
+    uint16_t file_type = 2;
+    ca_append(&a->buf, (char*)&file_type, 2);
+    uint16_t arch_type = 3;
+    ca_append(&a->buf, (char*)&arch_type, 2);
+    uint32_t file_version = 1;
+    ca_append(&a->buf, (char*)&file_version, 4);
+
+    a->program_start_patch = a->buf.count; //need to add executable offset (0x08048000)
+    ca_append(&a->buf, (char*)zeros, 4); //TODO: patch this
+    a->phdr_start_patch = a->buf.count;
+    ca_append(&a->buf, (char*)zeros, 4); //TODO: patch this
+    ca_append(&a->buf, (char*)zeros, 8);
+    a->ehdr_size_patch = a->buf.count; //TODO: patch this
+    ca_append(&a->buf, (char*)zeros, 2);
+    a->phdr_size_patch = a->buf.count; //TODO: patch this 
+    ca_append(&a->buf, (char*)zeros, 2);
+
+    uint16_t phdr_entries = 1;
+    ca_append(&a->buf, (char*)&phdr_entries, 2);
+    ca_append(&a->buf, (char*)zeros, 6);
+
+    //patch elf header size
+    uint16_t ehdr_size = a->buf.count;
+    memcpy(&a->buf.chars[a->ehdr_size_patch], &ehdr_size, 2);
+}
+
+void assembler_append_program_header(struct Assembler *a) {
+    //TODO: patch program header size and _start location (offset by org value)
+    uint32_t phdr_start = a->buf.count;
+    memcpy(&a->buf.chars[a->phdr_start_patch], &phdr_start, 4);
+
+    uint32_t type = 1; //load
+    ca_append(&a->buf, (char*)&type, 4);
+
+    uint32_t offset = 0;
+    ca_append(&a->buf, (char*)&offset, 4);
+
+    a->vaddr_patch = a->buf.count;
+    uint32_t vaddr = 0;
+    ca_append(&a->buf, (char*)&vaddr, 4);
+
+    a->paddr_patch = a->buf.count;
+    uint32_t paddr = 0;
+    ca_append(&a->buf, (char*)&paddr, 4);
+
+    a->filesz_patch = a->buf.count;
+    uint32_t filesz = 0;
+    ca_append(&a->buf, (char*)&filesz, 4);
+
+    a->memsz_patch = a->buf.count;
+    uint32_t memsz = 0;
+    ca_append(&a->buf, (char*)&memsz, 4);
+
+    uint32_t flags = 5;
+    ca_append(&a->buf, (char*)&flags, 4);
+
+    uint32_t align = 0x1000;
+    ca_append(&a->buf, (char*)&align, 4);
+
+    uint16_t phdr_size = a->buf.count - phdr_start;
+    memcpy(&a->buf.chars[a->phdr_size_patch], &phdr_size, 2);
+}
+
+uint32_t get_double(struct Token t) {
+    char* end = t.start + t.len;
+    long ret;
+    if (t.type == T_INT) {
+        ret = strtol(t.start, &end, 10);
+    } else if (t.type == T_HEX) {
+        ret = strtol(t.start + 2, &end, 16);
+    }
+    return (int32_t)ret;
+}
+
+uint8_t get_byte(struct Token t) {
+    char* end = t.start + t.len;
+    long ret;
+    if (t.type == T_INT) {
+        ret = strtol(t.start, &end, 10);
+    } else if (t.type == T_HEX) {
+        ret = strtol(t.start + 2, &end, 16);
+    }
+    return (uint8_t)ret;
+}
+
+
+void assemble_node(struct Assembler *a, struct Node *node) {
+    switch (node->type) {
+        case ANODE_LABEL:
+            //skip for now - will need to use intermediate data structures to save label information in assembler
+            break;
+        case ANODE_OP: {
+            struct ANodeOp* o = (struct ANodeOp*)node;
+            struct Token op = o->operator;
+            switch (op.type) {
+                case T_MOV: {
+                    if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_IMM) {
+                        struct ANodeReg* reg = (struct ANodeReg*)(o->operand1);
+                        struct ANodeImm* imm = (struct ANodeImm*)(o->operand2);
+                        uint8_t opcode;
+                        switch (reg->t.type) {
+                            case T_EAX: opcode = 0xb8; break;
+                            case T_ECX: opcode = 0xb9; break;
+                            case T_EDX: opcode = 0xba; break;
+                            case T_EBX: opcode = 0xbb; break;
+                            case T_ESP: opcode = 0xbc; break;
+                            case T_EBP: opcode = 0xbd; break;
+                            case T_ESI: opcode = 0xbe; break;
+                            case T_EDI: opcode = 0xbf; break;
+                            default: printf("Unrecognized register\n");
+                        }
+                        ca_append(&a->buf, (char*)&opcode, 1);
+                        uint32_t num = get_double(imm->t);
+                        ca_append(&a->buf, (char*)(&num), 4);
+                    } else if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_REG) {
+                        //MOV   r, r
+                    }
+                    break;
+                }
+                case T_INTR: {
+                    if (o->operand1->type == ANODE_IMM) {
+                        uint8_t opcode = 0xcd;
+                        ca_append(&a->buf, (char*)&opcode, 1);
+                        struct ANodeImm* imm = (struct ANodeImm*)(o->operand1);
+                        uint8_t num = get_byte(imm->t);
+                        ca_append(&a->buf, (char*)(&num), 1);
+                    } else {
+                        printf("Operator not recognized: INTR branch\n");
+                    }
+                    break;
+                }
+                case T_ORG: {
+                    if (o->operand1->type == ANODE_IMM) {
+                        struct ANodeImm* imm = (struct ANodeImm*)(o->operand1);
+                        a->location = get_double(imm->t);
+                    } else {
+                        printf("Operator not recognized: inside T_ORG branch\n");
+                    }
+                    break;
+                }
+                default:
+                    printf("Operator not recognized: default case\n");
+                    break;
+            }
+            break;
+        }
+        default:
+            printf("Not supported yet\n");
+    }
+}
+
+
+
+void assembler_append_program(struct Assembler *a, struct NodeArray *na) {
+    a->program_start_loc = a->buf.count;
+
+    for (int i = 0; i < na->count; i++) {
+        assemble_node(a, na->nodes[i]);
+    }
+
+    uint32_t filesz = a->buf.count;
+    memcpy(&a->buf.chars[a->filesz_patch], &filesz, 4);
+
+    uint32_t memsz = a->buf.count;
+    memcpy(&a->buf.chars[a->memsz_patch], &memsz, 4);
+}
+
+void assembler_patch_locations(struct Assembler *a) {
+    uint32_t program_start = a->program_start_loc + a->location;
+    memcpy(&a->buf.chars[a->program_start_patch], &program_start, 4);
+
+    uint32_t vaddr = a->location;
+    memcpy(&a->buf.chars[a->vaddr_patch], &vaddr, 4);
+
+    uint32_t paddr = a->location;
+    memcpy(&a->buf.chars[a->paddr_patch], &paddr, 4);
+}
+
+
+void assembler_write_binary(struct Assembler *a, char* filename) {
+    FILE *f = fopen(filename, "wb");
+    fwrite(a->buf.chars, sizeof(char), a->buf.count, f);
+    fclose(f);
+}
+
 
 int main (int argc, char **argv) {
 
@@ -1500,7 +1984,7 @@ int main (int argc, char **argv) {
 
     //Tokenize source code
     struct Lexer l;
-    lexer_init(&l, code);
+    lexer_init(&l, code, ST_ASM);
 
     struct TokenArray ta;
     ta_init(&ta);
@@ -1521,9 +2005,40 @@ int main (int argc, char **argv) {
     ta_add(&ta, t);
 
     for (int i = 0; i < ta.count; i++) {
-//        printf("%.*s\n", ta.tokens[i].len, ta.tokens[i].start);
+        printf("[%d] %.*s\n", i, ta.tokens[i].len, ta.tokens[i].start);
     }
 
+
+    //parsing and assembling
+    struct Parser p;
+    parser_init(&p, &ta);
+    struct NodeArray na;
+    na_init(&na);
+    
+    while (parser_peek_one(&p).type != T_EOF) {
+        na_add(&na, aparse_stmt(&p));
+    }
+
+    for (int i = 0; i < na.count; i++) {
+        ast_print(na.nodes[i]);
+        printf("\n");
+    }
+
+    struct Assembler a;
+    assembler_init(&a);
+
+    assembler_append_elf_header(&a);
+    assembler_append_program_header(&a);  
+    assembler_append_program(&a, &na);
+    assembler_patch_locations(&a);
+
+    assembler_write_binary(&a, "final.bin");
+
+    assembler_free(&a);
+
+    //end of assembling 
+
+    /*
     //Parse tokens into AST
     struct Parser p;
     parser_init(&p, &ta);
@@ -1573,7 +2088,7 @@ int main (int argc, char **argv) {
     na_free(&na);
     ta_free(&ta);
     ems_free(&ems);
-    printf("Allocated memory remaining: %ld\n", allocated);
+    printf("Allocated memory remaining: %ld\n", allocated);*/
 
     return 0;
 }
