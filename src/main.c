@@ -36,8 +36,16 @@ void free_unit(void *vptr, size_t unit_size) {
     free_arr(vptr, unit_size, 1);
 }
 
-
 enum TokenType {
+    T_EAX = 0,
+    T_ECX,
+    T_EDX,
+    T_EBX,
+    T_ESP,
+    T_EBP,
+    T_ESI,
+    T_EDI,
+
     //tokenizing tamarind file
     T_INT,
     T_HEX,
@@ -84,14 +92,6 @@ enum TokenType {
     T_PUSH,
     T_POP,
     T_ADD,
-    T_EAX,
-    T_EDX,
-    T_ECX,
-    T_EBX,
-    T_ESI,
-    T_EDI,
-    T_ESP,
-    T_EBP,
     T_INTR,
     T_DOLLAR,   //Let's just force user to define labels instead of compiling $$
     T_EQU,       //used to compute sizes (should compute the value and then patch immediately)
@@ -1870,11 +1870,15 @@ uint8_t get_byte(struct Token t) {
     return (uint8_t)ret;
 }
 
+uint8_t get_reg_pair_code(enum TokenType dst, enum TokenType src) {
+    return src * 8 + 0xc0 + dst;
+}
 
 void assemble_node(struct Assembler *a, struct Node *node) {
     switch (node->type) {
         case ANODE_LABEL:
             //skip for now - will need to use intermediate data structures to save label information in assembler
+            //This doesn't affect the machine code - only for the assembler to patch addresses
             break;
         case ANODE_OP: {
             struct ANodeOp* o = (struct ANodeOp*)node;
@@ -1900,7 +1904,12 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                         uint32_t num = get_double(imm->t);
                         ca_append(&a->buf, (char*)(&num), 4);
                     } else if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_REG) {
-                        //MOV   r, r
+                        uint8_t movrr_code = 0x89;
+                        ca_append(&a->buf, (char*)&movrr_code, 1);
+                        struct ANodeReg* dst = (struct ANodeReg*)(o->operand1);
+                        struct ANodeReg* src = (struct ANodeReg*)(o->operand2);
+                        uint8_t rr_code = get_reg_pair_code(dst->t.type, src->t.type);
+                        ca_append(&a->buf, (char*)&rr_code, 1);
                     }
                     break;
                 }
