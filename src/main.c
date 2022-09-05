@@ -1870,7 +1870,7 @@ uint8_t get_byte(struct Token t) {
     return (uint8_t)ret;
 }
 
-uint8_t mov_reg_reg_code(enum TokenType dst, enum TokenType src) {
+uint8_t reg_reg_code(enum TokenType dst, enum TokenType src) {
     return src * 8 + 0xc0 + dst;
 }
 
@@ -1897,11 +1897,38 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                         uint32_t num = get_double(imm->t);
                         ca_append(&a->buf, (char*)(&num), 4);
                     } else if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_REG) {
-                        uint8_t movrr_code = 0x89;
-                        ca_append(&a->buf, (char*)&movrr_code, 1);
+                        uint8_t mov_rr_code = 0x89;
+                        ca_append(&a->buf, (char*)&mov_rr_code, 1);
                         struct ANodeReg* dst = (struct ANodeReg*)(o->operand1);
                         struct ANodeReg* src = (struct ANodeReg*)(o->operand2);
-                        uint8_t rr_code = mov_reg_reg_code(dst->t.type, src->t.type);
+                        uint8_t rr_code = reg_reg_code(dst->t.type, src->t.type);
+                        ca_append(&a->buf, (char*)&rr_code, 1);
+                    }
+                    break;
+                }
+                case T_ADD: {
+                    if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_IMM) {
+                        struct ANodeReg* dst = (struct ANodeReg*)(o->operand1);
+                        //making all immediate values are 32-bits for now (need to add 8-bit versions later)
+                        if (dst->t.type == T_EAX) {
+                            uint8_t add_code = 0x05;
+                            ca_append(&a->buf, (char*)&add_code, 1);
+                        } else {
+                            uint8_t add_code = 0x81;
+                            ca_append(&a->buf, (char*)&add_code, 1);
+                            uint8_t r_code = dst->t.type + 0xc0;
+                            ca_append(&a->buf, (char*)&r_code, 1);
+                        }
+
+                        struct ANodeImm* imm = (struct ANodeImm*)(o->operand2);
+                        uint32_t num = get_double(imm->t);
+                        ca_append(&a->buf, (char*)(&num), 4);
+                    } else if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_REG) {
+                        uint8_t add_rr_code = 0x01;
+                        ca_append(&a->buf, (char*)&add_rr_code, 1);
+                        struct ANodeReg* dst = (struct ANodeReg*)(o->operand1);
+                        struct ANodeReg* src = (struct ANodeReg*)(o->operand2);
+                        uint8_t rr_code = reg_reg_code(dst->t.type, src->t.type);
                         ca_append(&a->buf, (char*)&rr_code, 1);
                     }
                     break;

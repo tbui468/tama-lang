@@ -6,18 +6,13 @@ Watch 'Understanding Compiler Optimization - Chandler Carruth' on youtube
 Reference for x86 machine code
     http://ref.x86asm.net/coder32.html
 
+May be time to refactor into different c modules
+
 GOAL 1: Make a assembler/linker for it
     Add more machine code mappings for assembler
         add enough to get it turing complete (booleans, conditionals, loops)
         //basic
-        //need to figure how to deref / do offsets
-        //each register pair (different depending on src/dst) has its own byte code?
-        //for a given source register, there is an offset
-        //  for each given dst register, the byte is that offset + register order
 
-
-        add     r, imm
-        add     r, r
         push    imm
         push    r
         pop     r
