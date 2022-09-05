@@ -1870,8 +1870,12 @@ uint8_t get_byte(struct Token t) {
     return (uint8_t)ret;
 }
 
-uint8_t get_reg_pair_code(enum TokenType dst, enum TokenType src) {
+uint8_t mov_reg_reg_code(enum TokenType dst, enum TokenType src) {
     return src * 8 + 0xc0 + dst;
+}
+
+uint8_t mov_reg_imm_code(enum TokenType dst) {
+    return dst + 0xb8;
 }
 
 void assemble_node(struct Assembler *a, struct Node *node) {
@@ -1888,18 +1892,7 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                     if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_IMM) {
                         struct ANodeReg* reg = (struct ANodeReg*)(o->operand1);
                         struct ANodeImm* imm = (struct ANodeImm*)(o->operand2);
-                        uint8_t opcode;
-                        switch (reg->t.type) {
-                            case T_EAX: opcode = 0xb8; break;
-                            case T_ECX: opcode = 0xb9; break;
-                            case T_EDX: opcode = 0xba; break;
-                            case T_EBX: opcode = 0xbb; break;
-                            case T_ESP: opcode = 0xbc; break;
-                            case T_EBP: opcode = 0xbd; break;
-                            case T_ESI: opcode = 0xbe; break;
-                            case T_EDI: opcode = 0xbf; break;
-                            default: printf("Unrecognized register\n");
-                        }
+                        uint8_t opcode = mov_reg_imm_code(reg->t.type);
                         ca_append(&a->buf, (char*)&opcode, 1);
                         uint32_t num = get_double(imm->t);
                         ca_append(&a->buf, (char*)(&num), 4);
@@ -1908,7 +1901,7 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                         ca_append(&a->buf, (char*)&movrr_code, 1);
                         struct ANodeReg* dst = (struct ANodeReg*)(o->operand1);
                         struct ANodeReg* src = (struct ANodeReg*)(o->operand2);
-                        uint8_t rr_code = get_reg_pair_code(dst->t.type, src->t.type);
+                        uint8_t rr_code = mov_reg_reg_code(dst->t.type, src->t.type);
                         ca_append(&a->buf, (char*)&rr_code, 1);
                     }
                     break;
