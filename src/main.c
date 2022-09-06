@@ -1980,6 +1980,29 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                     break;
                 }
                 case T_IMUL: {
+                    if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_IMM) {
+                        uint8_t code1 = 0x69;
+                        ca_append(&a->buf, (char*)&code1, 1);
+
+                        struct ANodeReg *reg = (struct ANodeReg*)(o->operand1);
+                        uint8_t code2 = reg->t.type * 9 + 0xc0;
+                        ca_append(&a->buf, (char*)&code2, 1);
+
+                        struct ANodeImm *imm = (struct ANodeImm*)(o->operand2);
+                        uint32_t num = get_double(imm->t);
+                        ca_append(&a->buf, (char*)(&num), 4);
+                    } else if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_REG) {
+                        uint16_t code = 0xaf0f;
+                        ca_append(&a->buf, (char*)&code, 2);
+
+                        struct ANodeReg *dst = (struct ANodeReg*)(o->operand1);
+                        struct ANodeReg *src = (struct ANodeReg*)(o->operand2);
+
+                        uint8_t rrcode = reg_reg_code(src->t.type, dst->t.type);
+                        ca_append(&a->buf, (char*)&rrcode, 1);
+                    } else {
+                        //TODO: error
+                    }
                     break;
                 }
                 case T_IDIV: {

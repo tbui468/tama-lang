@@ -13,12 +13,6 @@ GOAL 1: Make a assembler/linker for it
         add enough to get it turing complete (booleans, conditionals, loops)
         //basic
 
-        imul    r, r        0x0f, 0xaf, reversed rr code (src and destination are reversed when calling reg_reg_code)
-        imul    r, imm32    0x69, 0xc0 + dst * 9 (why 9), 4 bytes
-
-
-        //TEST ALL ABOVE with basic arithmetic
-
         //for conditionals
         jmp     imm
         jz
@@ -39,6 +33,7 @@ GOAL 1: Make a assembler/linker for it
         
 
         //TEST ALL ABOVE - should work with current compiler
+        //check out.asm and make sure ALL operations are assembled!!!
 
         //Need to have error messages appear for wrong inputs into assembler - there are a lot of ways to get this wrong
             eg, the first operand in an immediate value for many operations
@@ -52,6 +47,7 @@ GOAL 2: Linker stuff (linking multiple elf files statically)
 GOAL 3: For loops, functions, switch statements, arrays and structs (and classes?), pointers/references
 
 Assembler should allow 1 byte add/sub operations (currently defaulting to 4 byte operands when using immediates)
+Assembler needs to check for overflow with imul
 
 Tests for testing features (it's annoying to have to change test code to retest everything)
     Need way to compare input and expected output

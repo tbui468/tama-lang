@@ -12,6 +12,9 @@ mov     eax, ebx
 cdq
 mov     ebx, 42
 idiv    ebx
+mov     esi, 40
+imul    eax, esi
+sub     eax, 38
 mov     ebx, eax
 mov     eax, 1
 int     0x80
