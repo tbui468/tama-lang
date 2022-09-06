@@ -92,6 +92,7 @@ enum TokenType {
     T_PUSH,
     T_POP,
     T_ADD,
+    T_SUB,
     T_INTR,
     T_DOLLAR,   //Let's just force user to define labels instead of compiling $$
     T_EQU,       //used to compute sizes (should compute the value and then patch immediately)
@@ -1407,6 +1408,7 @@ struct Node *aparse_stmt(struct Parser *p) {
             //two operands
             case T_MOV:
             case T_ADD:
+            case T_SUB:
                 left = aparse_expr(p);
                 parser_consume(p, T_COMMA);
                 right = aparse_expr(p);
@@ -1534,6 +1536,8 @@ struct Token lexer_read_word(struct Lexer *l) {
             t.type = T_POP;
         } else if (t.len == 3 && strncmp("add", t.start, 3) == 0) {
             t.type = T_ADD;
+        } else if (t.len == 3 && strncmp("sub", t.start, 3) == 0) {
+            t.type = T_SUB;
         } else if (t.len == 3 && strncmp("eax", t.start, 3) == 0) {
             t.type = T_EAX;
         } else if (t.len == 3 && strncmp("edx", t.start, 3) == 0) {
@@ -1933,6 +1937,35 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                     }
                     break;
                 }
+                case T_SUB: {
+                    if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_REG) {
+                        uint8_t code = 0x29;
+                        ca_append(&a->buf, (char*)&code, 1);
+
+                        struct ANodeReg *dst = (struct ANodeReg*)(o->operand1);
+                        struct ANodeReg *src = (struct ANodeReg*)(o->operand2);
+                        uint8_t rr_code = reg_reg_code(dst->t.type, src->t.type);
+                        ca_append(&a->buf, (char*)&rr_code, 1);
+                    } else if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_IMM) {
+                        struct ANodeReg *reg = (struct ANodeReg*)(o->operand1);
+                        if (reg->t.type == T_EAX) {
+                            uint8_t code = 0x2d;
+                            ca_append(&a->buf, (char*)&code, 1);
+                        } else {
+                            uint8_t code1 = 0x81;
+                            ca_append(&a->buf, (char*)&code1, 1);
+                            uint8_t code2 = 0xe8 + reg->t.type;
+                            ca_append(&a->buf, (char*)&code2, 1);
+                        }
+
+                        struct ANodeImm *imm = (struct ANodeImm*)(o->operand2);
+                        uint32_t num = get_double(imm->t);
+                        ca_append(&a->buf, (char*)(&num), 4);
+                    } else {
+                        //TODO: error message
+                    }
+                    break;
+                }
                 case T_PUSH: {
                     if (o->operand1->type == ANODE_IMM) {
                         uint8_t code = 0x68;
@@ -2069,8 +2102,8 @@ int main (int argc, char **argv) {
     }
 
     for (int i = 0; i < na.count; i++) {
-        ast_print(na.nodes[i]);
-        printf("\n");
+//        ast_print(na.nodes[i]);
+//        printf("\n");
     }
 
     struct Assembler a;

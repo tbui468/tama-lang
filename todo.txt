@@ -13,13 +13,6 @@ GOAL 1: Make a assembler/linker for it
         add enough to get it turing complete (booleans, conditionals, loops)
         //basic
 
-        pop     r           0x58 + dst
-        push    imm32         0x68, 4 bytes
-        push    r           0x50 + src
-        sub     r, r        0x29, rr code
-        sub     eax, imm32    0x2d, 4 bytes
-        sub     r, imm32      0x81, dst + 0xe8, 4 bytes 
-
         imul    r, r        0x0f, 0xaf, reversed rr code (src and destination are reversed when calling reg_reg_code)
         imul    r, imm32    0x69, 0xc0 + dst * 9 (why 9), 4 bytes
 
@@ -49,6 +42,9 @@ GOAL 1: Make a assembler/linker for it
         
 
         //TEST ALL ABOVE - should work with current compiler
+
+        //Need to have error messages appear for wrong inputs into assembler - there are a lot of ways to get this wrong
+            eg, the first operand in an immediate value for many operations
 
 GOAL 2: Linker stuff (linking multiple elf files statically)
     will each ELF object file need a relocation table (showing with addresses need to be relocated)
