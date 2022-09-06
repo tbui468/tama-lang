@@ -93,10 +93,13 @@ enum TokenType {
     T_POP,
     T_ADD,
     T_SUB,
+    T_IMUL,
+    T_IDIV,
     T_INTR,
     T_DOLLAR,   //Let's just force user to define labels instead of compiling $$
     T_EQU,       //used to compute sizes (should compute the value and then patch immediately)
     T_ORG,
+    T_CDQ
 };
 
 struct Token {
@@ -1409,6 +1412,7 @@ struct Node *aparse_stmt(struct Parser *p) {
             case T_MOV:
             case T_ADD:
             case T_SUB:
+            case T_IMUL:
                 left = aparse_expr(p);
                 parser_consume(p, T_COMMA);
                 right = aparse_expr(p);
@@ -1418,9 +1422,12 @@ struct Node *aparse_stmt(struct Parser *p) {
             case T_PUSH:
             case T_INTR:
             case T_ORG:
+            case T_IDIV:
                 left = aparse_expr(p);
                 break;
             //no operands
+            case T_CDQ:
+                break;
             default:
                 ems_add(&ems, next.line, "AParse Error: Invalid token type!");
         }
@@ -1538,6 +1545,10 @@ struct Token lexer_read_word(struct Lexer *l) {
             t.type = T_ADD;
         } else if (t.len == 3 && strncmp("sub", t.start, 3) == 0) {
             t.type = T_SUB;
+        } else if (t.len == 4 && strncmp("imul", t.start, 4) == 0) {
+            t.type = T_IMUL;
+        } else if (t.len == 4 && strncmp("idiv", t.start, 4) == 0) {
+            t.type = T_IDIV;
         } else if (t.len == 3 && strncmp("eax", t.start, 3) == 0) {
             t.type = T_EAX;
         } else if (t.len == 3 && strncmp("edx", t.start, 3) == 0) {
@@ -1562,6 +1573,8 @@ struct Token lexer_read_word(struct Lexer *l) {
             t.type = T_EQU;
         } else if (t.len == 3 && strncmp("org", t.start, 3) == 0) {
             t.type = T_ORG;
+        } else if (t.len == 3 && strncmp("cdq", t.start, 3) == 0) {
+            t.type = T_CDQ;
         } else {
             t.type = T_IDENTIFIER;
         }
@@ -1966,6 +1979,21 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                     }
                     break;
                 }
+                case T_IMUL: {
+                    break;
+                }
+                case T_IDIV: {
+                    if (o->operand1->type == ANODE_REG && o->operand2 == NULL) {
+                        uint8_t code = 0xf7;
+                        ca_append(&a->buf, (char*)&code, 1);
+                        struct ANodeReg *reg = (struct ANodeReg*)(o->operand1);
+                        uint8_t r_offset = 0xf8 + reg->t.type;
+                        ca_append(&a->buf, (char*)&r_offset, 1);
+                    } else {
+                        //TODO: error message
+                    }
+                    break;
+                }
                 case T_PUSH: {
                     if (o->operand1->type == ANODE_IMM) {
                         uint8_t code = 0x68;
@@ -2004,6 +2032,15 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                         a->location = get_double(imm->t);
                     } else {
                         printf("Operator not recognized: inside T_ORG branch\n");
+                    }
+                    break;
+                }
+                case T_CDQ: {
+                    if (o->operand1 == NULL && o->operand2 == NULL) {
+                        uint8_t code = 0x99;
+                        ca_append(&a->buf, (char*)&code, 1);
+                    } else {
+                        //TODO: error
                     }
                     break;
                 }

@@ -16,9 +16,6 @@ GOAL 1: Make a assembler/linker for it
         imul    r, r        0x0f, 0xaf, reversed rr code (src and destination are reversed when calling reg_reg_code)
         imul    r, imm32    0x69, 0xc0 + dst * 9 (why 9), 4 bytes
 
-        //note: divide edx:eax by r
-        idiv    r           0xf7, 0xf8 + r
-
 
         //TEST ALL ABOVE with basic arithmetic
 
