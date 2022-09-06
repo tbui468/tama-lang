@@ -13,13 +13,21 @@ GOAL 1: Make a assembler/linker for it
         add enough to get it turing complete (booleans, conditionals, loops)
         //basic
 
-        push    imm
-        push    r
-        pop     r
-        mul     r, r
-        div     r, r
-        imul    r, r    
-        idiv    r, r
+        pop     r           0x58 + dst
+        push    imm32         0x68, 4 bytes
+        push    r           0x50 + src
+        sub     r, r        0x29, rr code
+        sub     eax, imm32    0x2d, 4 bytes
+        sub     r, imm32      0x81, dst + 0xe8, 4 bytes 
+
+        imul    r, r        0x0f, 0xaf, reversed rr code (src and destination are reversed when calling reg_reg_code)
+        imul    r, imm32    0x69, 0xc0 + dst * 9 (why 9), 4 bytes
+
+        //note: divide edx:eax by r
+        idiv    r           0xf7, 0xf8 + r
+
+
+        //TEST ALL ABOVE with basic arithmetic
 
         //for conditionals
         jmp     imm
@@ -36,18 +44,21 @@ GOAL 1: Make a assembler/linker for it
         setg    r8
         movzx   r32, r8
         xor     r, r
-
-        //function calls (mainly for fun.asm for now - no function definitions/calls supported in tamarind yet)
         call    <identifier>
         ret
         
 
-    Linker stuff (linking multiple elf files statically)
-        will each ELF object file need a relocation table (showing with addresses need to be relocated)
-            is 'org' used in relocation?  Am I mixing the assembler and linker?  Or is there another relocation step in the linker too?
+        //TEST ALL ABOVE - should work with current compiler
+
+GOAL 2: Linker stuff (linking multiple elf files statically)
+    will each ELF object file need a relocation table (showing with addresses need to be relocated)
+        is 'org' used in relocation?  Am I mixing the assembler and linker?  Or is there another relocation step in the linker too?
+    symbol resolution with object files
 
 
-GOAL 2: For loops, functions, switch statements, arrays and structs (and classes?), pointers/references
+GOAL 3: For loops, functions, switch statements, arrays and structs (and classes?), pointers/references
+
+Assembler should allow 1 byte add/sub operations (currently defaulting to 4 byte operands when using immediates)
 
 Tests for testing features (it's annoying to have to change test code to retest everything)
     Need way to compare input and expected output

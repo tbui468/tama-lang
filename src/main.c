@@ -930,7 +930,7 @@ enum TokenType compiler_compile(struct Compiler *c, struct Node *n) {
             } else if (*b->op.start == '*') {
                 write_op(c, "    imul    %s, %s", "eax", "ebx");
             } else if (*b->op.start == '/') {
-                write_op(c, "    cdq");
+                write_op(c, "    cdq"); //sign extend eax into edx
                 write_op(c, "    idiv    %s", "ebx");
             } else if (b->op.type == T_LESS) {
                 write_op(c, "    cmp     %s, %s", "eax", "ebx");
@@ -1931,6 +1931,26 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                         uint8_t rr_code = reg_reg_code(dst->t.type, src->t.type);
                         ca_append(&a->buf, (char*)&rr_code, 1);
                     }
+                    break;
+                }
+                case T_PUSH: {
+                    if (o->operand1->type == ANODE_IMM) {
+                        uint8_t code = 0x68;
+                        ca_append(&a->buf, (char*)&code, 1);
+                        struct ANodeImm* imm = (struct ANodeImm*)(o->operand1);
+                        uint32_t num = get_double(imm->t);
+                        ca_append(&a->buf, (char*)(&num), 4);
+                    } else if (o->operand1->type == ANODE_REG) {
+                        struct ANodeReg *reg = (struct ANodeReg*)(o->operand1);
+                        uint8_t code = 0x50 + reg->t.type;
+                        ca_append(&a->buf, (char*)&code, 1);
+                    }
+                    break;
+                }
+                case T_POP: {
+                    struct ANodeReg *reg = (struct ANodeReg*)(o->operand1);
+                    uint8_t code = 0x58 + reg->t.type;
+                    ca_append(&a->buf, (char*)&code, 1);
                     break;
                 }
                 case T_INTR: {
