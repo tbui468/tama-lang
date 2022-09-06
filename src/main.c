@@ -238,7 +238,8 @@ enum NodeType {
     NODE_WHILE,
 
     //for assembler
-    ANODE_LABEL,
+    ANODE_LABEL_REF,
+    ANODE_LABEL_DEF,
     ANODE_OP,
     ANODE_REG,
     ANODE_IMM
@@ -324,7 +325,12 @@ struct NodeWhile {
 };
 
 
-struct ANodeLabel {
+struct ANodeLabelDef {
+    struct Node n; 
+    struct Token t;
+};
+
+struct ANodeLabelRef {
     struct Node n; 
     struct Token t;
 };
@@ -463,9 +469,16 @@ struct Node *node_while(struct Token while_token, struct Node *condition, struct
     return (struct Node*)node;
 }
 
-struct Node *anode_label(struct Token t) {
-    struct ANodeLabel *node = alloc_unit(sizeof(struct ANodeLabel));
-    node->n.type = ANODE_LABEL;
+struct Node *anode_label_def(struct Token t) {
+    struct ANodeLabelDef *node = alloc_unit(sizeof(struct ANodeLabelDef));
+    node->n.type = ANODE_LABEL_DEF;
+    node->t = t;
+    return (struct Node*)node;
+}
+
+struct Node *anode_label_ref(struct Token t) {
+    struct ANodeLabelRef *node = alloc_unit(sizeof(struct ANodeLabelRef));
+    node->n.type = ANODE_LABEL_REF;
     node->t = t;
     return (struct Node*)node;
 }
@@ -549,8 +562,12 @@ void ast_print(struct Node* n) {
             printf("NODE_WHILE");
             break;
         }
-        case ANODE_LABEL: {
-            printf("ANODE_LABEL");
+        case ANODE_LABEL_DEF: {
+            printf("ANODE_LABEL_DEF");
+            break;
+        }
+        case ANODE_LABEL_REF: {
+            printf("ANODE_LABEL_REF");
             break;
         }
         case ANODE_OP: {
@@ -643,9 +660,14 @@ void ast_free(struct Node* n) {
             free_unit(w, sizeof(struct NodeWhile));
             break;
         }
-        case ANODE_LABEL: {
-            struct ANodeLabel* l = (struct ANodeLabel*)n;
-            free_unit(l, sizeof(struct ANodeLabel));
+        case ANODE_LABEL_DEF: {
+            struct ANodeLabelDef* l = (struct ANodeLabelDef*)n;
+            free_unit(l, sizeof(struct ANodeLabelDef));
+            break;
+        }
+        case ANODE_LABEL_REF: {
+            struct ANodeLabelRef* l = (struct ANodeLabelRef*)n;
+            free_unit(l, sizeof(struct ANodeLabelRef));
             break;
         }
         case ANODE_OP: {
@@ -1386,6 +1408,8 @@ struct Node *aparse_literal(struct Parser *p) {
         case T_ESI:
         case T_EDI:
             return anode_reg(next);
+        case T_IDENTIFIER:
+            return anode_label_ref(next);
         default:
             ems_add(&ems, next.line, "Parse Error: Unrecognized token!");
     }
@@ -1402,7 +1426,7 @@ struct Node *aparse_stmt(struct Parser *p) {
     if (next.type == T_IDENTIFIER && parser_peek_two(p).type == T_COLON) {
         struct Token id = parser_next(p);
         parser_consume(p, T_COLON);
-        return anode_label(id);
+        return anode_label_def(id);
     } else {
         struct Token op =  parser_next(p);
         struct Node *left = NULL;
@@ -1756,6 +1780,94 @@ char *load_code(char* filename) {
 /*
  * Assembler
  */
+
+struct U32Array {
+    uint32_t *elements;
+    int count;
+    int max_count;
+};
+
+
+void u32a_init(struct U32Array *ua) {
+    ua->elements = NULL;
+    ua->count = 0;
+    ua->max_count = 0;
+}
+
+void u32a_free(struct U32Array *ua) {
+    free_arr(ua->elements, sizeof(uint32_t), ua->max_count); 
+}
+
+void u32a_add(struct U32Array *ua, uint32_t element) {
+    int old_max = ua->max_count;
+    if (ua->count + 1 > ua->max_count) {
+        ua->max_count *= 2;
+        if (ua->max_count == 0)
+            ua->max_count = 8;
+    }
+
+    ua->elements = alloc_arr(ua->elements, sizeof(uint32_t), old_max, ua->max_count);
+
+    ua->elements[ua->count] = element;
+    ua->count++;
+}
+
+struct ALabel {
+    struct Token t;
+    uint32_t addr;
+    bool defined;
+    struct U32Array ref_locs;
+};
+
+void al_init(struct ALabel *al, struct Token t, uint32_t addr, bool defined) {
+    al->t = t;
+    al->addr = addr;
+    al->defined = defined;
+    u32a_init(&al->ref_locs);
+}
+
+struct ALabelArray {
+    struct ALabel *elements;
+    int count;
+    int max_count;
+};
+
+void ala_init(struct ALabelArray* ala) {
+    ala->elements = NULL;
+    ala->count = 0;
+    ala->max_count = 0;
+}
+
+void ala_free(struct ALabelArray *ala) {
+    free_arr(ala->elements, sizeof(struct ALabel), ala->max_count); 
+}
+
+void ala_add(struct ALabelArray *ala, struct ALabel element) {
+    int old_max = ala->max_count;
+    if (ala->count + 1 > ala->max_count) {
+        ala->max_count *= 2;
+        if (ala->max_count == 0)
+            ala->max_count = 8;
+    }
+
+    ala->elements = alloc_arr(ala->elements, sizeof(struct ALabel), old_max, ala->max_count);
+
+    ala->elements[ala->count] = element;
+    ala->count++;
+}
+
+struct ALabel* ala_get_label(struct ALabelArray *ala, struct Token t) {
+    for (int i = 0; i < ala->count; i++) {
+        struct ALabel* cur = &ala->elements[i];
+        if (cur->t.len == t.len && strncmp(cur->t.start, t.start, t.len) == 0) {
+            return cur;
+        }
+    }
+
+    return NULL;
+}
+
+
 struct Assembler {
     struct CharArray buf;
     int program_start_patch;
@@ -1768,6 +1880,7 @@ struct Assembler {
     int paddr_patch;
     uint32_t location;
     uint32_t program_start_loc;
+    struct ALabelArray ala;
 };
 
 void assembler_init(struct Assembler *a) {
@@ -1782,6 +1895,7 @@ void assembler_init(struct Assembler *a) {
     a->paddr_patch = 0;
     a->location = 0;
     a->program_start_loc = 0;
+    ala_init(&a->ala);
 }
 
 void assembler_free(struct Assembler *a) {
@@ -1897,36 +2011,74 @@ uint8_t mov_reg_imm_code(enum TokenType dst) {
 
 void assemble_node(struct Assembler *a, struct Node *node) {
     switch (node->type) {
-        case ANODE_LABEL:
-            //skip for now - will need to use intermediate data structures to save label information in assembler
-            //This doesn't affect the machine code - only for the assembler to patch addresses
+        case ANODE_IMM: {
+            struct ANodeImm* imm = (struct ANodeImm*)node;
+            uint32_t num = get_double(imm->t);
+            ca_append(&a->buf, (char*)(&num), 4);
             break;
+        }
+        case ANODE_LABEL_DEF: {
+            struct ALabel *label = NULL;
+            struct ANodeLabelDef* ld = (struct ANodeLabelDef*)node;
+            if ((label = ala_get_label(&a->ala, ld->t))) {
+                if (label->defined) {
+                    ems_add(&ems, ld->t.line, "Assembler Error: Labels cannot be defined more than once.");
+                } 
+                label->t = ld->t;
+                label->addr = a->buf.count;
+                label->defined = true;
+            } else {
+                struct ALabel al;
+                al_init(&al, ld->t, a->buf.count, true);
+                ala_add(&a->ala, al);
+            }
+            break;
+        }
+        case ANODE_LABEL_REF: {
+            struct ALabel *label = NULL;
+            struct ANodeLabelRef* lr = (struct ANodeLabelRef*)node;
+            if ((label = ala_get_label(&a->ala, lr->t))) {
+                u32a_add(&label->ref_locs, a->buf.count);
+            } else {
+                struct ALabel al;
+                al_init(&al, lr->t, 0, false);
+                ala_add(&a->ala, al);
+                u32a_add(&al.ref_locs, a->buf.count);
+            }
+            uint32_t place_holder = 0x0;
+            ca_append(&a->buf, (char*)&place_holder, 4);
+            break;
+        }
         case ANODE_OP: {
             struct ANodeOp* o = (struct ANodeOp*)node;
             struct Token op = o->operator;
             switch (op.type) {
                 case T_MOV: {
-                    if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_IMM) {
-                        struct ANodeReg* reg = (struct ANodeReg*)(o->operand1);
-                        struct ANodeImm* imm = (struct ANodeImm*)(o->operand2);
-                        uint8_t opcode = mov_reg_imm_code(reg->t.type);
-                        ca_append(&a->buf, (char*)&opcode, 1);
-                        uint32_t num = get_double(imm->t);
-                        ca_append(&a->buf, (char*)(&num), 4);
-                    } else if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_REG) {
+                    if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_REG) {
                         uint8_t mov_rr_code = 0x89;
                         ca_append(&a->buf, (char*)&mov_rr_code, 1);
                         struct ANodeReg* dst = (struct ANodeReg*)(o->operand1);
                         struct ANodeReg* src = (struct ANodeReg*)(o->operand2);
                         uint8_t rr_code = reg_reg_code(dst->t.type, src->t.type);
                         ca_append(&a->buf, (char*)&rr_code, 1);
+                    } else if (o->operand1->type == ANODE_REG) {
+                        struct ANodeReg* reg = (struct ANodeReg*)(o->operand1);
+                        uint8_t opcode = mov_reg_imm_code(reg->t.type);
+                        ca_append(&a->buf, (char*)&opcode, 1);
+                        assemble_node(a, o->operand2);
                     }
                     break;
                 }
                 case T_ADD: {
-                    if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_IMM) {
+                    if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_REG) {
+                        uint8_t add_rr_code = 0x01;
+                        ca_append(&a->buf, (char*)&add_rr_code, 1);
                         struct ANodeReg* dst = (struct ANodeReg*)(o->operand1);
-                        //making all immediate values are 32-bits for now (need to add 8-bit versions later)
+                        struct ANodeReg* src = (struct ANodeReg*)(o->operand2);
+                        uint8_t rr_code = reg_reg_code(dst->t.type, src->t.type);
+                        ca_append(&a->buf, (char*)&rr_code, 1);
+                    } else if (o->operand1->type == ANODE_REG) {
+                        struct ANodeReg* dst = (struct ANodeReg*)(o->operand1);
                         if (dst->t.type == T_EAX) {
                             uint8_t add_code = 0x05;
                             ca_append(&a->buf, (char*)&add_code, 1);
@@ -1936,17 +2088,7 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                             uint8_t r_code = dst->t.type + 0xc0;
                             ca_append(&a->buf, (char*)&r_code, 1);
                         }
-
-                        struct ANodeImm* imm = (struct ANodeImm*)(o->operand2);
-                        uint32_t num = get_double(imm->t);
-                        ca_append(&a->buf, (char*)(&num), 4);
-                    } else if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_REG) {
-                        uint8_t add_rr_code = 0x01;
-                        ca_append(&a->buf, (char*)&add_rr_code, 1);
-                        struct ANodeReg* dst = (struct ANodeReg*)(o->operand1);
-                        struct ANodeReg* src = (struct ANodeReg*)(o->operand2);
-                        uint8_t rr_code = reg_reg_code(dst->t.type, src->t.type);
-                        ca_append(&a->buf, (char*)&rr_code, 1);
+                        assemble_node(a, o->operand2);
                     }
                     break;
                 }
@@ -1959,7 +2101,7 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                         struct ANodeReg *src = (struct ANodeReg*)(o->operand2);
                         uint8_t rr_code = reg_reg_code(dst->t.type, src->t.type);
                         ca_append(&a->buf, (char*)&rr_code, 1);
-                    } else if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_IMM) {
+                    } else if (o->operand1->type == ANODE_REG) {
                         struct ANodeReg *reg = (struct ANodeReg*)(o->operand1);
                         if (reg->t.type == T_EAX) {
                             uint8_t code = 0x2d;
@@ -1970,28 +2112,12 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                             uint8_t code2 = 0xe8 + reg->t.type;
                             ca_append(&a->buf, (char*)&code2, 1);
                         }
-
-                        struct ANodeImm *imm = (struct ANodeImm*)(o->operand2);
-                        uint32_t num = get_double(imm->t);
-                        ca_append(&a->buf, (char*)(&num), 4);
-                    } else {
-                        //TODO: error message
-                    }
+                        assemble_node(a, o->operand2);
+                    } 
                     break;
                 }
                 case T_IMUL: {
-                    if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_IMM) {
-                        uint8_t code1 = 0x69;
-                        ca_append(&a->buf, (char*)&code1, 1);
-
-                        struct ANodeReg *reg = (struct ANodeReg*)(o->operand1);
-                        uint8_t code2 = reg->t.type * 9 + 0xc0;
-                        ca_append(&a->buf, (char*)&code2, 1);
-
-                        struct ANodeImm *imm = (struct ANodeImm*)(o->operand2);
-                        uint32_t num = get_double(imm->t);
-                        ca_append(&a->buf, (char*)(&num), 4);
-                    } else if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_REG) {
+                    if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_REG) {
                         uint16_t code = 0xaf0f;
                         ca_append(&a->buf, (char*)&code, 2);
 
@@ -2000,8 +2126,14 @@ void assemble_node(struct Assembler *a, struct Node *node) {
 
                         uint8_t rrcode = reg_reg_code(src->t.type, dst->t.type);
                         ca_append(&a->buf, (char*)&rrcode, 1);
-                    } else {
-                        //TODO: error
+                    } else if (o->operand1->type == ANODE_REG) {
+                        uint8_t code1 = 0x69;
+                        ca_append(&a->buf, (char*)&code1, 1);
+
+                        struct ANodeReg *reg = (struct ANodeReg*)(o->operand1);
+                        uint8_t code2 = reg->t.type * 9 + 0xc0;
+                        ca_append(&a->buf, (char*)&code2, 1);
+                        assemble_node(a, o->operand2);
                     }
                     break;
                 }
@@ -2018,12 +2150,10 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                     break;
                 }
                 case T_PUSH: {
-                    if (o->operand1->type == ANODE_IMM) {
+                    if (o->operand1->type == ANODE_IMM || o->operand1->type == ANODE_LABEL_REF) {
                         uint8_t code = 0x68;
                         ca_append(&a->buf, (char*)&code, 1);
-                        struct ANodeImm* imm = (struct ANodeImm*)(o->operand1);
-                        uint32_t num = get_double(imm->t);
-                        ca_append(&a->buf, (char*)(&num), 4);
+                        assemble_node(a, o->operand1);
                     } else if (o->operand1->type == ANODE_REG) {
                         struct ANodeReg *reg = (struct ANodeReg*)(o->operand1);
                         uint8_t code = 0x50 + reg->t.type;
@@ -2054,7 +2184,7 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                         struct ANodeImm* imm = (struct ANodeImm*)(o->operand1);
                         a->location = get_double(imm->t);
                     } else {
-                        printf("Operator not recognized: inside T_ORG branch\n");
+                        printf("Operand must be immediate value\n");
                     }
                     break;
                 }
@@ -2105,6 +2235,21 @@ void assembler_patch_locations(struct Assembler *a) {
     memcpy(&a->buf.chars[a->paddr_patch], &paddr, 4);
 }
 
+void assembler_patch_labels(struct Assembler *a) {
+    for (int i = 0; i < a->ala.count; i++) {
+        struct ALabel* l = &a->ala.elements[i];
+        if (!(l->defined)) {
+            ems_add(&ems, l->t.line, "Assembling Error: Label '%.*s' not defined.", l->t.len, l->t.start);
+        } else {
+            uint32_t final_addr = l->addr + a->location;
+            for (int j = 0; j < l->ref_locs.count; j++) {
+                uint32_t loc = l->ref_locs.elements[j];
+                memcpy(&a->buf.chars[loc], &final_addr, 4);
+            }
+        }
+    }
+}
+
 
 void assembler_write_binary(struct Assembler *a, char* filename) {
     FILE *f = fopen(filename, "wb");
@@ -2147,7 +2292,7 @@ int main (int argc, char **argv) {
     ta_add(&ta, t);
 
     for (int i = 0; i < ta.count; i++) {
-        printf("[%d] %.*s\n", i, ta.tokens[i].len, ta.tokens[i].start);
+//        printf("[%d] %.*s\n", i, ta.tokens[i].len, ta.tokens[i].start);
     }
 
 
@@ -2162,8 +2307,8 @@ int main (int argc, char **argv) {
     }
 
     for (int i = 0; i < na.count; i++) {
-//        ast_print(na.nodes[i]);
-//        printf("\n");
+        ast_print(na.nodes[i]);
+        printf("\n");
     }
 
     struct Assembler a;
@@ -2173,7 +2318,8 @@ int main (int argc, char **argv) {
     assembler_append_program_header(&a);  
     assembler_append_program(&a, &na);
     assembler_patch_locations(&a);
-
+    assembler_patch_labels(&a);
+    
     assembler_write_binary(&a, "final.bin");
 
     assembler_free(&a);

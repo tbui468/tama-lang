@@ -7,11 +7,32 @@ Reference for x86 machine code
     http://ref.x86asm.net/coder32.html
 
 May be time to refactor into different c modules
+    Tokens.h
+    Lexer.h
+    Lexer.c
 
 GOAL 1: Make a assembler/linker for it
     Add more machine code mappings for assembler
         add enough to get it turing complete (booleans, conditionals, loops)
-        //basic
+
+
+        ADD, IMUL, PUSH, etc should allow immediate values to also be labels
+            similar refactor to MOV and SUB were already done
+
+        test labels
+            print out label information after assembling for now
+
+            need to check at end of assembling:
+                are all labels defined?
+                offset addr of label definitions by org (if directive was used)
+                use final offset to patch all references for label (should have left 4 bytes free)
+
+            TODO!!! All label refs need to leave 4 bytes free to patch location
+
+
+        dereferencing (including shifts inside using expressions)
+        call
+        ret
 
         //for conditionals
         jmp     imm
@@ -66,6 +87,29 @@ Tests for testing features (it's annoying to have to change test code to retest 
     write a script (put in test directory) that runs 
         and compares variable_code.tmd and variable_sol.txt (example)
         could write it in python too
+
+    Tests for assembler (example of what should be tested)
+        org     0x08048000 
+
+        mov     ebx, 34
+        push    ebx
+        push    58
+        mov     ebx, 0
+        pop     ebx
+        pop     ecx
+        add     ebx, ecx
+        sub     ebx, 8
+        mov     eax, ebx
+        cdq
+        mov     ebx, 42
+        idiv    ebx
+        mov     esi, 40
+        imul    eax, esi
+        sub     eax, 38
+        mov     ebx, eax
+        mov     eax, 1
+        int     0x80
+        
 
 TODO!!! Need to maintain conventions of registers being clobbered or preserved on function calls:
     eax, edx, and ecx are clobbered
