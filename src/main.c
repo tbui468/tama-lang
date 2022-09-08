@@ -2002,6 +2002,7 @@ uint8_t get_byte(struct Token t) {
     return (uint8_t)ret;
 }
 
+//TODO: should get rid of these two functions completely eventually
 uint8_t reg_reg_code(enum TokenType dst, enum TokenType src) {
     return src * 8 + 0xc0 + dst;
 }
@@ -2010,40 +2011,25 @@ uint8_t mov_reg_imm_code(enum TokenType dst) {
     return dst + 0xb8;
 }
 
-//first byte
-//xxxxxx00
-static uint8_t ins_tbl[] = {
-    0x00,   //add
-    0x88,   //mov
-    0x28    //sub
+
+enum OpEn {
+    OE_MR,
+    OE_RM
 };
 
-enum OpInstruction {
+//opcode, op-encoding
+static uint8_t opc_tbl[][2] = {
+    {0x01, OE_MR},
+    {0x89, OE_MR},
+    {0x29, OE_MR},
+    {0xaf, OE_RM}
+};
+
+enum OpCode {
     INS_ADD = 0,
     INS_MOV,
-    INS_SUB
-};
-
-//000000x0
-static uint8_t dir_tbl[] = {
-    0x00,   //dst is r/m
-    0x02    //dst is r
-};
-
-enum OpDirection {
-    DIR_RSM = 0,
-    DIR_REG
-};
-
-//0000000x
-static uint8_t siz_tbl[] = {
-    0x00,   //8-bit operand
-    0x01    //32-bit operand
-};
-
-enum OpSize {
-    SIZ_08B = 0,
-    SIZ_32B
+    INS_SUB,
+    INS_IMUL
 };
 
 //second byte
@@ -2086,6 +2072,29 @@ static uint8_t rsm_tbl[] = {
     0x06,
     0x07
 };
+
+void write_code_2(struct Assembler *a, enum OpCode oc, enum TokenType dst, enum TokenType src) {
+    uint8_t opc = opc_tbl[oc][0];
+    ca_append(&a->buf, (char*)&opc, 1);
+
+    if (opc_tbl[oc][1] == OE_RM) {
+        enum TokenType temp = dst;
+        dst = src;
+        src = temp;
+    }
+
+    uint8_t opd = mod_tbl[MOD_REG] | reg_tbl[src] | rsm_tbl[dst];
+    ca_append(&a->buf, (char*)&opd, 1);
+}
+
+/*
+void write_code_1(struct Assembler *a, enum OpCode oc, enum TokenType dst) {
+
+}
+
+void write_code_0(struct Assembler *a, enum OpCode oc) {
+
+}*/
 
 void assemble_node(struct Assembler *a, struct Node *node) {
     switch (node->type) {
@@ -2133,12 +2142,10 @@ void assemble_node(struct Assembler *a, struct Node *node) {
             switch (op.type) {
                 case T_MOV: {
                     if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_REG) {
-                        uint8_t mov_rr_code = 0x89;
-                        ca_append(&a->buf, (char*)&mov_rr_code, 1);
                         struct ANodeReg* dst = (struct ANodeReg*)(o->operand1);
                         struct ANodeReg* src = (struct ANodeReg*)(o->operand2);
-                        uint8_t rr_code = reg_reg_code(dst->t.type, src->t.type);
-                        ca_append(&a->buf, (char*)&rr_code, 1);
+
+                        write_code_2(a, INS_MOV, dst->t.type, src->t.type);
                     } else if (o->operand1->type == ANODE_REG) {
                         struct ANodeReg* reg = (struct ANodeReg*)(o->operand1);
                         uint8_t opcode = mov_reg_imm_code(reg->t.type);
@@ -2152,11 +2159,7 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                         struct ANodeReg* dst = (struct ANodeReg*)(o->operand1);
                         struct ANodeReg* src = (struct ANodeReg*)(o->operand2);
 
-                        uint8_t opc = ins_tbl[INS_ADD] | dir_tbl[DIR_RSM] | siz_tbl[SIZ_32B];
-                        ca_append(&a->buf, (char*)&opc, 1);
-
-                        uint8_t opd = mod_tbl[MOD_REG] | reg_tbl[src->t.type] | rsm_tbl[dst->t.type];
-                        ca_append(&a->buf, (char*)&opd, 1);
+                        write_code_2(a, INS_ADD, dst->t.type, src->t.type);
                     } else if (o->operand1->type == ANODE_REG) {
                         struct ANodeReg* dst = (struct ANodeReg*)(o->operand1);
                         if (dst->t.type == T_EAX) {
@@ -2174,13 +2177,10 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                 }
                 case T_SUB: {
                     if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_REG) {
-                        uint8_t code = 0x29;
-                        ca_append(&a->buf, (char*)&code, 1);
+                        struct ANodeReg* dst = (struct ANodeReg*)(o->operand1);
+                        struct ANodeReg* src = (struct ANodeReg*)(o->operand2);
 
-                        struct ANodeReg *dst = (struct ANodeReg*)(o->operand1);
-                        struct ANodeReg *src = (struct ANodeReg*)(o->operand2);
-                        uint8_t rr_code = reg_reg_code(dst->t.type, src->t.type);
-                        ca_append(&a->buf, (char*)&rr_code, 1);
+                        write_code_2(a, INS_SUB, dst->t.type, src->t.type);
                     } else if (o->operand1->type == ANODE_REG) {
                         struct ANodeReg *reg = (struct ANodeReg*)(o->operand1);
                         if (reg->t.type == T_EAX) {
@@ -2198,14 +2198,13 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                 }
                 case T_IMUL: {
                     if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_REG) {
-                        uint16_t code = 0xaf0f;
-                        ca_append(&a->buf, (char*)&code, 2);
+                        uint8_t prefix = 0x0f;
+                        ca_append(&a->buf, (char*)&prefix, 1);
 
                         struct ANodeReg *dst = (struct ANodeReg*)(o->operand1);
                         struct ANodeReg *src = (struct ANodeReg*)(o->operand2);
 
-                        uint8_t rrcode = reg_reg_code(src->t.type, dst->t.type);
-                        ca_append(&a->buf, (char*)&rrcode, 1);
+                        write_code_2(a, INS_IMUL, dst->t.type, src->t.type);
                     } else if (o->operand1->type == ANODE_REG) {
                         uint8_t code1 = 0x69;
                         ca_append(&a->buf, (char*)&code1, 1);

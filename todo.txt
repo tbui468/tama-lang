@@ -32,7 +32,42 @@ Look at this stackoverflow post for how machine code is structured: (THIS IS REA
             maybe a better way to do this?  Could be problematic if
             constants don't match with table entries
 
-    Change over assembly to use new bit tables <-----------DO THIS!!!!!
+    Change over assembly to use new bit tables <-----------START HERE!!!!!
+
+        Could just not worry about the direction/size bits and directly use the opcodes in the reference
+            the RM and MR op/en will already tell us the dst and src of the registers/memory
+
+            could have a boolean to signify when it's MR or RM
+
+        void write_code(INS_SUB, dst, src) {
+            //if instruction is RM, swap dst and src
+        }
+
+        enum OpEn {
+            OE_MR,
+            OE_RM
+        };
+
+        //opcode, 
+        uint8_t ins_tbl[][2] = {
+            {0x00, OE_MR},
+            {0x00, OE_MR},
+            {0x00, OE_RM},
+            {0xaf, OE_RM}
+        };
+
+        Why is imul reversed for dst and src?????
+
+        ????Is the direction bit ignored???  (since the direction seems encoded in the opcode already
+            using MR and RM
+        add instruction has MR encoding (Memory <- Register???)
+        mov has MR op/en too
+        sub has MR op/en too
+
+        Reg to Reg is done with mov/add/sub - how about imul??????
+            need to read docs on how imul works
+            reg_to_reg operations can probably be pull into a function since all code is the same
+        How is Reg to Imm done? (may need to read about offsets, etc)
 
 
     example: 
