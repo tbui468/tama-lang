@@ -1,9 +1,7 @@
 org     0x08048000 
-start:
-mov     eax, 9
-end:
-mov     eax, end
-sub     eax, start
+mov     eax, 32
+mov     ecx, 10
+add     eax, ecx
 mov     ebx, eax
 mov     eax, 1
 int     0x80

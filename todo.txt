@@ -3,8 +3,74 @@ Read a little more of 'Linkers and Loaders' and/or LLD docs/source
 Read ELF Specification
 Watch 'Understanding Compiler Optimization - Chandler Carruth' on youtube
 
+Start writing out README file
+    can we use that markup language (not html) to format document?
+    Motivation
+        Why build this? To learn more about the tools
+        Why use C? Curious about limitations
+    Diagram
+    Modules
+        TLexer
+        TParser
+        Compiler
+        ALexer
+        AParser
+        Assembler
+        Linker
+
+    Building
+
 Reference for x86 machine code
     http://ref.x86asm.net/coder32.html
+
+Look at this stackoverflow post for how machine code is structured: (THIS IS REALLY GOOD!)
+    https://stackoverflow.com/questions/45526209/referencing-registers-in-machine-code
+
+    Redo assembly to machine code translation:
+        get add with two registers working first
+        get constants (INDS_ADD, DIR_REG, etc) corresponding to tables
+            maybe a better way to do this?  Could be problematic if
+            constants don't match with table entries
+
+    Change over assembly to use new bit tables <-----------DO THIS!!!!!
+
+
+    example: 
+        add    ecx, eax
+        [00000001][ 11][000][001] 0xc101 (0xc803 is the same)
+        [op, d, s][MOD][REG][R/M]
+
+        we need the 6-bit code for instructions with two register operands
+        000000 add
+        100010 mov
+        001010 sub
+
+    uint8_t ins = inst[INS_ADD];
+    uint8_t dir = dirs[DIR_REG]; //1 is register, 0 is r/m
+    uint8_t siz = sizs[SIZ_32];
+    uint8_t opc = instruction | direction | size;
+
+    uint8_t mod = mods[MOD_REG];
+    uint8_t reg = regs[REG_EAX];
+    uint8_t r_m = r_ms[RM_ECX];
+
+0-4 byte prefixes - used to modify instructions
+1-2 byte opcodes
+    I. single byte
+        ex: bit 0 in 'add' determines 8-bit or 16/32-bit registers/memory (1 by default for 32-bit systems)
+            bit 1 in 'add' determines whether destination is REG (1) or R/M (0)
+    II. 0x0f prefix byte + opcode
+    *up to 512 instruction classes
+0-1 mod-reg-r/m byte (further sub divided into bits)
+    I.      MOD: 2 bits (11 means R/M is a register, else for displacement/indirect addressing?)
+    II.     REG: 3 bits (one bit pattern for each of the 8 registers)
+    III.    R/M: 3 bits
+0-1 scaled index byte (further sub divided into bits)
+    I.      Scale: 2 bits
+    II.     Index: 3 bits
+    III.    Base: 3 bits
+0-4 displacement
+0-4 immediate
 
 May be time to refactor into different c modules
     Tokens.h
@@ -15,27 +81,15 @@ GOAL 1: Make a assembler/linker for it
     Add more machine code mappings for assembler
         add enough to get it turing complete (booleans, conditionals, loops)
 
-
-        ADD, IMUL, PUSH, etc should allow immediate values to also be labels
-            similar refactor to MOV and SUB were already done
-
-        test labels
-            print out label information after assembling for now
-
-            need to check at end of assembling:
-                are all labels defined?
-                offset addr of label definitions by org (if directive was used)
-                use final offset to patch all references for label (should have left 4 bytes free)
-
-            TODO!!! All label refs need to leave 4 bytes free to patch location
-
-
         dereferencing (including shifts inside using expressions)
+            mov     eax, [ebp - 4] ;moving top of stack into eax
+            how does this translate into machine code?
+            read stackoverflow post above about x86 machine code
         call
         ret
 
         //for conditionals
-        jmp     imm
+        jmp     imm/lbl
         jz
         je
         cmp     r, imm

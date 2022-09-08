@@ -37,6 +37,7 @@ void free_unit(void *vptr, size_t unit_size) {
 }
 
 enum TokenType {
+    //@Note: order here is necessary for machine code mapping tables
     T_EAX = 0,
     T_ECX,
     T_EDX,
@@ -2009,6 +2010,83 @@ uint8_t mov_reg_imm_code(enum TokenType dst) {
     return dst + 0xb8;
 }
 
+//first byte
+//xxxxxx00
+static uint8_t ins_tbl[] = {
+    0x00,   //add
+    0x88,   //mov
+    0x28    //sub
+};
+
+enum OpInstruction {
+    INS_ADD = 0,
+    INS_MOV,
+    INS_SUB
+};
+
+//000000x0
+static uint8_t dir_tbl[] = {
+    0x00,   //dst is r/m
+    0x02    //dst is r
+};
+
+enum OpDirection {
+    DIR_RSM = 0,
+    DIR_REG
+};
+
+//0000000x
+static uint8_t siz_tbl[] = {
+    0x00,   //8-bit operand
+    0x01    //32-bit operand
+};
+
+enum OpSize {
+    SIZ_08B = 0,
+    SIZ_32B
+};
+
+//second byte
+//xx000000
+static uint8_t mod_tbl[] = {
+    0x00,
+    0x40,
+    0x80,
+    0xc0    //r/m is register
+};
+
+enum OpMod {
+    MOD_TEMP1 = 0, //TODO: choose better name than _TEMP
+    MOD_TEMP2,
+    MOD_TEMP3,
+    MOD_REG
+};
+
+//registers table indices should match with enum TokenType register values
+//00xxx000
+static uint8_t reg_tbl[] = {
+    0x00,   //eax
+    0x08,
+    0x10,
+    0x18,
+    0x20,
+    0x28,
+    0x30,
+    0x38
+};
+
+//00000xxx
+static uint8_t rsm_tbl[] = {
+    0x00,   //eax
+    0x01,
+    0x02,
+    0x03,
+    0x04,
+    0x05,
+    0x06,
+    0x07
+};
+
 void assemble_node(struct Assembler *a, struct Node *node) {
     switch (node->type) {
         case ANODE_IMM: {
@@ -2071,12 +2149,14 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                 }
                 case T_ADD: {
                     if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_REG) {
-                        uint8_t add_rr_code = 0x01;
-                        ca_append(&a->buf, (char*)&add_rr_code, 1);
                         struct ANodeReg* dst = (struct ANodeReg*)(o->operand1);
                         struct ANodeReg* src = (struct ANodeReg*)(o->operand2);
-                        uint8_t rr_code = reg_reg_code(dst->t.type, src->t.type);
-                        ca_append(&a->buf, (char*)&rr_code, 1);
+
+                        uint8_t opc = ins_tbl[INS_ADD] | dir_tbl[DIR_RSM] | siz_tbl[SIZ_32B];
+                        ca_append(&a->buf, (char*)&opc, 1);
+
+                        uint8_t opd = mod_tbl[MOD_REG] | reg_tbl[src->t.type] | rsm_tbl[dst->t.type];
+                        ca_append(&a->buf, (char*)&opd, 1);
                     } else if (o->operand1->type == ANODE_REG) {
                         struct ANodeReg* dst = (struct ANodeReg*)(o->operand1);
                         if (dst->t.type == T_EAX) {
