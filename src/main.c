@@ -100,7 +100,8 @@ enum TokenType {
     T_DOLLAR,   //Let's just force user to define labels instead of compiling $$
     T_EQU,       //used to compute sizes (should compute the value and then patch immediately)
     T_ORG,
-    T_CDQ
+    T_CDQ,
+    T_XOR
 };
 
 struct Token {
@@ -872,18 +873,20 @@ int compiler_append_data(struct Compiler *c, char *s, int len) {
 //write out assembly file
 void compiler_output_assembly(struct Compiler *c) {
     FILE *f = fopen("out.asm", "w");
-    char *s = "section     .text\n"
-              "global      _start\n"
-              "%include \"../../assembly_test/fun.asm\""
-              "\n"
-              "_start:\n"
-              "    mov     ebp, esp\n";
+    char *s = //"section     .text\n"
+              //"global      _start\n"
+              //"%include \"../../assembly_test/fun.asm\""
+              //"\n"
+              "org     0x08048000\n"
+              "_start:\n";
+              //"    mov     ebp, esp\n"; //need to set the frame pointer before doing anything else
     char *e = "\n"
-              "    mov     eax, 0x1\n"
-              "    xor     ebx, ebx\n"
+              //"    xor     ebx, ebx\n" //ebx holds the return value of exit() system call 0x1
+              "    pop     ebx\n"       //temporary popping of stack into ebx to test (since printing won't work right now)
+              "    mov     eax, 0x01\n" //assembler doesn't recognize hex right now
               "    int     0x80\n"
-              "\n"
-              "section     .data\n";
+              "\n";
+  //            "section     .data\n";
     fwrite(s, sizeof(char), strlen(s), f);
     fwrite(c->text.chars, sizeof(char), c->text.count, f);
     fwrite(e, sizeof(char), strlen(e), f);
@@ -1452,6 +1455,7 @@ struct Node *aparse_stmt(struct Parser *p) {
             case T_ADD:
             case T_SUB:
             case T_IMUL:
+            case T_XOR:
                 left = aparse_expr(p);
                 parser_consume(p, T_COMMA);
                 right = aparse_expr(p);
@@ -1614,6 +1618,8 @@ struct Token lexer_read_word(struct Lexer *l) {
             t.type = T_ORG;
         } else if (t.len == 3 && strncmp("cdq", t.start, 3) == 0) {
             t.type = T_CDQ;
+        } else if (t.len == 3 && strncmp("xor", t.start, 3) == 0) {
+            t.type = T_XOR;
         } else {
             t.type = T_IDENTIFIER;
         }
@@ -1915,6 +1921,7 @@ void assembler_init(struct Assembler *a) {
 
 void assembler_free(struct Assembler *a) {
     ca_free(&a->buf);
+    ala_free(&a->ala);
 }
 
 void assembler_append_elf_header(struct Assembler *a) {
@@ -2231,6 +2238,19 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                     }
                     break;
                 }
+                case T_XOR: {
+                    if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_REG) {
+                        ca_append_byte(&a->buf, 0x33);
+
+                        struct ANodeReg *dst = (struct ANodeReg*)(o->operand1);
+                        struct ANodeReg *src = (struct ANodeReg*)(o->operand2);
+
+                        ca_append_byte(&a->buf, mod_tbl[MOD_REG] | r_tbl[dst->t.type] | rm_tbl[src->t.type]);
+                    } else {
+                        printf("XOR only works between registers for now\n");
+                    }
+                    break;
+                }
                 default:
                     printf("Operator not recognized: default case\n");
                     break;
@@ -2305,7 +2325,7 @@ int main (int argc, char **argv) {
 
     //Tokenize source code
     struct Lexer l;
-    lexer_init(&l, code, ST_ASM);
+    lexer_init(&l, code, ST_TMD); //ST_TMD or ST_ASM
 
     struct TokenArray ta;
     ta_init(&ta);
@@ -2329,38 +2349,7 @@ int main (int argc, char **argv) {
 //        printf("[%d] %.*s\n", i, ta.tokens[i].len, ta.tokens[i].start);
     }
 
-
-    //parsing and assembling
-    struct Parser p;
-    parser_init(&p, &ta);
-    struct NodeArray na;
-    na_init(&na);
     
-    while (parser_peek_one(&p).type != T_EOF) {
-        na_add(&na, aparse_stmt(&p));
-    }
-
-    for (int i = 0; i < na.count; i++) {
-        ast_print(na.nodes[i]);
-        printf("\n");
-    }
-
-    struct Assembler a;
-    assembler_init(&a);
-
-    assembler_append_elf_header(&a);
-    assembler_append_program_header(&a);  
-    assembler_append_program(&a, &na);
-    assembler_patch_locations(&a);
-    assembler_patch_labels(&a);
-    
-    assembler_write_binary(&a, "final.bin");
-
-    assembler_free(&a);
-
-    //end of assembling 
-
-    /*
     //Parse tokens into AST
     struct Parser p;
     parser_init(&p, &ta);
@@ -2397,9 +2386,57 @@ int main (int argc, char **argv) {
     }
 
 
-    //Could assemble to object files here?
+    //Tokenize assembly
+    char *acode = load_code("out.asm");
+    struct Lexer al;
+    lexer_init(&al, acode, ST_ASM); //ST_TMD or ST_ASM
+
+    struct TokenArray ata;
+    ta_init(&ata);
+
+    while (al.current < (int)strlen(al.code)) {
+        struct Token t = lexer_next_token(&al);
+        if (t.type != T_NEWLINE)
+            ta_add(&ata, t);
+        else
+            al.line++;
+    }
+
+    struct Token at;
+    at.type = T_EOF;
+    at.start = NULL;
+    at.len = 0;
+    at.line = al.line;
+    ta_add(&ata, at);
+
+    //parse assembly
+    struct Parser ap;
+    parser_init(&ap, &ata);
+    struct NodeArray ana;
+    na_init(&ana);
     
-    //Could link here and create executable?
+    while (parser_peek_one(&ap).type != T_EOF) {
+        na_add(&ana, aparse_stmt(&ap));
+    }
+
+    for (int i = 0; i < ana.count; i++) {
+        //ast_print(ana.nodes[i]);
+        //printf("\n");
+    }
+
+    //assemble
+    struct Assembler a;
+    assembler_init(&a);
+
+    assembler_append_elf_header(&a);
+    assembler_append_program_header(&a);  
+    assembler_append_program(&a, &ana);
+    assembler_patch_locations(&a);
+    assembler_patch_labels(&a);
+    
+    assembler_write_binary(&a, "out.bin");
+
+
    
     ems_print(&ems);
     
@@ -2409,8 +2446,11 @@ int main (int argc, char **argv) {
     vda_free(&vda);
     na_free(&na);
     ta_free(&ta);
+    na_free(&ana);
+    ta_free(&ata);
+    assembler_free(&a);
     ems_free(&ems);
-    printf("Allocated memory remaining: %ld\n", allocated);*/
+    printf("Allocated memory remaining: %ld\n", allocated);
 
     return 0;
 }

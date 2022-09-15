@@ -14,5 +14,7 @@ cdq
 mov     ecx, 15
 idiv    ecx
 mov     ebx, eax
+mov     ebx, 0
+xor     ebx, ebx
 mov     eax, 1
 int     0x80

@@ -5,6 +5,7 @@ Watch 'Understanding Compiler Optimization - Chandler Carruth' on youtube
 
 Start writing out README file
     can we use that markup language (not html) to format document?
+        this seems like a good chance to learn something easier than html
     Motivation
         Why build this? To learn more about the tools
         Why use C? Curious about limitations
@@ -26,41 +27,28 @@ Reference for x86 machine code
 Look at this stackoverflow post for how machine code is structured: (THIS IS REALLY GOOD!)
     https://stackoverflow.com/questions/45526209/referencing-registers-in-machine-code
 
+Use an array for storing list of keywords to lex:
+    Will this work???  No - the second and third values are char (uint8_t), NOT char*
+        char* tmd_keywords[][] = {
+            {"for", 3, T_FOR}, 
+            {"while", 4, T_WHILE}, 
+        };
 
-    Change over assembly to use new bit tables <-----------START HERE!!!!!
+        char *asm_keywords[][] = {
+            {"pop", 3, T_POP}, 
+            {"push", 4, T_PUSH}, 
+        };
 
-        Get assembler working with immediates values
+Get assembler working with new opcode structure <---------start here!!!!
+        Break up lexer and parser into separate modules for compiler and assembler
+            lexer can definitely share code
+            parser ... maybe ...
 
-            Redo IDIV
-            Redo remaining opcodes
-
-            change rsm_tbl to rm_tble 
-
-            remove opc_tbl complete (keep for ModR/M since that combination is necessary)
-            remove mov_reg_reg_code and other unused functions
+        Add in other opcodes to make assembler turing complete (conditionals and loops)
 
         Get assembler working with single and zero operand operations
 
         Get assembler working with byte offsets and dereferencing!!! (the ultimate goal - this is where our assembler is getting stuck)
-
-        write_code_2(a, INS_IMUL, dst->t.type, src->t.type);
-            should have this function take in two struct ANodeReg instead of TokenTypes
-            this will make it easier to modify later since all the casting will be inside of the write_code_2 function
-
-
-        could split write_code_2 into two functions (consider this later, for now it's fine as a single function)
-            write_operator_code     opcode from Intel manuals (direction and size are integrated into opcode already)
-            write_operand_code      The 8 bits for MOD, REG, and R/M
-
-            this depends on how intertwined these two bytes are
-
-            get immediate
-
-
-        Reg to Reg is done with mov/add/sub - how about imul??????
-            need to read docs on how imul works
-            reg_to_reg operations can probably be pull into a function since all code is the same
-        How is Reg to Imm done? (may need to read about offsets, etc)
 
 
     example: 
