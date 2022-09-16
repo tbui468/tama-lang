@@ -100,10 +100,12 @@ struct Compiler {
 
 
 
-void compiler_init(struct Compiler *c, struct VarDataArray *head) {
+void compiler_init(struct Compiler *c) {
     ba_init(&c->text);
     ba_init(&c->data);
     c->data_offset = 0;
+    struct VarDataArray *head = alloc_unit(sizeof(struct VarDataArray));
+    vda_init(head);
     c->head = head;
     c->conditional_label_id = 0;
 }
@@ -111,6 +113,8 @@ void compiler_init(struct Compiler *c, struct VarDataArray *head) {
 void compiler_free(struct Compiler *c) {
     ba_free(&c->text);
     ba_free(&c->data);
+    vda_free(c->head);
+    free_unit(c->head, sizeof(struct VarDataArray));
 }
 
 void compiler_decl_local(struct Compiler *c, struct Token var, struct Token type) {
@@ -1147,10 +1151,8 @@ int main (int argc, char **argv) {
     }
 
     
-    struct VarDataArray vda;
-    vda_init(&vda);
     struct Compiler c;
-    compiler_init(&c, &vda);
+    compiler_init(&c);
 
     compiler_begin_scope(&c);
     for (int i = 0; i < na.count; i++) {
@@ -1220,7 +1222,6 @@ int main (int argc, char **argv) {
     //cleanup
     printf("Memory allocated: %ld\n", allocated);
     compiler_free(&c);
-    vda_free(&vda);
     na_free(&na);
     ta_free(&ta);
     na_free(&ana);
