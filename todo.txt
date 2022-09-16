@@ -27,28 +27,66 @@ Reference for x86 machine code
 Look at this stackoverflow post for how machine code is structured: (THIS IS REALLY GOOD!)
     https://stackoverflow.com/questions/45526209/referencing-registers-in-machine-code
 
-Use an array for storing list of keywords to lex:
-    Will this work???  No - the second and third values are char (uint8_t), NOT char*
-        char* tmd_keywords[][] = {
-            {"for", 3, T_FOR}, 
-            {"while", 4, T_WHILE}, 
-        };
-
-        char *asm_keywords[][] = {
-            {"pop", 3, T_POP}, 
-            {"push", 4, T_PUSH}, 
-        };
-
 Get assembler working with new opcode structure <---------start here!!!!
-        Break up lexer and parser into separate modules for compiler and assembler
-            lexer can definitely share code
-            parser ... maybe ...
+        Move compiler into own module
+            accessory structs and functions should go there too
+            VarDataArray is only used in compiler, so should move it into there
+
+        Move lexer into own module using arrays to change reserved words:
+            //set this in the lexer
+            //value is index into reserved_words
+            uint8_t tmd_reserved[] = {
+                0, 1
+            }
+
+            //set this in the lexer
+            uint8_t asm_reserved[] = {
+                2, 3
+            }
+
+            //shared for both languages (tamarind and assembly)
+            struct ReservedWord reserved_words[] = {
+                {"for", 3, T_FOR},
+                {"while", 4, T_WHILE},
+                {"pop", 3, T_POP},
+                {"push", 4, T_PUSH}
+            }
+
+            struct ReservedWord {
+                char* word;
+                int len;
+                struct TokenType type;
+            };
+
+        Move parser into own module
+            maybe best to just have separate modules for tmd_parser and asm_parser
+            there's some share functions, but not enough...
+            How about restructuring Assembly Nodes to make it more inline with book format:
+                I like how all the nodes where inside each other
+
+            asm_ast.h/.c
+            tmd_ast.h/.c
+
+
+        Where is struct ByteArray being used?  If it's only one module, could we just put it into that module?
+
+        should make some functions static
+            look through all .c and .h files and make all functions not required outside translation unit private
 
         Add in other opcodes to make assembler turing complete (conditionals and loops)
+            Get assembler working with byte offsets and dereferencing!!! (the ultimate goal - this is where our assembler is getting stuck)
 
-        Get assembler working with single and zero operand operations
+        Make linker to allow different modules to be compiled into object files, then the object files can be linked
+            need to allow code to refer to external variables (can add external functions later)
+            one.tmd
+                extern c: int
+                print(c)
 
-        Get assembler working with byte offsets and dereferencing!!! (the ultimate goal - this is where our assembler is getting stuck)
+            two.tmd
+                c: int = 25
+
+            assembler should produce one.obj and two.obj
+            linker should take both object files as inputs and produce out.bin
 
 
     example: 
