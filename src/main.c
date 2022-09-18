@@ -17,6 +17,8 @@
 #define MAX_MSG_LEN 256
 
 extern size_t allocated;
+
+
 /*
  *  Parser
  */
@@ -357,6 +359,45 @@ char *load_code(char* filename) {
 
 
 int main (int argc, char **argv) {
+    int TMD_COUNT = 11;
+    struct ReservedWord tmd_reserved[11] = {
+        {"print", 5, T_PRINT},
+        {"int", 3, T_INT_TYPE},
+        {"bool", 4, T_BOOL_TYPE},
+        {"true", 4, T_TRUE},
+        {"false", 5, T_FALSE},
+        {"and", 3, T_AND},
+        {"or", 2, T_OR},
+        {"if", 2, T_IF},
+        {"elif", 4, T_ELIF},
+        {"else", 4, T_ELSE},
+        {"while", 5, T_WHILE}
+    };
+
+    int ASM_COUNT = 20;
+    struct ReservedWord asm_reserved[20] = {
+        {"mov", 3, T_MOV},
+        {"push", 4, T_PUSH},
+        {"pop", 3, T_POP},
+        {"add", 3, T_ADD},
+        {"sub", 3, T_SUB},
+        {"imul", 4, T_IMUL},
+        {"idiv", 4, T_IDIV},
+        {"eax", 3, T_EAX},
+        {"ecx", 3, T_ECX},
+        {"edx", 3, T_EDX},
+        {"ebx", 3, T_EBX},
+        {"esp", 3, T_ESP},
+        {"ebp", 3, T_EBP},
+        {"esi", 3, T_ESI},
+        {"edi", 3, T_EDI},
+        {"int", 3, T_INTR},
+        {"equ", 3, T_EQU},
+        {"org", 3, T_ORG},
+        {"cdq", 3, T_CDQ},
+        {"xor", 3, T_XOR}
+    };
+
 
     ems_init(&ems);
 
@@ -368,7 +409,7 @@ int main (int argc, char **argv) {
 
     //Tokenize source code
     struct Lexer l;
-    lexer_init(&l, code, ST_TMD); //ST_TMD or ST_ASM
+    lexer_init(&l, code, tmd_reserved, TMD_COUNT);
 
     struct TokenArray ta;
     ta_init(&ta);
@@ -389,7 +430,7 @@ int main (int argc, char **argv) {
     ta_add(&ta, t);
 
     for (int i = 0; i < ta.count; i++) {
-//        printf("[%d] %.*s\n", i, ta.tokens[i].len, ta.tokens[i].start);
+//        printf("[%d] %.*s.  Type:%d\n", i, ta.tokens[i].len, ta.tokens[i].start, ta.tokens[i].type);
     }
 
 
@@ -427,7 +468,7 @@ int main (int argc, char **argv) {
     //Tokenize assembly
     char *acode = load_code("out.asm");
     struct Lexer al;
-    lexer_init(&al, acode, ST_ASM); //ST_TMD or ST_ASM
+    lexer_init(&al, acode, asm_reserved, ASM_COUNT);
 
     struct TokenArray ata;
     ta_init(&ata);

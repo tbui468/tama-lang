@@ -5,16 +5,12 @@
 
 #include "token.h"
 
-enum SyntaxType {
-    ST_TMD,
-    ST_ASM
-};
-
 struct Lexer {
     char* code;
     int current;
     int line;
-    enum SyntaxType st;
+    struct ReservedWord *reserved_words;
+    int reserved_count;
 };
 
 struct ReservedWord {
@@ -24,7 +20,7 @@ struct ReservedWord {
 };
 
 
-void lexer_init(struct Lexer *l, char* code, enum SyntaxType st);
+void lexer_init(struct Lexer *l, char* code, struct ReservedWord *reserved_words, int reserved_count);
 void lexer_skip_ws(struct Lexer *l);
 bool is_digit(char c);
 bool is_char(char c);
