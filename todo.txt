@@ -28,33 +28,9 @@ Look at this stackoverflow post for how machine code is structured: (THIS IS REA
     https://stackoverflow.com/questions/45526209/referencing-registers-in-machine-code
 
 Get assembler working with new opcode structure <---------start here!!!!
-        Move struct TokenArray and functions to token.h/c
-
-        Move lexer into own module using arrays to change reserved words:
-            //set this in the lexer
-            //value is index into reserved_words
-            uint8_t tmd_reserved[] = {
-                0, 1
-            }
-
-            //set this in the lexer
-            uint8_t asm_reserved[] = {
-                2, 3
-            }
-
-            //shared for both languages (tamarind and assembly)
-            struct ReservedWord reserved_words[] = {
-                {"for", 3, T_FOR},
-                {"while", 4, T_WHILE},
-                {"pop", 3, T_POP},
-                {"push", 4, T_PUSH}
-            }
-
-            struct ReservedWord {
-                char* word;
-                int len;
-                struct TokenType type;
-            };
+        Move lexer into own module
+            use new reserved words array (with index) to specify keywords for lexer
+            remove enum SyntaxType (since we are using the index arrays for the lexer now)
 
         Move parser into own module
             maybe best to just have separate modules for tmd_parser and asm_parser

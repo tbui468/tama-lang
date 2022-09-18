@@ -7,6 +7,7 @@ set(Sources
     assembler.c
     error.c
     compiler.c
+    lexer.c
     )
 
 set(Headers
@@ -17,6 +18,7 @@ set(Headers
     assembler.h
     error.h
     compiler.h
+    lexer.h
     )
 
 add_executable(
