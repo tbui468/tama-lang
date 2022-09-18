@@ -28,9 +28,7 @@ Look at this stackoverflow post for how machine code is structured: (THIS IS REA
     https://stackoverflow.com/questions/45526209/referencing-registers-in-machine-code
 
 Get assembler working with new opcode structure <---------start here!!!!
-        Move compiler into own module
-            accessory structs and functions should go there too
-            VarDataArray is only used in compiler, so should move it into there
+        Move struct TokenArray and functions to token.h/c
 
         Move lexer into own module using arrays to change reserved words:
             //set this in the lexer
