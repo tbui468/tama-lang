@@ -1,5 +1,5 @@
-Read a little more of 'Computer Systems: A Programmer's Perspective'
-Read a little more of 'Linkers and Loaders' and/or LLD docs/source
+Read a little more of Ian Lance Taylor's blog or 'Linkers and Loaders'
+    to understand differences between ELF relocatable files and ELF executable files
 Read ELF Specification
 Watch 'Understanding Compiler Optimization - Chandler Carruth' on youtube
 
@@ -21,6 +21,9 @@ Start writing out README file
 
     Building
 
+    ELF executables have read-only and read/write sections:
+        using a read/write section will require main function/global variables
+
 Reference for x86 machine code
     http://ref.x86asm.net/coder32.html
 
@@ -28,7 +31,6 @@ Look at this stackoverflow post for how machine code is structured: (THIS IS REA
     https://stackoverflow.com/questions/45526209/referencing-registers-in-machine-code
 
 Get assembler working with new opcode structure <---------start here!!!!
-
         Move parser into own module
             maybe best to just have separate modules for tmd_parser and asm_parser
             there's some share functions, but not enough...
@@ -43,6 +45,17 @@ Get assembler working with new opcode structure <---------start here!!!!
 
         should make some functions static
             look through all .c and .h files and make all functions not required outside translation unit private
+
+        Make fewer functions for main to call - each stage should be a simple function (not a dozen lines like right now to lex)
+
+            main() {
+                ta = lex(code);
+                na = parse(ta);
+                compile(na, "out.asm");
+                ata = lex(assembly);
+                ana = parse(ata);
+                assemble(ana, "out.bin"); 
+            }
 
         Add in other opcodes to make assembler turing complete (conditionals and loops)
             Get assembler working with byte offsets and dereferencing!!! (the ultimate goal - this is where our assembler is getting stuck)
