@@ -46,8 +46,8 @@ int main (int argc, char **argv) {
         {"while", 5, T_WHILE}
     };
 
-    int ASM_COUNT = 20;
-    struct ReservedWord asm_reserved[20] = {
+    int ASM_COUNT = 22;
+    struct ReservedWord asm_reserved[22] = {
         {"mov", 3, T_MOV},
         {"push", 4, T_PUSH},
         {"pop", 3, T_POP},
@@ -67,7 +67,9 @@ int main (int argc, char **argv) {
         {"equ", 3, T_EQU},
         {"org", 3, T_ORG},
         {"cdq", 3, T_CDQ},
-        {"xor", 3, T_XOR}
+        {"xor", 3, T_XOR},
+        {"call", 4, T_CALL},
+        {"ret", 3, T_RET}
     };
 
 
@@ -133,7 +135,7 @@ int main (int argc, char **argv) {
     compiler_end_scope(&c);
 
     if (ems.count <= 0) {
-        compiler_output_assembly(&c);
+//        compiler_output_assembly(&c);
     }
 
 
@@ -160,6 +162,10 @@ int main (int argc, char **argv) {
     at.line = al.line;
     ta_add(&ata, at);
 
+    for (int i = 0; i < ata.count; i++) {
+//        printf("[%d] %.*s\n", i, ata.tokens[i].len, ata.tokens[i].start);
+    }
+
     //parse assembly
     struct Parser ap;
     parser_init(&ap, &ata);
@@ -182,6 +188,7 @@ int main (int argc, char **argv) {
     assembler_append_elf_header(&a);
     assembler_append_program_header(&a);  
     assembler_append_program(&a, &ana);
+    assembler_patch_rjmp(&a);
     assembler_patch_locations(&a);
     assembler_patch_labels(&a);
     

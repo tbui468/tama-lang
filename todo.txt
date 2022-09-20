@@ -30,35 +30,78 @@ Reference for x86 machine code
 Look at this stackoverflow post for how machine code is structured: (THIS IS REALLY GOOD!)
     https://stackoverflow.com/questions/45526209/referencing-registers-in-machine-code
 
-Get assembler working with new opcode structure <---------start here!!!!
-        Move parser into own module
-            maybe best to just have separate modules for tmd_parser and asm_parser
-            there's some share functions, but not enough...
-            How about restructuring Assembly Nodes to make it more inline with book format:
-                I like how all the nodes where inside each other
+!!!Found an insidious bug from shallow copies - the stack allocated copy was being change instead of the
+        version saved to the heap.  rjump_locs.count was NOT being updated properly!!!
 
-            asm_ast.h/.c
-            tmd_ast.h/.c
-
-
-        Where is struct ByteArray being used?  If it's only one module, could we just put it into that module?
-
-        should make some functions static
-            look through all .c and .h files and make all functions not required outside translation unit private
-
-        Make fewer functions for main to call - each stage should be a simple function (not a dozen lines like right now to lex)
-
-            main() {
-                ta = lex(code);
-                na = parse(ta);
-                compile(na, "out.asm");
-                ata = lex(assembly);
-                ana = parse(ata);
-                assemble(ana, "out.bin"); 
-            }
-
+Get assembler working with new opcode structure
         Add in other opcodes to make assembler turing complete (conditionals and loops)
             Get assembler working with byte offsets and dereferencing!!! (the ultimate goal - this is where our assembler is getting stuck)
+
+            Get print working - we need to be able to print out stuff for easy feedback!!!
+                get '_print_char' working
+                    have assembler assemble opcodes for 'call' and 'ret'
+                        will 'call' work correctly with labels and patching!?? (will find out soon enough...)
+                    extract _print_char into own function and concatenate to beginning of program
+
+                    e8 0c 00 00 00 //e8 and 12 - from the next instruction address (after 0c000000), jump 12 to get to function
+                        the 4 bytes following is in two' complement form (to allow jumps in negative direction)
+
+                    When a call instruction is reached, we should put in the address of the following instruction
+                        into the 4 byte location.  Then when all labels are defined, we need to do this:
+                            addr = label_addr - following_addr
+                            put addr into the 4 bytes
+
+                    write a function called 'assembler_patch_rjmp' <---------------start here
+                        look at function notes inside assembler.c
+                        run without using call and ret to fix any errors
+                        run with call and ret opcodes in assembly
+
+
+                    //out.asm should assemble and run properly
+                    org     0x08048000
+                    _print_char:
+                        push    ebp
+                        mov     ebp, esp
+
+                        mov     ecx, ebp
+                        add     ecx, 8
+                        mov     edx, 1
+
+                        mov     eax, 0x4
+                        mov     ebx, 0x1
+                        int     0x80
+
+                        pop     ebp
+                        xor     eax, eax
+                        ret
+                    _start:
+                        push    97
+                        call    _print_char
+                        add     esp, 4
+
+                        pop     ebx
+                        mov     eax, 0x01
+                        int     0x80
+
+            Get _print_digit working - this will require assembling offsets and deferencing!!!
+                will need to figure out how to deference and stuff - look at that website again
+
+            jmp     imm/lbl
+            jz
+            je
+            cmp     r, imm
+            cmp     r, r
+            test    r, imm
+            test    r, r
+            neg     r32
+            inc     r32
+            sete    r8
+            setl    r8
+            setg    r8
+            movzx   r32, r8
+            call    <identifier>
+            ret
+        
 
         Make linker to allow different modules to be compiled into object files, then the object files can be linked
             need to allow code to refer to external variables (can add external functions later)
@@ -126,24 +169,6 @@ GOAL 1: Make a assembler/linker for it
         call
         ret
 
-        //for conditionals
-        jmp     imm/lbl
-        jz
-        je
-        cmp     r, imm
-        cmp     r, r
-        test    r, imm
-        test    r, r
-        neg     r32
-        inc     r32
-        sete    r8
-        setl    r8
-        setg    r8
-        movzx   r32, r8
-        xor     r, r
-        call    <identifier>
-        ret
-        
 
         //TEST ALL ABOVE - should work with current compiler
         //check out.asm and make sure ALL operations are assembled!!!

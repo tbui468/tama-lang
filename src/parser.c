@@ -310,10 +310,12 @@ struct Node *aparse_stmt(struct Parser *p) {
             case T_INTR:
             case T_ORG:
             case T_IDIV:
+            case T_CALL:
                 left = aparse_expr(p);
                 break;
             //no operands
             case T_CDQ:
+            case T_RET:
                 break;
             default:
                 ems_add(&ems, next.line, "AParse Error: Invalid token type!");

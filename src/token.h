@@ -68,7 +68,9 @@ enum TokenType {
     T_EQU,       //used to compute sizes (should compute the value and then patch immediately)
     T_ORG,
     T_CDQ,
-    T_XOR
+    T_XOR,
+    T_CALL,
+    T_RET
 };
 
 struct Token {

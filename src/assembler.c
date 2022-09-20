@@ -77,6 +77,12 @@ void al_init(struct ALabel *al, struct Token t, uint32_t addr, bool defined) {
     al->addr = addr;
     al->defined = defined;
     u32a_init(&al->ref_locs);
+    u32a_init(&al->rjmp_locs);
+}
+
+void al_free(struct ALabel *al) {
+    u32a_free(&al->ref_locs);
+    u32a_free(&al->rjmp_locs);
 }
 
 
@@ -87,6 +93,9 @@ void ala_init(struct ALabelArray* ala) {
 }
 
 void ala_free(struct ALabelArray *ala) {
+    for (int i = 0; i < ala->count; i++) {
+        al_free(&ala->elements[i]);
+    }
     free_arr(ala->elements, sizeof(struct ALabel), ala->max_count); 
 }
 
@@ -240,14 +249,13 @@ void assemble_node(struct Assembler *a, struct Node *node) {
         case ANODE_LABEL_REF: {
             struct ALabel *label = NULL;
             struct ANodeLabelRef* lr = (struct ANodeLabelRef*)node;
-            if ((label = ala_get_label(&a->ala, lr->t))) {
-                u32a_add(&label->ref_locs, a->buf.count);
-            } else {
+            if (!(label = ala_get_label(&a->ala, lr->t))) {
                 struct ALabel al;
                 al_init(&al, lr->t, 0, false);
                 ala_add(&a->ala, al);
-                u32a_add(&al.ref_locs, a->buf.count);
+                label = ala_get_label(&a->ala, lr->t);
             }
+            u32a_add(&label->ref_locs, a->buf.count);
             ba_append_double(&a->buf, 0x0);
             break;
         }
@@ -397,6 +405,28 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                     }
                     break;
                 }
+                case T_CALL: {
+                    if (o->operand1->type == ANODE_LABEL_REF && o->operand2 == NULL) {
+                        ba_append_byte(&a->buf, 0xe8);
+                        struct ALabel *label = NULL;
+                        struct ANodeLabelRef* lr = (struct ANodeLabelRef*)(o->operand1);
+                        if (!(label = ala_get_label(&a->ala, lr->t))) {
+                            struct ALabel al;
+                            al_init(&al, lr->t, 0, false);
+                            ala_add(&a->ala, al);
+                            label = ala_get_label(&a->ala, lr->t);
+                        }
+                        u32a_add(&label->rjmp_locs, a->buf.count);
+                        ba_append_double(&a->buf, a->buf.count + 4); //put address of following instruction
+                    } else {
+                        printf("CALL only works with labels for now\n");
+                    }
+                    break;
+                }
+                case T_RET: {
+                    ba_append_byte(&a->buf, 0xc3);
+                    break;
+                }
                 default:
                     printf("Operator not recognized: default case\n");
                     break;
@@ -450,6 +480,22 @@ void assembler_patch_labels(struct Assembler *a) {
     }
 }
 
+void assembler_patch_rjmp(struct Assembler *a) {
+    for (int i = 0; i < a->ala.count; i++) {
+        struct ALabel *l = &a->ala.elements[i];
+        if (!(l->defined)) {
+            ems_add(&ems, l->t.line, "Assembling Error: Label '%.*s' not defined.", l->t.len, l->t.start);
+        } else {
+            for (int j = 0; j < l->rjmp_locs.count; j++) {
+                printf("%d\n", j);
+                uint32_t loc = l->rjmp_locs.elements[j];
+                uint32_t *next = (uint32_t*)(&a->buf.bytes[loc]);
+                uint32_t final_addr = l->addr - *next;
+                memcpy(&a->buf.bytes[loc], &final_addr, 4);
+            }
+        }
+    }
+}
 
 void assembler_write_binary(struct Assembler *a, char* filename) {
     FILE *f = fopen(filename, "wb");
