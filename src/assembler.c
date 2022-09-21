@@ -166,13 +166,13 @@ void assembler_append_elf_header(struct Assembler *a) {
     ba_append_double(&a->buf, file_version);
 
     a->program_start_patch = a->buf.count; //need to add executable offset (0x08048000)
-    ba_append(&a->buf, zeros, 4); //TODO: patch this
+    ba_append(&a->buf, zeros, 4); 
     a->phdr_start_patch = a->buf.count;
-    ba_append(&a->buf, zeros, 4); //TODO: patch this
+    ba_append(&a->buf, zeros, 4);
     ba_append(&a->buf, zeros, 8);
-    a->ehdr_size_patch = a->buf.count; //TODO: patch this
+    a->ehdr_size_patch = a->buf.count;
     ba_append(&a->buf, zeros, 2);
-    a->phdr_size_patch = a->buf.count; //TODO: patch this 
+    a->phdr_size_patch = a->buf.count;
     ba_append(&a->buf, zeros, 2);
 
     uint16_t phdr_entries = 1;
@@ -185,7 +185,6 @@ void assembler_append_elf_header(struct Assembler *a) {
 }
 
 void assembler_append_program_header(struct Assembler *a) {
-    //TODO: patch program header size and _start location (offset by org value)
     uint32_t phdr_start = a->buf.count;
     memcpy(&a->buf.bytes[a->phdr_start_patch], &phdr_start, 4);
 
@@ -441,10 +440,22 @@ void assemble_node(struct Assembler *a, struct Node *node) {
 
 
 void assembler_append_program(struct Assembler *a, struct NodeArray *na) {
-    a->program_start_loc = a->buf.count;
+    //a->program_start_loc = a->buf.count;
 
     for (int i = 0; i < na->count; i++) {
         assemble_node(a, na->nodes[i]);
+    }
+
+    for (int i = 0; i < a->ala.count; i++) {
+        struct ALabel* l = &a->ala.elements[i];
+        if (strncmp("_start", l->t.start, l->t.len) == 0) {
+            if (!(l->defined)) {
+                ems_add(&ems, l->t.line, "Assembling Error: Label '%.*s' not defined.", l->t.len, l->t.start);
+            } else {
+                a->program_start_loc = l->addr;
+                break;
+            }
+        }
     }
 
     uint32_t filesz = a->buf.count;
@@ -487,7 +498,6 @@ void assembler_patch_rjmp(struct Assembler *a) {
             ems_add(&ems, l->t.line, "Assembling Error: Label '%.*s' not defined.", l->t.len, l->t.start);
         } else {
             for (int j = 0; j < l->rjmp_locs.count; j++) {
-                printf("%d\n", j);
                 uint32_t loc = l->rjmp_locs.elements[j];
                 uint32_t *next = (uint32_t*)(&a->buf.bytes[loc]);
                 uint32_t final_addr = l->addr - *next;

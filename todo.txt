@@ -33,56 +33,22 @@ Look at this stackoverflow post for how machine code is structured: (THIS IS REA
 !!!Found an insidious bug from shallow copies - the stack allocated copy was being change instead of the
         version saved to the heap.  rjump_locs.count was NOT being updated properly!!!
 
+Refactor:
+    Replace struct VarData with Symbol tables (or just a linked list for now)
+        Symbol tables should be filled in with:
+            identifier
+            type
+            value
+
+    Replace struct VarDataArray with new name: struct Environment
+        Each environment holds a linked list of Symbols
+
+    Walk the AST and type-check using Symbol and Environment to hold data
+
+push operator doesn't accept hexadecimal right now - it should assemble 'push 0xa'
+
 Get assembler working with new opcode structure
         Add in other opcodes to make assembler turing complete (conditionals and loops)
-            Get assembler working with byte offsets and dereferencing!!! (the ultimate goal - this is where our assembler is getting stuck)
-
-            Get print working - we need to be able to print out stuff for easy feedback!!!
-                get '_print_char' working
-                    have assembler assemble opcodes for 'call' and 'ret'
-                        will 'call' work correctly with labels and patching!?? (will find out soon enough...)
-                    extract _print_char into own function and concatenate to beginning of program
-
-                    e8 0c 00 00 00 //e8 and 12 - from the next instruction address (after 0c000000), jump 12 to get to function
-                        the 4 bytes following is in two' complement form (to allow jumps in negative direction)
-
-                    When a call instruction is reached, we should put in the address of the following instruction
-                        into the 4 byte location.  Then when all labels are defined, we need to do this:
-                            addr = label_addr - following_addr
-                            put addr into the 4 bytes
-
-                    write a function called 'assembler_patch_rjmp' <---------------start here
-                        look at function notes inside assembler.c
-                        run without using call and ret to fix any errors
-                        run with call and ret opcodes in assembly
-
-
-                    //out.asm should assemble and run properly
-                    org     0x08048000
-                    _print_char:
-                        push    ebp
-                        mov     ebp, esp
-
-                        mov     ecx, ebp
-                        add     ecx, 8
-                        mov     edx, 1
-
-                        mov     eax, 0x4
-                        mov     ebx, 0x1
-                        int     0x80
-
-                        pop     ebp
-                        xor     eax, eax
-                        ret
-                    _start:
-                        push    97
-                        call    _print_char
-                        add     esp, 4
-
-                        pop     ebx
-                        mov     eax, 0x01
-                        int     0x80
-
             Get _print_digit working - this will require assembling offsets and deferencing!!!
                 will need to figure out how to deference and stuff - look at that website again
 
@@ -101,7 +67,8 @@ Get assembler working with new opcode structure
             movzx   r32, r8
             call    <identifier>
             ret
-        
+       
+            Get _print_int working - should be able to print out 32-bit integers of arbitrary length (including negatives)
 
         Make linker to allow different modules to be compiled into object files, then the object files can be linked
             need to allow code to refer to external variables (can add external functions later)
