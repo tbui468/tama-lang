@@ -14,10 +14,20 @@ Start writing out README file
         TLexer
         TParser
         Compiler
+            TODO: 
+                  Refactor VarData to Symbol (identifier, value, type data)
+                  Refactor VarDataArray to Environment (linked list or hash table from Cebra)
+                  Add IR module(s):
+                      Translate to IR
+                      Canonicalize IR
+                      Write interface to emit assembly for x86, x86-64, ARM, etc
+                      Write implementation for x86 for now
         ALexer
         AParser
         Assembler
+            TODO: produce non-executable ELF files (to allow linking with other files)
         Linker
+            TODO: need to make this
 
     Building
 
@@ -51,7 +61,121 @@ Get assembler working with new opcode structure
         Add in other opcodes to make assembler turing complete (conditionals and loops)
             Get _print_digit working - this will require assembling offsets and deferencing!!!
                 will need to figure out how to deference and stuff - look at that website again
+                assemble basic assembly using tiny.asm and check binary
 
+        Use Mod = 00 since we are only using ebp for memory dereferencing
+
+        [0x8b][00<reg>101][32-bit displacement] ebp memory with displacement to register
+        [0x89][00<reg>101][32-bit displacement] register to ebp memory with displacement
+
+        Need to lex/parse displacement
+        Lex brackets
+        parse a new node - diplacement (register, int32)
+        assemble <-------------- produce machine code to make '_print_digit' work
+
+    mov     eax, [ebp + 8]
+    add     eax, 0x30
+    mov     [ebp + 8], eax
+
+        
+
+        https://stackoverflow.com/questions/19866651/ia32-assembly-move-instruction
+        00000000  8B04852CA10408    mov eax, [eax*4 + 0x804a12c] <----example from stack overflow
+        8b is for mov
+        04 ?
+        85 ?
+        2ca10408 is the displacement
+
+        0x5c == 01011100
+        01
+        011 register ebx
+        100 register esp
+
+        0x1c == 00011100
+        Mod = 00
+        011 register ebx
+        100 register esp
+
+        Mod 11 means the following 6 bytes identify reg/rm
+        The other 3 Mod values:
+            first operand is register
+            second operand (r/m) is stored in memory address
+            SIB byte is needed when r/m is esp (100) 
+            Mod 01 also requires a 8-bit displacement
+            Mod 10 also requires a 32-bit displacement 
+
+        if (Mod == 00 or Mod == 01) and r/m == 100 
+            SIB needed after ModRM
+
+        !!!!0x24 is the SIB byte - look at IA32_lecture_slides pdf for details!!!
+        Is the SIB byte unique? (No other opcode starts with it)
+        Or do the two MOD bits determine the SIB?
+
+    T_EAX = 000
+    T_ECX = 001
+    T_EDX = 010
+    T_EBX = 011
+    T_ESP = 100
+    T_EBP = 101
+    T_ESI = 110
+    T_EDI = 111
+
+        _start:
+            push    9                   6a 09
+            mov     ebx,  [esp]         8b 1c 24
+            mov     eax, [esp]
+            mov     ebx,  [esp + 4]     8b 5c 24 04
+            mov     ebx,  [esp + 8]     8b 5c 24 08
+            mov     ebx,  [esp + 12]    8b 5c 24 0c
+            mov     eax, 0x1            b8 01
+            int     0x80
+*********Temp code to test dereferencing in assembly******
+        _test:
+            ;make call frame
+            push    ebp
+            mov     ebp, esp
+
+            ;convert byte into char
+            mov     eax, [ebp + 8]
+            
+            ;test by printing out char
+            push    eax
+            call    _print_char
+            add     esp, 4
+
+        _start:
+            push    97
+            call    _test
+            add     esp, 4
+
+*********Final test*****
+
+        _print_digit:
+            ;make call frame
+            push    ebp
+            mov     ebp, esp
+
+            ;convert byte into char
+            mov     eax, [ebp + 8]
+            add     eax, 0x30
+            mov     [ebp + 8], eax
+
+            ;set arguments for write syscall 
+            mov     ecx, ebp
+            add     ecx, 8  ;need to go down stack 2 bytes (top is old base pointer address, and second to top is return address)
+            mov     edx, 1
+
+            ;set syscall to write, file descriptor to stdout, and trigger interrupt
+            mov     eax, 0x4    
+            mov     ebx, 0x1
+            int     0x80
+
+            ;restore previous call frame, and return 0
+            pop     ebp
+            xor     eax, eax
+            ret
+
+*******Need to assemble these instructions into machine code
             jmp     imm/lbl
             jz
             je

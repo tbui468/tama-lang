@@ -251,10 +251,6 @@ struct Node *parse_stmt(struct Parser *p) {
     }
 }
 
-//struct Node *aparse_deref(struct Parser *p) {
-//  NOTE: should reach this point if T_L_BRACKET is encountered
-//}
-
 struct Node *aparse_literal(struct Parser *p) {
     struct Token next = parser_next(p);
     switch (next.type) {
@@ -279,7 +275,24 @@ struct Node *aparse_literal(struct Parser *p) {
 }
 
 struct Node *aparse_expr(struct Parser *p) {
-    return aparse_literal(p);
+    if (parser_peek_one(p).type == T_L_BRACKET) {
+        parser_consume(p, T_L_BRACKET);
+        struct Node* reg = aparse_literal(p);
+        if (parser_peek_one(p).type == T_R_BRACKET) {
+            parser_consume(p, T_R_BRACKET);
+            struct Token dummy;
+            return anode_deref(reg, dummy, NULL);
+        } else if (parser_peek_one(p).type == T_PLUS || parser_peek_one(p).type == T_MINUS) {
+            struct Token op = parser_next(p);
+            struct Node* displacement = aparse_literal(p);
+            parser_consume(p, T_R_BRACKET);
+            return anode_deref(reg, op, displacement);
+        }
+    } else {
+        return aparse_literal(p);
+    }
+    ems_add(&ems, parser_peek_one(p).line, "AParse Error: Invalid token type!");
+    return NULL;
 }
 
 struct Node *aparse_stmt(struct Parser *p) {

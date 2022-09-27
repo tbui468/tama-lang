@@ -22,6 +22,7 @@ enum NodeType {
     ANODE_OP,
     ANODE_REG,
     ANODE_IMM32,
+    ANODE_DEREF,
     ANODE_IMM8 //TODO: not implemented yet
 };
 
@@ -132,10 +133,18 @@ struct ANodeImm {
     struct Token t;
 };
 
+struct ANodeDeref {
+    struct Node n;
+    struct Node *reg;
+    struct Token op;
+    struct Node *imm;
+};
+
 void na_init(struct NodeArray *na);
 void ast_free(struct Node* n);
 void na_free(struct NodeArray *na);
 void na_add(struct NodeArray *na, struct Node* n);
+
 struct Node* node_literal(struct Token value);
 struct Node* node_unary(struct Token op, struct Node* right);
 struct Node* node_binary(struct Node* left, struct Token op, struct Node* right);
@@ -152,6 +161,8 @@ struct Node *anode_label_ref(struct Token t);
 struct Node *anode_op(struct Token operator, struct Node *operand1, struct Node *operand2);
 struct Node *anode_reg(struct Token t);
 struct Node *anode_imm(struct Token t);
+struct Node *anode_deref(struct Node *reg, struct Token t, struct Node *imm);
+
 void ast_print(struct Node* n);
 void ast_free(struct Node* n);
 

@@ -22,7 +22,7 @@ uint8_t get_byte(struct Token t) {
     } else if (t.type == T_HEX) {
         ret = strtol(t.start + 2, &end, 16);
     }
-    return (uint8_t)ret;
+    return (int8_t)ret;
 }
 
 

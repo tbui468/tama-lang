@@ -16,9 +16,9 @@ static uint8_t mod_tbl[] = {
 };
 
 enum OpMod {
-    MOD_TEMP1 = 0, //TODO: choose better name than _TEMP
-    MOD_TEMP2,
-    MOD_TEMP3,
+    MOD_00 = 0,
+    MOD_01,
+    MOD_10,
     MOD_REG
 };
 
@@ -267,8 +267,51 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                         struct ANodeReg* dst = (struct ANodeReg*)(o->operand1);
                         struct ANodeReg* src = (struct ANodeReg*)(o->operand2);
 
-                        ba_append_byte(&a->buf, 0x89);
+                        ba_append_byte(&a->buf, 0x89); //register to memory, 0x8b is memory to register
                         ba_append_byte(&a->buf, mod_tbl[MOD_REG] | r_tbl[src->t.type] | rm_tbl[dst->t.type]);
+                    } else if (o->operand1->type == ANODE_DEREF && o->operand2->type == ANODE_REG) {
+                        //[0x89][01<reg>101][8-bit displacement] register to ebp memory with displacement
+                        //TODO: get this done
+                        ba_append_byte(&a->buf, 0x89);
+
+                        struct ANodeDeref* dst = (struct ANodeDeref*)(o->operand1);
+                        struct ANodeReg* src = (struct ANodeReg*)(o->operand2);
+                        struct ANodeReg* mem = (struct ANodeReg*)(dst->reg);
+                        struct ANodeImm *imm = (struct ANodeImm*)(dst->imm);
+                        if (mem->t.type != T_EBP) {
+                            printf("Dereferencing only supported with ebp for now!\n");
+                        }
+                        int dis = get_double(imm->t);
+                        if (dis < -128 || dis > 127) {
+                            printf("32-bit displacements not supported!\n");
+                        }
+                        ba_append_byte(&a->buf, mod_tbl[MOD_01] | r_tbl[src->t.type] | rm_tbl[mem->t.type]);
+                        if (dst->imm) {
+                            ba_append_byte(&a->buf, get_byte(imm->t));
+                        } else {
+                            ba_append_byte(&a->buf, 0x00);
+                        }
+                    } else if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_DEREF) {
+                        //[0x8b][01<reg>101][8-bit displacement] ebp memory with displacement to register
+                        //TODO: get this done
+                        ba_append_byte(&a->buf, 0x8b);
+                        struct ANodeReg* dst = (struct ANodeReg*)(o->operand1);
+                        struct ANodeDeref* src = (struct ANodeDeref*)(o->operand2);
+                        struct ANodeReg *mem = (struct ANodeReg*)(src->reg);
+                        struct ANodeImm *imm = (struct ANodeImm*)(src->imm);
+                        if (mem->t.type != T_EBP) {
+                            printf("Dereferencing only supported with ebp for now!\n");
+                        }
+                        int dis = get_double(imm->t);
+                        if (dis < -128 || dis > 127) {
+                            printf("32-bit displacements not supported!\n");
+                        }
+                        ba_append_byte(&a->buf, mod_tbl[MOD_01] | r_tbl[dst->t.type] | rm_tbl[mem->t.type]);
+                        if (src->imm) {
+                            ba_append_byte(&a->buf, get_byte(imm->t));
+                        } else {
+                            ba_append_byte(&a->buf, 0x00);
+                        }
                     } else if (o->operand1->type == ANODE_REG) {
                         struct ANodeReg* dst = (struct ANodeReg*)(o->operand1);
                         ba_append_byte(&a->buf, 0xb8 + dst->t.type);

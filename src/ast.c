@@ -158,6 +158,15 @@ struct Node *anode_imm(struct Token t) {
     return (struct Node*)node;
 }
 
+struct Node *anode_deref(struct Node *reg, struct Token op, struct Node *imm) {
+    struct ANodeDeref *node = alloc_unit(sizeof(struct ANodeDeref));
+    node->n.type = ANODE_DEREF;
+    node->reg = reg;
+    node->op = op;
+    node->imm = imm;
+    return (struct Node*)node;
+}
+
 void ast_print(struct Node* n) {
     switch (n->type) {
         case NODE_LITERAL: {
@@ -232,6 +241,10 @@ void ast_print(struct Node* n) {
         }
         case ANODE_IMM32: {
             printf("ANODE_IMM32");
+            break;
+        }
+        case ANODE_DEREF: {
+            printf("ANODE_DEREF");
             break;
         }
         default:
@@ -337,6 +350,13 @@ void ast_free(struct Node* n) {
         case ANODE_IMM32: {
             struct ANodeImm* i = (struct ANodeImm*)n;
             free_unit(i, sizeof(struct ANodeImm));
+            break;
+        }
+        case ANODE_DEREF: {
+            struct ANodeDeref* d = (struct ANodeDeref*)n;
+            ast_free(d->reg);
+            ast_free(d->imm);
+            free_unit(d, sizeof(struct ANodeDeref));
             break;
         }
         default:

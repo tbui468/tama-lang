@@ -70,7 +70,7 @@ enum TokenType {
     T_CDQ,
     T_XOR,
     T_CALL,
-    T_RET
+    T_RET,
 };
 
 struct Token {
