@@ -46,8 +46,8 @@ int main (int argc, char **argv) {
         {"while", 5, T_WHILE}
     };
 
-    int ASM_COUNT = 22;
-    struct ReservedWord asm_reserved[22] = {
+    int ASM_COUNT = 25;
+    struct ReservedWord asm_reserved[25] = {
         {"mov", 3, T_MOV},
         {"push", 4, T_PUSH},
         {"pop", 3, T_POP},
@@ -69,7 +69,10 @@ int main (int argc, char **argv) {
         {"cdq", 3, T_CDQ},
         {"xor", 3, T_XOR},
         {"call", 4, T_CALL},
-        {"ret", 3, T_RET}
+        {"ret", 3, T_RET},
+        {"jmp", 3, T_JMP},
+        {"jg", 2, T_JG},
+        {"cmp", 3, T_CMP}
     };
 
 

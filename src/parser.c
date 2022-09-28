@@ -313,6 +313,7 @@ struct Node *aparse_stmt(struct Parser *p) {
             case T_SUB:
             case T_IMUL:
             case T_XOR:
+            case T_CMP:
                 left = aparse_expr(p);
                 parser_consume(p, T_COMMA);
                 right = aparse_expr(p);
@@ -324,6 +325,8 @@ struct Node *aparse_stmt(struct Parser *p) {
             case T_ORG:
             case T_IDIV:
             case T_CALL:
+            case T_JMP:
+            case T_JG:
                 left = aparse_expr(p);
                 break;
             //no operands

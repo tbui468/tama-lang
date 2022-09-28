@@ -66,7 +66,7 @@ struct Token lexer_read_number(struct Lexer *l) {
 
     while (1) {
         char next = l->code[l->current + t.len];
-        if (is_digit(next)) {
+        if (is_digit(next) || (is_hex && is_char(next))) {
             t.len++;
         } else if (next == '.') {
             t.len++;

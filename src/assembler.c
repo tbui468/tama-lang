@@ -271,7 +271,6 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                         ba_append_byte(&a->buf, mod_tbl[MOD_REG] | r_tbl[src->t.type] | rm_tbl[dst->t.type]);
                     } else if (o->operand1->type == ANODE_DEREF && o->operand2->type == ANODE_REG) {
                         //[0x89][01<reg>101][8-bit displacement] register to ebp memory with displacement
-                        //TODO: get this done
                         ba_append_byte(&a->buf, 0x89);
 
                         struct ANodeDeref* dst = (struct ANodeDeref*)(o->operand1);
@@ -293,7 +292,6 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                         }
                     } else if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_DEREF) {
                         //[0x8b][01<reg>101][8-bit displacement] ebp memory with displacement to register
-                        //TODO: get this done
                         ba_append_byte(&a->buf, 0x8b);
                         struct ANodeReg* dst = (struct ANodeReg*)(o->operand1);
                         struct ANodeDeref* src = (struct ANodeDeref*)(o->operand2);
@@ -459,9 +457,65 @@ void assemble_node(struct Assembler *a, struct Node *node) {
                             label = ala_get_label(&a->ala, lr->t);
                         }
                         u32a_add(&label->rjmp_locs, a->buf.count);
-                        ba_append_double(&a->buf, a->buf.count + 4); //put address of following instruction
+                        ba_append_double(&a->buf, a->buf.count + 4); //put address of following instruction (patch displacement relative to this)
                     } else {
                         printf("CALL only works with labels for now\n");
+                    }
+                    break;
+                }
+                case T_JMP: {
+                    if (o->operand1->type == ANODE_LABEL_REF && o->operand2 == NULL) {
+                        ba_append_byte(&a->buf, 0xe9);
+                        struct ALabel *label = NULL;
+                        struct ANodeLabelRef* lr = (struct ANodeLabelRef*)(o->operand1);
+                        if (!(label = ala_get_label(&a->ala, lr->t))) {
+                            struct ALabel al;
+                            al_init(&al, lr->t, 0, false);
+                            ala_add(&a->ala, al);
+                            label = ala_get_label(&a->ala, lr->t);
+                        }
+                        u32a_add(&label->rjmp_locs, a->buf.count);
+                        ba_append_double(&a->buf, a->buf.count + 4); //put address of following instruction (patch displacement relative to this)
+                    } else {
+                        printf("JMP only works with labels for now\n");
+                    }
+                    break;
+                }
+                case T_JG: {
+                    if (o->operand1->type == ANODE_LABEL_REF && o->operand2 == NULL) {
+                        ba_append_byte(&a->buf, 0x0f);
+                        ba_append_byte(&a->buf, 0x8f);
+                        struct ALabel *label = NULL;
+                        struct ANodeLabelRef* lr = (struct ANodeLabelRef*)(o->operand1);
+                        if (!(label = ala_get_label(&a->ala, lr->t))) {
+                            struct ALabel al;
+                            al_init(&al, lr->t, 0, false);
+                            ala_add(&a->ala, al);
+                            label = ala_get_label(&a->ala, lr->t);
+                        }
+                        u32a_add(&label->rjmp_locs, a->buf.count);
+                        ba_append_double(&a->buf, a->buf.count + 4); //put address of following instruction (patch displacement relative to this)
+                    } else {
+                        printf("JMP only works with labels for now\n");
+                    }
+                    break;
+                }
+                case T_CMP: {
+                    //0x3d id <----cmp    eax, imm32
+                    //0x81 /7 id <----- cmp   r/m32, imm32
+                    if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_IMM32) {
+                        struct ANodeReg *reg = (struct ANodeReg*)(o->operand1);
+
+                        if (reg->t.type == T_EAX) {
+                            ba_append_byte(&a->buf, 0x3d);
+                            assemble_node(a, o->operand2);
+                        } else {
+                            ba_append_byte(&a->buf, 0x81);
+                            ba_append_byte(&a->buf, mod_tbl[MOD_REG] | 0x07 << 3 | rm_tbl[reg->t.type]);
+                            assemble_node(a, o->operand2);
+                        }
+                    } else {
+                        printf("CMP only supports register, imm32 for now\n");
                     }
                     break;
                 }

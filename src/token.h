@@ -71,6 +71,9 @@ enum TokenType {
     T_XOR,
     T_CALL,
     T_RET,
+    T_JMP,
+    T_JG,
+    T_CMP
 };
 
 struct Token {

@@ -57,4 +57,19 @@ such as 'ret'.  The remaining bytes are only required under certain conditions.
     [IMMEDIATE] 1, 2, 4 bytes (if required)
         Needed for some operations (such as pushing an immediate value)
 
-## ELF Linker
+###Dereferencing (only supports 8-bit displacement with ebp for now)
+Opcode byte
+    0x89 for moving register into ebp with 8-bit displacement
+    0x8b for moving from ebp with 8-bit displacement into register
+ModR/RM byte
+    First two bits are 01 to allow 8-bit displacement
+    Next 3 bits are the register
+    Last 3 bits are the register holding the memory address
+Displacement byte
+    Displacement from memory address in ebp
+
+## ELF Format
+###Minimum ELF executable format
+ELF header
+Program header
+text
