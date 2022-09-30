@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "token.h"
+#include "token.hpp"
 
 struct Lexer {
     char* code;

@@ -40,6 +40,14 @@ Reference for x86 machine code
 Look at this stackoverflow post for how machine code is structured: (THIS IS REALLY GOOD!)
     https://stackoverflow.com/questions/45526209/referencing-registers-in-machine-code
 
+******************************************Refactor to C++********************************* <--------start here!
+Rename headers to use .hpp extension
+Switch over to c++ for these reasons:
+    can switch to C if performance is necessary
+    STL (vectors, unordered maps, etc) will simplify code
+    a dedicated string type will simplify things further
+    could use visitor pattern to let compiler catch errors when adding new nodes
+
 ************************************Misc*********************************
 emit_bin() <--instead of write() or whatever I called it
 emit_asm() <--instead of write() or whatever I called it
@@ -47,33 +55,163 @@ Symbol <-- instead of VarData
 Environment <-- instead of VarDataArray
 Generalize assembly operation nodes: ANodeOp(op, operand1, operand2) <-- just make operand1/operand2 NULL for no operand instructions)
 
-******************************************Refactor to C++*********************************
-Switch over to c++ for these reasons:
-    can switch to C if performance is necessary
-    STL (vectors, unordered maps, etc) will simplify code
-    a dedicated string type will simplify things further
-    could use visitor pattern to let compiler catch errors when adding new nodes
 
 **********************************Add linker******************************************
+Write in C++ from the start to simplify
 Have assembler emit linkable ELF files along with executable ELF files
     any file with 'main' function can be executable
     need to implement functions in tamarind and set main as entry point
 
 ********************************Assemble Executabel ELF********************************
-Assemble _print_bool
-    cmp
-        lex
-        parse
-        assemble
 
-        0x3d id <----cmp    eax, imm32
-        0x81 /7 id <----- cmp   r/m32, imm32
-            Note: this means use 11 as mod bits, 7 as three register bits (111), and then r/m register
+class Assembler {
+    public:
+        Assembler(struct TokenArray ta) {
+            m_ta = ta;
+        }
 
+        void emit_machine_code(const std::string& filename) {
+            parse(&m_na);
+            assemble(&buf);
+            write_file(filename);
+        }
 
-    *NOTE: will need to check patching of jmp/jg addresses too
+    private:
+        void parse(struct NodeArray* na) {
 
-Test compiler driver end-to-end:
+        } 
+
+        void assemble(std::string buf) {
+
+        }
+
+        void write_file(const std::string& filename) {
+
+        } 
+
+    public:
+        struct TokenArray m_ta;
+        struct NodeArray m_na;
+        std::string buf;
+};
+
+Make new assembler in C++ asm
+    Make new parser
+    Make new assembler
+    make function emit_elf()
+
+*Refactor to simplify switch statement (no more nesting):
+
+    struct Instruction {
+        struct Token instruction;
+        struct Operand *op1; //NULL if unused
+        struct Operand *op2; //NULL if unused
+    };
+
+    struct Operand {
+        enum OperandType type;
+    };
+
+    struct RegOperand {
+        struct Operand operand;
+        struct Token reg;
+    };
+
+    struct Imm32Operand {
+        struct Operand operand;
+        struct Token imm;
+    };
+
+    struct Imm8Operand {
+        struct Operand operand;
+        struct Token imm;
+    };
+
+    struct MemOperand {
+        struct Operand operand;
+        struct Token reg;
+        struct Token displacement;
+    };
+
+    struct LabelOperand {
+        struct Operand operand;
+        struct Token label;
+    };
+
+    class Operand {
+        public:
+            Operand(enum OperandType type) {
+                m_type = type;
+            }
+
+        public: 
+            enum OperandType m_type;
+    };
+
+    class RegOperand: public Operand {
+        public:
+            RegOperand(enum Token reg): Operand(OT_REG) {
+                m_reg = reg;
+            }
+        public:
+            enum Token m_reg;
+    };
+
+    Operand* parse_operand(struct Parser p) {
+        enum Token t = parser_next(p);
+        switch(t) {
+            case T_L_BRACKET:
+                //memory access
+            case T_EAX:
+                //register
+            case T_LABEL_REF:
+                //label
+            case T_HEX:
+            case T_INT:
+                //immediate
+        }
+    }
+
+    Instruction* parse_instruction(struct Parser p) {
+        enum Token t = parser_next(p);
+        switch (t) {
+            case T_PUSH:
+            case T_POP:
+                Operand* operand = parse_operand(p);
+                return new Instruction(t, operand, NULL);
+            case T_RET:
+            case T_LABEL_DEF:
+                return new Instruction(t, NULL, NULL);
+            case T_ADD:
+            case T_IDIV:
+                Operand* operand1 = parse_operand(p);
+                Operand* operand2 = parse_operand(p);
+                return new Instruction(t, operand1, operand2);
+        }
+    }
+
+    Label definition is now an AStmt with no operands (both NULL)
+    Label references can be computed using a function
+    Immediates (8-bit and 32-bit) can be computed using a function
+
+Assemble _print_int
+    Add tokens for these instructions
+    parse these instructions
+    assemble these instructions - look at Intel reference for x86 
+
+        je      print_zero
+        test    eax, 0x80000000 ;hex for 2^31
+        jnz     do_negative
+        neg     eax
+        inc     edi
+        dec     edi 
+
+    *Note: using 'div' instruction in _print_int right now
+            can this be replaced with idiv, or is an unsigned division necessary here?
+
+Test compiler driver end-to-end (with only printing booleans for now
+    Uncomment code so that compiler emits assembly
+    Have compiler all functions in fun.asm for now (remove comments since my assembler doesn't recognize them right now)
     x: int = 10
     x = 15
     y: int = -90
@@ -84,11 +222,11 @@ Test compiler driver end-to-end:
     x: int = 0
     while x < 10 {
         if x % 2 == 0 {
-            print(x)
+            print(true)
         }
         x = x + 1
     }
-Assemble _print_int <----------------this one is next
+
 Test compiler driver end-to-end:
     print out 32-bit signed integers
 

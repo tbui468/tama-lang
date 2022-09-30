@@ -1,10 +1,10 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#include "parser.h"
-#include "error.h"
-#include "ast.h"
-#include "memory.h"
+#include "parser.hpp"
+#include "error.hpp"
+#include "ast.hpp"
+#include "memory.hpp"
 
 
 struct Token parser_peek_two(struct Parser *p) {
@@ -204,7 +204,7 @@ struct Node *parse_stmt(struct Parser *p);
 
 struct Node* parse_block(struct Parser *p) {
     struct Token l_brace = parser_consume(p, T_L_BRACE);
-    struct NodeArray* na = alloc_unit(sizeof(struct NodeArray));
+    struct NodeArray* na = (struct NodeArray*)alloc_unit(sizeof(struct NodeArray));
     na_init(na);
     while (parser_peek_one(p).type != T_R_BRACE && parser_peek_one(p).type != T_EOF) {
         struct Node* stmt = parse_stmt(p);

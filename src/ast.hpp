@@ -1,7 +1,7 @@
 #ifndef TMD_AST_H
 #define TMD_AST_H
 
-#include "token.h"
+#include "token.hpp"
 
 enum NodeType {
     NODE_BINARY,
@@ -106,6 +106,17 @@ struct NodeWhile {
 };
 
 
+/*
+ * Assembler
+ */
+
+struct ANodeStmt {
+    struct Node n;
+    struct Token op;
+    struct Node *operand1;
+    struct Node *operand2;
+};
+
 struct ANodeLabelDef {
     struct Node n; 
     struct Token t;
@@ -118,7 +129,7 @@ struct ANodeLabelRef {
 
 struct ANodeOp {
     struct Node n;
-    struct Token operator;
+    struct Token op;
     struct Node *operand1;
     struct Node *operand2;
 };
@@ -156,9 +167,10 @@ struct Node *node_set_var(struct Token var, struct Node *expr);
 struct Node *node_block(struct Token l_brace, struct Token r_brace, struct NodeArray* na);
 struct Node *node_if(struct Token if_token, struct Node *condition, struct Node *then_block, struct Node *else_block);
 struct Node *node_while(struct Token while_token, struct Node *condition, struct Node *while_block);
+
 struct Node *anode_label_def(struct Token t);
 struct Node *anode_label_ref(struct Token t);
-struct Node *anode_op(struct Token operator, struct Node *operand1, struct Node *operand2);
+struct Node *anode_op(struct Token op, struct Node *operand1, struct Node *operand2);
 struct Node *anode_reg(struct Token t);
 struct Node *anode_imm(struct Token t);
 struct Node *anode_deref(struct Node *reg, struct Token t, struct Node *imm);

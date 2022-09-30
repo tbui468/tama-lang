@@ -4,9 +4,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "byte_array.h"
-#include "token.h"
-#include "ast.h"
+#include "byte_array.hpp"
+#include "token.hpp"
+#include "ast.hpp"
 
 
 struct U32Array {

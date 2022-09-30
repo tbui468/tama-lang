@@ -2,9 +2,9 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "assembler.h"
-#include "memory.h"
-#include "error.h"
+#include "assembler.hpp"
+#include "memory.hpp"
+#include "error.hpp"
 
 //second byte
 //xx000000
@@ -65,7 +65,7 @@ void u32a_add(struct U32Array *ua, uint32_t element) {
             ua->max_count = 8;
     }
 
-    ua->elements = alloc_arr(ua->elements, sizeof(uint32_t), old_max, ua->max_count);
+    ua->elements = (uint32_t*)alloc_arr(ua->elements, sizeof(uint32_t), old_max, ua->max_count);
 
     ua->elements[ua->count] = element;
     ua->count++;
@@ -107,7 +107,7 @@ void ala_add(struct ALabelArray *ala, struct ALabel element) {
             ala->max_count = 8;
     }
 
-    ala->elements = alloc_arr(ala->elements, sizeof(struct ALabel), old_max, ala->max_count);
+    ala->elements = (struct ALabel*)alloc_arr(ala->elements, sizeof(struct ALabel), old_max, ala->max_count);
 
     ala->elements[ala->count] = element;
     ala->count++;
@@ -260,7 +260,7 @@ void assemble_node(struct Assembler *a, struct Node *node) {
         }
         case ANODE_OP: {
             struct ANodeOp* o = (struct ANodeOp*)node;
-            struct Token op = o->operator;
+            struct Token op = o->op;
             switch (op.type) {
                 case T_MOV: {
                     if (o->operand1->type == ANODE_REG && o->operand2->type == ANODE_REG) {

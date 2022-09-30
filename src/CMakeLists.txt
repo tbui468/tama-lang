@@ -1,26 +1,30 @@
 set(Sources
-    main.c
-    ast.c
-    memory.c
-    token.c
-    byte_array.c
-    assembler.c
-    error.c
-    compiler.c
-    lexer.c
-    parser.c
+    main.cpp
+    ast.cpp
+    memory.cpp
+    token.cpp
+    byte_array.cpp
+    assembler.cpp
+    assembler1.cpp
+    error.cpp
+    compiler.cpp
+    lexer.cpp
+    parser.cpp
+    assembler.cpp
     )
 
 set(Headers
-    ast.h
-    memory.h
-    token.h
-    byte_array.h
-    assembler.h
-    error.h
-    compiler.h
-    lexer.h
-    parser.h
+    ast.hpp
+    memory.hpp
+    token.hpp
+    byte_array.hpp
+    assembler.hpp
+    assembler1.hpp
+    error.hpp
+    compiler.hpp
+    lexer.hpp
+    parser.hpp
+    assembler.hpp
     )
 
 add_executable(

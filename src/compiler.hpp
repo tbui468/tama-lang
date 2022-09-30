@@ -1,9 +1,9 @@
 #ifndef TMD_COMPILER_H
 #define TMD_COMPILER_H
 
-#include "token.h"
-#include "byte_array.h"
-#include "ast.h"
+#include "token.hpp"
+#include "byte_array.hpp"
+#include "ast.hpp"
 
 struct VarData {
     struct Token var;

@@ -2,15 +2,16 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "memory.h"
-#include "ast.h"
-#include "token.h"
-#include "byte_array.h"
-#include "assembler.h"
-#include "error.h"
-#include "compiler.h"
-#include "lexer.h"
-#include "parser.h"
+#include "memory.hpp"
+#include "ast.hpp"
+#include "token.hpp"
+#include "byte_array.hpp"
+#include "assembler.hpp"
+#include "error.hpp"
+#include "compiler.hpp"
+#include "lexer.hpp"
+#include "parser.hpp"
+#include "assembler1.hpp"
 
 #define MAX_MSG_LEN 256
 
@@ -21,7 +22,7 @@ char *load_code(char* filename) {
     fseek(f, 0, SEEK_END);
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET); //rewind(f);
-    char *string = malloc(fsize + 1);
+    char *string = (char*)malloc(fsize + 1);
     fread(string, fsize, 1, f);
     fclose(f);
     string[fsize] = 0;
@@ -78,6 +79,7 @@ int main (int argc, char **argv) {
 
     ems_init(&ems);
 
+    
     if (argc < 2) {
         printf("Usage: tama <filename>\n");
         exit(1);
@@ -211,6 +213,11 @@ int main (int argc, char **argv) {
     assembler_free(&a);
     ems_free(&ems);
     printf("Allocated memory remaining: %ld\n", allocated);
+
+
+    //TODO: finish the new assembler in c++
+    //Assembler1 assembler;
+    //assembler.emit_code("out.asm", "out.bin");
 
     return 0;
 }

@@ -3,9 +3,9 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#include "compiler.h"
-#include "memory.h"
-#include "error.h"
+#include "compiler.hpp"
+#include "memory.hpp"
+#include "error.hpp"
 
 #define MAX_MSG_LEN 256
 
@@ -27,7 +27,7 @@ void vda_add(struct VarDataArray *vda, struct VarData vd) {
     } else if (vda->count + 1 > vda->max_count) {
         vda->max_count *= 2;
     }
-    vda->vds = alloc_arr(vda->vds, sizeof(struct VarData), old_max, vda->max_count);
+    vda->vds = (struct VarData*)alloc_arr(vda->vds, sizeof(struct VarData), old_max, vda->max_count);
 
     vda->vds[vda->count] = vd;
     vda->count++;
@@ -48,7 +48,7 @@ void compiler_init(struct Compiler *c) {
     ba_init(&c->text);
     ba_init(&c->data);
     c->data_offset = 0;
-    struct VarDataArray *head = alloc_unit(sizeof(struct VarDataArray));
+    struct VarDataArray *head = (struct VarDataArray*)alloc_unit(sizeof(struct VarDataArray));
     vda_init(head);
     c->head = head;
     c->conditional_label_id = 0;
@@ -95,7 +95,7 @@ struct VarData* compiler_get_local(struct Compiler* c, struct Token var) {
 
 
 void compiler_begin_scope(struct Compiler *c) {
-    struct VarDataArray *scope = alloc_unit(sizeof(struct VarDataArray));
+    struct VarDataArray *scope = (struct VarDataArray*)alloc_unit(sizeof(struct VarDataArray));
     vda_init(scope);
     scope->next = c->head;
     c->head = scope;

@@ -2,8 +2,6 @@
 #define TMD_ERROR_H
 
 
-
-
 struct Error {
     char* msg;
     int line;
@@ -17,7 +15,7 @@ struct ErrorMsgs {
 };
 
 
-struct ErrorMsgs ems;
+extern struct ErrorMsgs ems;
 
 void ems_init(struct ErrorMsgs *ems);
 void ems_free(struct ErrorMsgs *ems);

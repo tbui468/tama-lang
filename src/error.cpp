@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#include "error.h"
-#include "memory.h"
+#include "error.hpp"
+#include "memory.hpp"
 
 #define MAX_MSG_LEN 256
+
+struct ErrorMsgs ems;
 
 void ems_init(struct ErrorMsgs *ems) {
     ems->errors = NULL;
@@ -27,12 +29,12 @@ void ems_add(struct ErrorMsgs *ems, int line, char* format, ...) {
         } else {
             ems->max_count *= 2;
         }
-        ems->errors = alloc_arr(ems->errors, sizeof(struct Error), old_max, ems->max_count);
+        ems->errors = (struct Error*)alloc_arr(ems->errors, sizeof(struct Error), old_max, ems->max_count);
     }
 
     va_list ap;
     va_start(ap, format);
-    char* s = alloc_unit(MAX_MSG_LEN);
+    char* s = (char*)alloc_unit(MAX_MSG_LEN);
     int written = snprintf(s, MAX_MSG_LEN, "[%d] ", line);
     vsnprintf(s + written, MAX_MSG_LEN - written, format, ap);
     va_end(ap);

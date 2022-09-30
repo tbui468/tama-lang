@@ -1,8 +1,8 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "lexer.h"
-#include "error.h"
+#include "lexer.hpp"
+#include "error.hpp"
 
 void lexer_init(struct Lexer *l, char* code, struct ReservedWord *reserved_words, int reserved_count) {
     l->code = code;

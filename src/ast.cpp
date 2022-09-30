@@ -1,7 +1,7 @@
 
 #include <stdio.h>
-#include "ast.h"
-#include "memory.h"
+#include "ast.hpp"
+#include "memory.hpp"
 
 
 void na_init(struct NodeArray *na) {
@@ -26,20 +26,20 @@ void na_add(struct NodeArray *na, struct Node* n) {
     } else if (na->count + 1 > na->max_count) {
         na->max_count *= 2;
     }
-    na->nodes = alloc_arr(na->nodes, sizeof(struct Node*), old_max, na->max_count);
+    na->nodes = (struct Node**)alloc_arr(na->nodes, sizeof(struct Node*), old_max, na->max_count);
 
     na->nodes[na->count++] = n;
 }
 
 struct Node* node_literal(struct Token value) {
-    struct NodeLiteral *node = alloc_unit(sizeof(struct NodeLiteral));
+    struct NodeLiteral *node = (struct NodeLiteral*)alloc_unit(sizeof(struct NodeLiteral));
     node->n.type = NODE_LITERAL;
     node->value = value;
     return (struct Node*)node;
 }
 
 struct Node* node_unary(struct Token op, struct Node* right) {
-    struct NodeUnary *node = alloc_unit(sizeof(struct NodeUnary));
+    struct NodeUnary *node = (struct NodeUnary*)alloc_unit(sizeof(struct NodeUnary));
     node->n.type = NODE_UNARY;
     node->op = op;
     node->right = right;
@@ -47,7 +47,7 @@ struct Node* node_unary(struct Token op, struct Node* right) {
 }
 
 struct Node* node_binary(struct Node* left, struct Token op, struct Node* right) {
-    struct NodeBinary *node = alloc_unit(sizeof(struct NodeBinary));
+    struct NodeBinary *node = (struct NodeBinary*)alloc_unit(sizeof(struct NodeBinary));
     node->n.type = NODE_BINARY;
     node->left = left;
     node->op = op;
@@ -56,21 +56,21 @@ struct Node* node_binary(struct Node* left, struct Token op, struct Node* right)
 }
 
 struct Node *node_print(struct Node* arg) {
-    struct NodePrint *node = alloc_unit(sizeof(struct NodePrint));
+    struct NodePrint *node = (struct NodePrint*)alloc_unit(sizeof(struct NodePrint));
     node->n.type = NODE_PRINT;
     node->arg = arg;
     return (struct Node*)node;
 }
 
 struct Node *node_expr_stmt(struct Node *expr) {
-    struct NodeExprStmt *node = alloc_unit(sizeof(struct NodeExprStmt));
+    struct NodeExprStmt *node = (struct NodeExprStmt*)alloc_unit(sizeof(struct NodeExprStmt));
     node->n.type = NODE_EXPR_STMT;
     node->expr = expr;
     return (struct Node*)node;
 }
 
 struct Node *node_decl_var(struct Token var, struct Token type, struct Node *expr) {
-    struct NodeDeclVar *node = alloc_unit(sizeof(struct NodeDeclVar));
+    struct NodeDeclVar *node = (struct NodeDeclVar*)alloc_unit(sizeof(struct NodeDeclVar));
     node->n.type = NODE_DECL_VAR;
     node->var = var;
     node->type = type;
@@ -79,14 +79,14 @@ struct Node *node_decl_var(struct Token var, struct Token type, struct Node *exp
 }
 
 struct Node *node_get_var(struct Token var) {
-    struct NodeGetVar *node = alloc_unit(sizeof(struct NodeGetVar));
+    struct NodeGetVar *node = (struct NodeGetVar*)alloc_unit(sizeof(struct NodeGetVar));
     node->n.type = NODE_GET_VAR;
     node->var = var;
     return (struct Node*)node;
 }
 
 struct Node *node_set_var(struct Token var, struct Node *expr) {
-    struct NodeSetVar *node = alloc_unit(sizeof(struct NodeSetVar));
+    struct NodeSetVar *node = (struct NodeSetVar*)alloc_unit(sizeof(struct NodeSetVar));
     node->n.type = NODE_SET_VAR;
     node->var = var;
     node->expr = expr;
@@ -94,7 +94,7 @@ struct Node *node_set_var(struct Token var, struct Node *expr) {
 }
 
 struct Node *node_block(struct Token l_brace, struct Token r_brace, struct NodeArray* na) {
-    struct NodeBlock *node = alloc_unit(sizeof(struct NodeBlock));
+    struct NodeBlock *node = (struct NodeBlock*)alloc_unit(sizeof(struct NodeBlock));
     node->n.type = NODE_BLOCK;
     node->l_brace = l_brace;
     node->r_brace = r_brace;
@@ -103,7 +103,7 @@ struct Node *node_block(struct Token l_brace, struct Token r_brace, struct NodeA
 }
 
 struct Node *node_if(struct Token if_token, struct Node *condition, struct Node *then_block, struct Node *else_block) {
-    struct NodeIf *node = alloc_unit(sizeof(struct NodeIf));
+    struct NodeIf *node = (struct NodeIf*)alloc_unit(sizeof(struct NodeIf));
     node->n.type = NODE_IF;
     node->if_token = if_token;
     node->condition = condition;
@@ -113,7 +113,7 @@ struct Node *node_if(struct Token if_token, struct Node *condition, struct Node 
 }
 
 struct Node *node_while(struct Token while_token, struct Node *condition, struct Node *while_block) {
-    struct NodeWhile *node = alloc_unit(sizeof(struct NodeWhile));
+    struct NodeWhile *node = (struct NodeWhile*)alloc_unit(sizeof(struct NodeWhile));
     node->n.type = NODE_WHILE;
     node->while_token = while_token;
     node->condition = condition;
@@ -122,44 +122,44 @@ struct Node *node_while(struct Token while_token, struct Node *condition, struct
 }
 
 struct Node *anode_label_def(struct Token t) {
-    struct ANodeLabelDef *node = alloc_unit(sizeof(struct ANodeLabelDef));
+    struct ANodeLabelDef *node = (struct ANodeLabelDef*)alloc_unit(sizeof(struct ANodeLabelDef));
     node->n.type = ANODE_LABEL_DEF;
     node->t = t;
     return (struct Node*)node;
 }
 
 struct Node *anode_label_ref(struct Token t) {
-    struct ANodeLabelRef *node = alloc_unit(sizeof(struct ANodeLabelRef));
+    struct ANodeLabelRef *node = (struct ANodeLabelRef*)alloc_unit(sizeof(struct ANodeLabelRef));
     node->n.type = ANODE_LABEL_REF;
     node->t = t;
     return (struct Node*)node;
 }
 
-struct Node *anode_op(struct Token operator, struct Node *operand1, struct Node *operand2) {
-    struct ANodeOp *node = alloc_unit(sizeof(struct ANodeOp));
+struct Node *anode_op(struct Token op, struct Node *operand1, struct Node *operand2) {
+    struct ANodeOp *node = (struct ANodeOp*)alloc_unit(sizeof(struct ANodeOp));
     node->n.type = ANODE_OP;
-    node->operator = operator;
+    node->op = op;
     node->operand1 = operand1;
     node->operand2 = operand2;
     return (struct Node*)node;
 }
 
 struct Node *anode_reg(struct Token t) {
-    struct ANodeReg *node = alloc_unit(sizeof(struct ANodeReg));
+    struct ANodeReg *node = (struct ANodeReg*)alloc_unit(sizeof(struct ANodeReg));
     node->n.type = ANODE_REG;
     node->t = t;
     return (struct Node*)node;
 }
 
 struct Node *anode_imm(struct Token t) {
-    struct ANodeImm *node = alloc_unit(sizeof(struct ANodeImm));
+    struct ANodeImm *node = (struct ANodeImm*)alloc_unit(sizeof(struct ANodeImm));
     node->n.type = ANODE_IMM32;
     node->t = t;
     return (struct Node*)node;
 }
 
 struct Node *anode_deref(struct Node *reg, struct Token op, struct Node *imm) {
-    struct ANodeDeref *node = alloc_unit(sizeof(struct ANodeDeref));
+    struct ANodeDeref *node = (struct ANodeDeref*)alloc_unit(sizeof(struct ANodeDeref));
     node->n.type = ANODE_DEREF;
     node->reg = reg;
     node->op = op;

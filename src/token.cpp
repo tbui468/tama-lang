@@ -1,7 +1,7 @@
 #include <stdlib.h>
 
-#include "token.h"
-#include "memory.h"
+#include "token.hpp"
+#include "memory.hpp"
 
 uint32_t get_double(struct Token t) {
     char* end = t.start + t.len;
@@ -43,7 +43,7 @@ void ta_add(struct TokenArray *ta, struct Token t) {
     }else if (ta->count + 1 > ta->max_count) {
         ta->max_count *= 2;
     }
-    ta->tokens = alloc_arr(ta->tokens, sizeof(struct Token), old_max, ta->max_count);
+    ta->tokens = (struct Token*)alloc_arr(ta->tokens, sizeof(struct Token), old_max, ta->max_count);
 
     ta->tokens[ta->count] = t;
     ta->count++;

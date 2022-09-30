@@ -1,7 +1,7 @@
 #ifndef TMD_PARSER_H
 #define TMD_PARSER_H
 
-#include "token.h"
+#include "token.hpp"
 
 struct Parser {
     struct TokenArray *ta;
