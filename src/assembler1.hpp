@@ -11,15 +11,6 @@
 #include "reserved_word.hpp"
 #include "lexer_new.hpp"
 
-/*
-org     0x08048000
-
-_start:
-    mov     ebx, 42
-    mov     eax, 0x01
-    int     0x80
-*/
-
 class Assembler1 {
     public:
         inline static std::vector<struct ReservedWordNew> m_reserved_words {{
@@ -77,12 +68,33 @@ class Assembler1 {
                 NodeOp(struct Token t, Node* left, Node* right): m_t(t), m_left(left), m_right(right) {}
                 void assemble(Assembler1& a) override {
                     switch(m_t.type) {
+                        case T_MOV: {
+                            NodeReg *reg;
+                            NodeImm *imm;
+                            if ((reg = dynamic_cast<NodeReg*>(m_left)) && (imm = dynamic_cast<NodeImm*>(m_right))) {
+                                a.m_buf.push_back(0xb8 + reg->m_t.type);
+                                imm->assemble(a);
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: mov with those operands not supported");
+                            }
+                            break;
+                        }
                         case T_ORG: {
                             NodeImm* ptr;
                             if (!(ptr = dynamic_cast<NodeImm*>(m_left))) {
                                 ems_add(&ems, m_t.line, "Assembler Error: org operator must be followed by imm32.");
                             } else {
                                 a.m_load_addr = get_double(ptr->m_t);
+                            }
+                            break;
+                        }
+                        case T_INTR: {
+                            NodeImm* ptr;
+                            if (!(ptr = dynamic_cast<NodeImm*>(m_left))) {
+                                ems_add(&ems, m_t.line, "Assembler Error: int operator must be followed by imm32.");
+                            } else {
+                                a.m_buf.push_back(0xcd);
+                                m_left->assemble(a);
                             }
                             break;
                         }
@@ -116,7 +128,7 @@ class Assembler1 {
         };
 
         class NodeReg: public Node {
-            private:
+            public:
                 struct Token m_t;
             public:
                 NodeReg(struct Token t): m_t(t) {}
@@ -147,29 +159,19 @@ class Assembler1 {
             public:
                 NodeLabelDef(struct Token t): m_t(t) {}
                 void assemble(Assembler1& a) override {
-                    //TODO
-                    //look for label inside of m_labels
-                    //  if exists
-                    //      if already defined, emit error
-                    //      else
-                    //          set token (just so token is definition rather than reference)
-                    //          set address to a.m_buf.size()
-                    //          set m_defined of label to true
-                    //  else
-                    //      add new label with defined = true
-                    /*
-                    if ((label = ala_get_label(&a->ala, ld->t))) {
-                        if (label->defined) {
-                            ems_add(&ems, ld->t.line, "Assembler Error: Labels cannot be defined more than once.");
-                        } 
-                        label->t = ld->t;
-                        label->addr = a->buf.count;
-                        label->defined = true;
+                    std::string s(m_t.start, m_t.len);
+                    std::unordered_map<std::string, Label>::iterator it = a.m_labels.find(s);
+                    if (it != a.m_labels.end()) {
+                        if (it->second.m_defined) {
+                            ems_add(&ems, m_t.line, "Assembler Error: Labels cannot be defined more than once.");
+                        } else {
+                            it->second.m_t = m_t;
+                            it->second.m_addr = a.m_buf.size();
+                            it->second.m_defined = true;
+                        }
                     } else {
-                        struct ALabel al;
-                        al_init(&al, ld->t, a->buf.count, true);
-                        ala_add(&a->ala, al);
-                    }*/
+                        a.m_labels.insert({s, Label(m_t, a.m_buf.size(), true)});
+                    }
                 }
                 std::string to_string() {
                     return "LabelDef";

@@ -251,26 +251,15 @@ void Assembler1::append_program() {
     for (Node *n: m_nodes) {
         n->assemble(*this);
     }
-/*
-    Label* l = m_labels.find("_start");
-    if (l != m_labels.end()) {
-        if (!l->m_defined) {
-            ems_add(&ems, l->m_t.line, "Assembling Error: Label '%.*s' not defined.", l->m_t.len, l->m_t.start);
+
+    std::unordered_map<std::string, Label>::iterator it = m_labels.find("_start");
+    if (it != m_labels.end()) {
+        if (!it->second.m_defined) {
+            ems_add(&ems, it->second.m_t.line, "Assembling Error: Label '%.*s' not defined.", it->second.m_t.len, it->second.m_t.start);
         } else {
-            m_program_start_addr = l->m_addr;
-    }*/
-/*
-    //find _start label
-    for (const Label& l: m_labels) {
-        if (l.m_t.len == 6 && strncmp(l.m_t.start, "_start", 6) == 0) {
-            if (!l.m_defined) {
-                ems_add(&ems, l.m_t.line, "Assembling Error: Label '%.*s' not defined.", l.m_t.len, l.m_t.start);
-            } else {
-                m_program_start_addr = l.m_addr;
-                break;
-            }
+            m_program_start_addr = it->second.m_addr;
         }
-    }*/
+    }
 
     uint32_t filesz = m_buf.size();
     uint32_t *ptr = (uint32_t*)&m_buf[m_filesz_offset];
