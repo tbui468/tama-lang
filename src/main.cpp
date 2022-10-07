@@ -186,7 +186,8 @@ int main (int argc, char **argv) {
         //printf("\n");
     }
 
-    //assemble
+    //old assembler
+    /*
     struct Assembler a;
     assembler_init(&a);
 
@@ -198,8 +199,11 @@ int main (int argc, char **argv) {
     assembler_patch_labels(&a);
     
     assembler_write_binary(&a, "out.bin");
+    */
 
-
+    //TODO: complete new assembler
+    Assembler1 assembler;
+    assembler.emit_code("new_out.asm", "out.bin");
    
     ems_print(&ems);
     
@@ -210,14 +214,11 @@ int main (int argc, char **argv) {
     ta_free(&ta);
     na_free(&ana);
     ta_free(&ata);
-    assembler_free(&a);
+    //assembler_free(&a);
     ems_free(&ems);
     printf("Allocated memory remaining: %ld\n", allocated);
 
 
-    //TODO: finish the new assembler in c++
-    //Assembler1 assembler;
-    //assembler.emit_code("out.asm", "out.bin");
 
     return 0;
 }

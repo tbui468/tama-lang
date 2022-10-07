@@ -9,6 +9,7 @@ set(Sources
     error.cpp
     compiler.cpp
     lexer.cpp
+    lexer_new.cpp
     parser.cpp
     assembler.cpp
     )
@@ -23,6 +24,7 @@ set(Headers
     error.hpp
     compiler.hpp
     lexer.hpp
+    lexer_new.hpp
     parser.hpp
     assembler.hpp
     )

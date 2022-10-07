@@ -1,5 +1,3 @@
 #!/bin/bash
-cd build
-cmake --build .
-cd src
+cd build/src
 ./tama ./../../test/scratch.tmd

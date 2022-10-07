@@ -537,8 +537,6 @@ void assemble_node(struct Assembler *a, struct Node *node) {
 
 
 void assembler_append_program(struct Assembler *a, struct NodeArray *na) {
-    //a->program_start_loc = a->buf.count;
-
     for (int i = 0; i < na->count; i++) {
         assemble_node(a, na->nodes[i]);
     }

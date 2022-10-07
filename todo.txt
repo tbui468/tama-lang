@@ -40,8 +40,15 @@ Reference for x86 machine code
 Look at this stackoverflow post for how machine code is structured: (THIS IS REALLY GOOD!)
     https://stackoverflow.com/questions/45526209/referencing-registers-in-machine-code
 
-******************************************Refactor to C++********************************* <--------start here!
-Rename headers to use .hpp extension
+******************************************Refactor to C++*********************************
+Finish Assemlber class assembling <-----------------start here
+    test basic assembler functionality before dealing with labels and jumps
+        assemble all nodes
+        writer m_buf to output file <--------------------start here
+        test out.bin to see if it actually runs
+    Refactor NodeLabelRef and NodeLabelDef assemble() functions - just copied original functions
+        define Label class - what was the difference between ref_addr and rel_jump_addr
+    Need to make data structures in Assembler1 class for labels/offsets whe for labels
 Switch over to c++ for these reasons:
     can switch to C if performance is necessary
     STL (vectors, unordered maps, etc) will simplify code
