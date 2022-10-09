@@ -41,16 +41,23 @@ Look at this stackoverflow post for how machine code is structured: (THIS IS REA
     https://stackoverflow.com/questions/45526209/referencing-registers-in-machine-code
 
 ******************************************Refactor to C++*********************************
-Finish Assemlber class assembling <-----------------start here
+Finish Assemlber class assembling
     test basic assembler functionality before dealing with labels and jumps
-        assemble all nodes
-        writer m_buf to output file <--------------------start here
-            assemble MOV
-            assemble INT
-        test out.bin to see if it actually runs
-    Refactor NodeLabelRef and NodeLabelDef assemble() functions - just copied original functions
-        define Label class - what was the difference between ref_addr and rel_jump_addr
-    Need to make data structures in Assembler1 class for labels/offsets whe for labels
+        assemble remaining nodes - start with function calls
+            push (DONE)
+            pop (DONE)
+            call (DONE)
+            ret (DONE)
+            xor (DONE)
+            add (DONE)
+            Test with print_char
+            ...
+            [look at assembly.c for other instructions]
+        remove assembler.hpp and assembler.cpp
+        rename assembler1.hpp and assembler1.cpp
+        rename Assembler1 class to Assembler
+
+
 Switch over to c++ for these reasons:
     can switch to C if performance is necessary
     STL (vectors, unordered maps, etc) will simplify code

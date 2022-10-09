@@ -5,6 +5,7 @@
 #include <vector>
 #include <array>
 #include <unordered_map>
+#include <iostream>
 
 #include "error.hpp"
 #include "token.hpp"
@@ -13,6 +14,45 @@
 
 class Assembler1 {
     public:
+        inline static std::array<uint8_t, 4> mod_tbl {{
+            0x00,
+            0x40,
+            0x80,
+            0xc0    //r/m is register
+        }};
+
+        enum class OpMod {
+            MOD_00 = 0,
+            MOD_01,
+            MOD_10,
+            MOD_REG
+        };
+
+        //registers table indices should match with enum TokenType register values
+        //00xxx000
+        inline static std::array<uint8_t, 8> r_tbl {{
+            0x00 << 3,   //eax
+            0x01 << 3,
+            0x02 << 3,
+            0x03 << 3,
+            0x04 << 3,
+            0x05 << 3,
+            0x06 << 3,
+            0x07 << 3
+        }};
+
+        //00000xxx
+        inline static std::array<uint8_t, 8> rm_tbl {{
+            0x00,   //eax
+            0x01,
+            0x02,
+            0x03,
+            0x04,
+            0x05,
+            0x06,
+            0x07
+        }};
+
         inline static std::vector<struct ReservedWordNew> m_reserved_words {{
             {"mov", T_MOV},
             {"push", T_PUSH},
@@ -68,15 +108,129 @@ class Assembler1 {
                 NodeOp(struct Token t, Node* left, Node* right): m_t(t), m_left(left), m_right(right) {}
                 void assemble(Assembler1& a) override {
                     switch(m_t.type) {
+                        case T_ADD: {
+                            if (dynamic_cast<NodeReg*>(m_left) && dynamic_cast<NodeReg*>(m_right)) {
+                                a.m_buf.push_back(0x01);
+                                NodeReg* dst = dynamic_cast<NodeReg*>(m_left);
+                                NodeReg* src = dynamic_cast<NodeReg*>(m_right);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | r_tbl[src->m_t.type] | rm_tbl[dst->m_t.type]);
+                            } else if (dynamic_cast<NodeReg*>(m_left) && dynamic_cast<NodeImm*>(m_right)) {
+                                NodeReg* reg = dynamic_cast<NodeReg*>(m_left);
+                                if (reg->m_t.type == T_EAX) {
+                                    a.m_buf.push_back(0x05);
+                                } else {
+                                    a.m_buf.push_back(0x81);
+                                    a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x00 << 3 | rm_tbl[reg->m_t.type]);
+                                }
+                                m_right->assemble(a);
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: add doesn't work with those operand types\n");
+                            }
+                            break;
+                        }
+                        case T_CALL: {
+                            if (dynamic_cast<NodeLabelRef*>(m_left)) {
+                                a.m_buf.push_back(0xe8);
+                                NodeLabelRef* ref = dynamic_cast<NodeLabelRef*>(m_left);
+                                std::string s(ref->m_t.start, ref->m_t.len);
+                                std::unordered_map<std::string, Label>::iterator it = a.m_labels.find(s);
+                                if (it == a.m_labels.end()) {
+                                    a.m_labels.insert({s, Label(ref->m_t, 0, false)}); //NOTE: setting addr to 0 as place holder until defined
+                                    it = a.m_labels.find(s);
+                                }
+                                it->second.m_rjmp_addr.push_back(a.m_buf.size());
+
+                                uint32_t addr = a.m_buf.size() + 4;
+                                a.m_buf.insert(a.m_buf.end(), (uint8_t*)&addr, (uint8_t*)&addr + sizeof(uint32_t));
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: call only works with labels for now\n");
+                            }
+                            break;
+                        }
                         case T_MOV: {
-                            NodeReg *reg;
-                            NodeImm *imm;
-                            if ((reg = dynamic_cast<NodeReg*>(m_left)) && (imm = dynamic_cast<NodeImm*>(m_right))) {
+                            if (dynamic_cast<NodeReg*>(m_left) && dynamic_cast<NodeImm*>(m_right)) {
+                                NodeReg *reg = dynamic_cast<NodeReg*>(m_left);
+                                NodeImm *imm = dynamic_cast<NodeImm*>(m_right);
                                 a.m_buf.push_back(0xb8 + reg->m_t.type);
                                 imm->assemble(a);
+                            } else if (dynamic_cast<NodeReg*>(m_left) && dynamic_cast<NodeReg*>(m_right)) {
+                                a.m_buf.push_back(0x89);
+                                NodeReg *dst = dynamic_cast<NodeReg*>(m_left);
+                                NodeReg *src = dynamic_cast<NodeReg*>(m_right);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | r_tbl[src->m_t.type] | rm_tbl[dst->m_t.type]);
+                            } else if (dynamic_cast<NodeMem*>(m_left) && dynamic_cast<NodeReg*>(m_right)) {
+                                //[0x89][01<reg>101][8-bit displacement] register to ebp memory with displacement
+                                a.m_buf.push_back(0x89);
+
+                                NodeMem *mem = dynamic_cast<NodeMem*>(m_left);
+                                NodeReg *base = dynamic_cast<NodeReg*>(mem->m_base);
+                                NodeImm *disp = dynamic_cast<NodeImm*>(mem->m_displacement);
+                                NodeReg *reg = dynamic_cast<NodeReg*>(m_right);
+
+                                if (base->m_t.type != T_EBP) {
+                                    printf("Dereferencing only supported with ebp for now!\n");
+                                }
+
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_01] | r_tbl[reg->m_t.type] | rm_tbl[base->m_t.type]);
+
+                                if (disp) {
+                                    int dis = get_double(disp->m_t);
+                                    if (dis < -128 || dis > 127) {
+                                        printf("32-bit displacements not supported (yet)!\n");
+                                    }
+                                    a.m_buf.push_back(get_byte(disp->m_t));
+                                } else {
+                                    a.m_buf.push_back(0x00);
+                                }
+                            } else if (dynamic_cast<NodeReg*>(m_left) && dynamic_cast<NodeMem*>(m_right)) {
+                                //[0x8b][01<reg>101][8-bit displacement] ebp memory with displacement to register
+                                a.m_buf.push_back(0x8b);
+
+                                NodeReg* reg = dynamic_cast<NodeReg*>(m_left);
+                                NodeMem* mem = dynamic_cast<NodeMem*>(m_right);
+                                NodeReg* base = dynamic_cast<NodeReg*>(mem->m_base);
+                                NodeImm* disp = dynamic_cast<NodeImm*>(mem->m_displacement);
+
+                                if (base->m_t.type != T_EBP) {
+                                    printf("Dereferencing only supported with ebp for now!\n");
+                                }
+
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_01] | r_tbl[reg->m_t.type] | rm_tbl[base->m_t.type]);
+
+                                if (disp) {
+                                    int dis = get_double(disp->m_t);
+                                    if (dis < -128 || dis > 127) {
+                                        printf("32-bit displacements not supported!\n");
+                                    }
+                                    a.m_buf.push_back(get_byte(disp->m_t));
+                                } else {
+                                    a.m_buf.push_back(0x00);
+                                }
                             } else {
                                 ems_add(&ems, m_t.line, "Assembler Error: mov with those operands not supported");
                             }
+                            break;
+                        }
+                        case T_PUSH: {
+                            if (dynamic_cast<NodeImm*>(m_left)) {
+                                //68 id
+                                a.m_buf.push_back(0x68);
+                                NodeImm* imm = dynamic_cast<NodeImm*>(m_left);
+                                imm->assemble(a);
+                            } else if (dynamic_cast<NodeReg*>(m_left)) {
+                                //ff /6
+                                a.m_buf.push_back(0xff);
+                                NodeReg* reg = dynamic_cast<NodeReg*>(m_left);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x06 << 3 | rm_tbl[reg->m_t.type]);
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: push with those operands not supported");
+                            }
+                            break;
+                        }
+                        case T_POP: {
+                            //58 + rd - pop stack into r32
+                            NodeReg* reg = dynamic_cast<NodeReg*>(m_left);
+                            a.m_buf.push_back(0x58 + reg->m_t.type);
                             break;
                         }
                         case T_ORG: {
@@ -94,7 +248,24 @@ class Assembler1 {
                                 ems_add(&ems, m_t.line, "Assembler Error: int operator must be followed by imm32.");
                             } else {
                                 a.m_buf.push_back(0xcd);
-                                m_left->assemble(a);
+                                NodeImm* imm = dynamic_cast<NodeImm*>(m_left);
+                                a.m_buf.push_back(get_byte(imm->m_t)); //NOTE: interrupt operand must be 1 byte
+                            }
+                            break;
+                        }
+                        case T_RET: {
+                            a.m_buf.push_back(0xc3);
+                            break;
+                        }
+                        case T_XOR: {
+                            if (dynamic_cast<NodeReg*>(m_left) && dynamic_cast<NodeReg*>(m_right)) {
+                                a.m_buf.push_back(0x33);
+
+                                NodeReg* dst = dynamic_cast<NodeReg*>(m_left);
+                                NodeReg* src = dynamic_cast<NodeReg*>(m_right);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | r_tbl[dst->m_t.type] | rm_tbl[src->m_t.type]);
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: xor only works with register operands for now.");
                             }
                             break;
                         }
@@ -141,7 +312,7 @@ class Assembler1 {
         };
 
         class NodeLabelRef: public Node {
-            private:
+            public:
                 struct Token m_t;
             public:
                 NodeLabelRef(struct Token t): m_t(t) {}
@@ -154,7 +325,7 @@ class Assembler1 {
         };
 
         class NodeLabelDef: public Node {
-            private:
+            public:
                 struct Token m_t;
             public:
                 NodeLabelDef(struct Token t): m_t(t) {}
@@ -179,7 +350,7 @@ class Assembler1 {
         };
 
         class NodeMem: public Node {
-            private:
+            public:
                 Node *m_base;
                 struct Token m_op;
                 Node *m_displacement;

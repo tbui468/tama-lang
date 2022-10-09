@@ -145,7 +145,8 @@ int main (int argc, char **argv) {
 
 
     //Tokenize assembly
-    char *acode = load_code("out.asm");
+    /*
+    char *acode = load_code("new_out.asm");
     struct Lexer al;
     lexer_init(&al, acode, asm_reserved, ASM_COUNT);
 
@@ -187,7 +188,6 @@ int main (int argc, char **argv) {
     }
 
     //old assembler
-    /*
     struct Assembler a;
     assembler_init(&a);
 
@@ -198,8 +198,7 @@ int main (int argc, char **argv) {
     assembler_patch_locations(&a);
     assembler_patch_labels(&a);
     
-    assembler_write_binary(&a, "out.bin");
-    */
+    assembler_write_binary(&a, "out1.bin");*/
 
     //TODO: complete new assembler
     Assembler1 assembler;
@@ -212,8 +211,8 @@ int main (int argc, char **argv) {
     compiler_free(&c);
     na_free(&na);
     ta_free(&ta);
-    na_free(&ana);
-    ta_free(&ata);
+    //na_free(&ana);
+    //ta_free(&ata);
     //assembler_free(&a);
     ems_free(&ems);
     printf("Allocated memory remaining: %ld\n", allocated);
