@@ -124,7 +124,7 @@ void Assembler1::parse() {
     }
 
     for (Node* n: m_nodes) {
-        std::cout << "instruction: " << n->to_string() << '\n';
+        //std::cout << "instruction: " << n->to_string() << '\n';
     }
 }
 

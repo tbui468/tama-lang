@@ -147,12 +147,68 @@ class Assembler1 {
                             }
                             break;
                         }
+                        case T_CMP: {
+                            //0x3d id <----cmp    eax, imm32
+                            //0x81 /7 id <----- cmp   r/m32, imm32
+                            if (dynamic_cast<NodeReg*>(m_left) && dynamic_cast<NodeImm*>(m_right)) {
+                                NodeReg *reg = dynamic_cast<NodeReg*>(m_left);
+                                if (reg->m_t.type == T_EAX) {
+                                    a.m_buf.push_back(0x3d);
+                                    m_right->assemble(a);
+                                } else {
+                                    a.m_buf.push_back(0x81);
+                                    a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x07 << 3 | rm_tbl[reg->m_t.type]);
+                                    m_right->assemble(a);
+                                }
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: cmp only works imm32 for now\n");
+                            }
+                            break;
+                        }
+                        case T_JG: {
+                            if (dynamic_cast<NodeLabelRef*>(m_left)) {
+                                a.m_buf.push_back(0x0f);
+                                a.m_buf.push_back(0x8f);
+                                NodeLabelRef* ref = dynamic_cast<NodeLabelRef*>(m_left);
+                                std::string s(ref->m_t.start, ref->m_t.len);
+                                std::unordered_map<std::string, Label>::iterator it = a.m_labels.find(s);
+                                if (it == a.m_labels.end()) {
+                                    a.m_labels.insert({s, Label(ref->m_t, 0, false)}); //NOTE: setting addr to 0 as place holder until defined
+                                    it = a.m_labels.find(s);
+                                }
+                                it->second.m_rjmp_addr.push_back(a.m_buf.size());
+
+                                uint32_t addr = a.m_buf.size() + 4;
+                                a.m_buf.insert(a.m_buf.end(), (uint8_t*)&addr, (uint8_t*)&addr + sizeof(uint32_t));
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: jg only works with labels for now\n");
+                            }
+                            break;
+                        }
+                        case T_JMP: {
+                            if (dynamic_cast<NodeLabelRef*>(m_left)) {
+                                a.m_buf.push_back(0xe9);
+                                NodeLabelRef* ref = dynamic_cast<NodeLabelRef*>(m_left);
+                                std::string s(ref->m_t.start, ref->m_t.len);
+                                std::unordered_map<std::string, Label>::iterator it = a.m_labels.find(s);
+                                if (it == a.m_labels.end()) {
+                                    a.m_labels.insert({s, Label(ref->m_t, 0, false)}); //NOTE: setting addr to 0 as place holder until defined
+                                    it = a.m_labels.find(s);
+                                }
+                                it->second.m_rjmp_addr.push_back(a.m_buf.size());
+
+                                uint32_t addr = a.m_buf.size() + 4;
+                                a.m_buf.insert(a.m_buf.end(), (uint8_t*)&addr, (uint8_t*)&addr + sizeof(uint32_t));
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: jmp only works with labels for now\n");
+                            }
+                            break;
+                        }
                         case T_MOV: {
                             if (dynamic_cast<NodeReg*>(m_left) && dynamic_cast<NodeImm*>(m_right)) {
                                 NodeReg *reg = dynamic_cast<NodeReg*>(m_left);
-                                NodeImm *imm = dynamic_cast<NodeImm*>(m_right);
                                 a.m_buf.push_back(0xb8 + reg->m_t.type);
-                                imm->assemble(a);
+                                m_right->assemble(a);
                             } else if (dynamic_cast<NodeReg*>(m_left) && dynamic_cast<NodeReg*>(m_right)) {
                                 a.m_buf.push_back(0x89);
                                 NodeReg *dst = dynamic_cast<NodeReg*>(m_left);
