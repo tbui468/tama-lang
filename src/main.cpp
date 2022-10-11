@@ -6,12 +6,11 @@
 #include "ast.hpp"
 #include "token.hpp"
 #include "byte_array.hpp"
-#include "assembler.hpp"
 #include "error.hpp"
 #include "compiler.hpp"
 #include "lexer.hpp"
 #include "parser.hpp"
-#include "assembler1.hpp"
+#include "assembler.hpp"
 
 #define MAX_MSG_LEN 256
 
@@ -46,36 +45,6 @@ int main (int argc, char **argv) {
         {"else", 4, T_ELSE},
         {"while", 5, T_WHILE}
     };
-
-    int ASM_COUNT = 25;
-    struct ReservedWord asm_reserved[25] = {
-        {"mov", 3, T_MOV},
-        {"push", 4, T_PUSH},
-        {"pop", 3, T_POP},
-        {"add", 3, T_ADD},
-        {"sub", 3, T_SUB},
-        {"imul", 4, T_IMUL},
-        {"idiv", 4, T_IDIV},
-        {"eax", 3, T_EAX},
-        {"ecx", 3, T_ECX},
-        {"edx", 3, T_EDX},
-        {"ebx", 3, T_EBX},
-        {"esp", 3, T_ESP},
-        {"ebp", 3, T_EBP},
-        {"esi", 3, T_ESI},
-        {"edi", 3, T_EDI},
-        {"int", 3, T_INTR},
-        {"equ", 3, T_EQU},
-        {"org", 3, T_ORG},
-        {"cdq", 3, T_CDQ},
-        {"xor", 3, T_XOR},
-        {"call", 4, T_CALL},
-        {"ret", 3, T_RET},
-        {"jmp", 3, T_JMP},
-        {"jg", 2, T_JG},
-        {"cmp", 3, T_CMP}
-    };
-
 
     ems_init(&ems);
 
@@ -144,64 +113,8 @@ int main (int argc, char **argv) {
     }
 
 
-    //Tokenize assembly
-    /*
-    char *acode = load_code("new_out.asm");
-    struct Lexer al;
-    lexer_init(&al, acode, asm_reserved, ASM_COUNT);
 
-    struct TokenArray ata;
-    ta_init(&ata);
-
-    while (al.current < (int)strlen(al.code)) {
-        struct Token t = lexer_next_token(&al);
-        if (t.type != T_NEWLINE)
-            ta_add(&ata, t);
-        else
-            al.line++;
-    }
-
-    struct Token at;
-    at.type = T_EOF;
-    at.start = NULL;
-    at.len = 0;
-    at.line = al.line;
-    ta_add(&ata, at);
-
-    for (int i = 0; i < ata.count; i++) {
-//        printf("[%d] %.*s\n", i, ata.tokens[i].len, ata.tokens[i].start);
-    }
-
-    //parse assembly
-    struct Parser ap;
-    parser_init(&ap, &ata);
-    struct NodeArray ana;
-    na_init(&ana);
-    
-    while (parser_peek_one(&ap).type != T_EOF) {
-        na_add(&ana, aparse_stmt(&ap));
-    }
-
-    for (int i = 0; i < ana.count; i++) {
-        //ast_print(ana.nodes[i]);
-        //printf("\n");
-    }
-
-    //old assembler
-    struct Assembler a;
-    assembler_init(&a);
-
-    assembler_append_elf_header(&a);
-    assembler_append_program_header(&a);  
-    assembler_append_program(&a, &ana);
-    assembler_patch_rjmp(&a);
-    assembler_patch_locations(&a);
-    assembler_patch_labels(&a);
-    
-    assembler_write_binary(&a, "out1.bin");*/
-
-    //TODO: complete new assembler
-    Assembler1 assembler;
+    Assembler assembler;
     assembler.emit_code("new_out.asm", "out.bin");
    
     ems_print(&ems);
@@ -211,9 +124,6 @@ int main (int argc, char **argv) {
     compiler_free(&c);
     na_free(&na);
     ta_free(&ta);
-    //na_free(&ana);
-    //ta_free(&ata);
-    //assembler_free(&a);
     ems_free(&ems);
     printf("Allocated memory remaining: %ld\n", allocated);
 

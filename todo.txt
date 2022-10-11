@@ -42,7 +42,19 @@ Look at this stackoverflow post for how machine code is structured: (THIS IS REA
 
 ******************************************Refactor to C++*********************************
 Finish Assemlber class assembling
+        Add functions to parse negative numbers and basic terms (subtraction and addition) in assembler
         fix bug with negative numbers not parsing/lexing properly
+            need to parse numbers (addition/subtraction/etc)
+            [ebp + 8]
+            [ebp - 8]
+            mov     eax, 8
+            mov     eax, -8
+            push    10
+            push    -10
+
+            Note: Be sure to have lexer recognize PLUS/MINUS too
+            //TODO: parse_unary   <---------start here - add these three stages to parser in Assembler1.cpp/hpp
+            //TODO: parse_term
 
         remove assembler.hpp and assembler.cpp
         rename assembler1.hpp and assembler1.cpp

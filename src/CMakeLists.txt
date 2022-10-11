@@ -5,13 +5,11 @@ set(Sources
     token.cpp
     byte_array.cpp
     assembler.cpp
-    assembler1.cpp
     error.cpp
     compiler.cpp
     lexer.cpp
     lexer_new.cpp
     parser.cpp
-    assembler.cpp
     )
 
 set(Headers
@@ -20,13 +18,11 @@ set(Headers
     token.hpp
     byte_array.hpp
     assembler.hpp
-    assembler1.hpp
     error.hpp
     compiler.hpp
     lexer.hpp
     lexer_new.hpp
     parser.hpp
-    assembler.hpp
     )
 
 add_executable(
