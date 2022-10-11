@@ -131,17 +131,7 @@ class Assembler1 {
                         case T_CALL: {
                             if (dynamic_cast<NodeLabelRef*>(m_left)) {
                                 a.m_buf.push_back(0xe8);
-                                NodeLabelRef* ref = dynamic_cast<NodeLabelRef*>(m_left);
-                                std::string s(ref->m_t.start, ref->m_t.len);
-                                std::unordered_map<std::string, Label>::iterator it = a.m_labels.find(s);
-                                if (it == a.m_labels.end()) {
-                                    a.m_labels.insert({s, Label(ref->m_t, 0, false)}); //NOTE: setting addr to 0 as place holder until defined
-                                    it = a.m_labels.find(s);
-                                }
-                                it->second.m_rjmp_addr.push_back(a.m_buf.size());
-
-                                uint32_t addr = a.m_buf.size() + 4;
-                                a.m_buf.insert(a.m_buf.end(), (uint8_t*)&addr, (uint8_t*)&addr + sizeof(uint32_t));
+                                m_left->assemble(a);
                             } else {
                                 ems_add(&ems, m_t.line, "Assembler Error: call only works with labels for now\n");
                             }
@@ -169,17 +159,7 @@ class Assembler1 {
                             if (dynamic_cast<NodeLabelRef*>(m_left)) {
                                 a.m_buf.push_back(0x0f);
                                 a.m_buf.push_back(0x8f);
-                                NodeLabelRef* ref = dynamic_cast<NodeLabelRef*>(m_left);
-                                std::string s(ref->m_t.start, ref->m_t.len);
-                                std::unordered_map<std::string, Label>::iterator it = a.m_labels.find(s);
-                                if (it == a.m_labels.end()) {
-                                    a.m_labels.insert({s, Label(ref->m_t, 0, false)}); //NOTE: setting addr to 0 as place holder until defined
-                                    it = a.m_labels.find(s);
-                                }
-                                it->second.m_rjmp_addr.push_back(a.m_buf.size());
-
-                                uint32_t addr = a.m_buf.size() + 4;
-                                a.m_buf.insert(a.m_buf.end(), (uint8_t*)&addr, (uint8_t*)&addr + sizeof(uint32_t));
+                                m_left->assemble(a);
                             } else {
                                 ems_add(&ems, m_t.line, "Assembler Error: jg only works with labels for now\n");
                             }
@@ -188,17 +168,7 @@ class Assembler1 {
                         case T_JMP: {
                             if (dynamic_cast<NodeLabelRef*>(m_left)) {
                                 a.m_buf.push_back(0xe9);
-                                NodeLabelRef* ref = dynamic_cast<NodeLabelRef*>(m_left);
-                                std::string s(ref->m_t.start, ref->m_t.len);
-                                std::unordered_map<std::string, Label>::iterator it = a.m_labels.find(s);
-                                if (it == a.m_labels.end()) {
-                                    a.m_labels.insert({s, Label(ref->m_t, 0, false)}); //NOTE: setting addr to 0 as place holder until defined
-                                    it = a.m_labels.find(s);
-                                }
-                                it->second.m_rjmp_addr.push_back(a.m_buf.size());
-
-                                uint32_t addr = a.m_buf.size() + 4;
-                                a.m_buf.insert(a.m_buf.end(), (uint8_t*)&addr, (uint8_t*)&addr + sizeof(uint32_t));
+                                m_left->assemble(a);
                             } else {
                                 ems_add(&ems, m_t.line, "Assembler Error: jmp only works with labels for now\n");
                             }
@@ -373,7 +343,16 @@ class Assembler1 {
             public:
                 NodeLabelRef(struct Token t): m_t(t) {}
                 void assemble(Assembler1& a) override {
-                    //TODO: fill this in 
+                    std::string s(m_t.start, m_t.len);
+                    std::unordered_map<std::string, Label>::iterator it = a.m_labels.find(s);
+                    if (it == a.m_labels.end()) {
+                        a.m_labels.insert({s, Label(m_t, 0, false)});
+                        it = a.m_labels.find(s);
+                    }
+                    it->second.m_rjmp_addr.push_back(a.m_buf.size());
+
+                    uint32_t addr = a.m_buf.size() + 4;
+                    a.m_buf.insert(a.m_buf.end(), (uint8_t*)&addr, (uint8_t*)&addr + sizeof(uint32_t));
                 }
                 std::string to_string() {
                     return "LabelRef";
