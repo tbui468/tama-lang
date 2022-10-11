@@ -91,6 +91,7 @@ Assembler1::Node *Assembler1::parse_stmt() {
             case T_IMUL:
             case T_XOR:
             case T_CMP:
+            case T_TEST:
                 left = parse_expr();
                 consume_token(T_COMMA);
                 right = parse_expr();
@@ -101,9 +102,15 @@ Assembler1::Node *Assembler1::parse_stmt() {
             case T_INTR:
             case T_ORG:
             case T_IDIV:
+            case T_DIV:
             case T_CALL:
             case T_JMP:
+            case T_JNZ:
+            case T_JE:
             case T_JG:
+            case T_NEG:
+            case T_INC:
+            case T_DEC:
                 left = parse_expr();
                 break;
             //no operands

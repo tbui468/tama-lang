@@ -63,6 +63,8 @@ enum TokenType {
     T_SUB,
     T_IMUL,
     T_IDIV,
+    T_INC,
+    T_DIV,
     T_INTR,
     T_DOLLAR,   //Let's just force user to define labels instead of compiling $$
     T_EQU,       //used to compute sizes (should compute the value and then patch immediately)
@@ -72,8 +74,13 @@ enum TokenType {
     T_CALL,
     T_RET,
     T_JMP,
+    T_JE,
     T_JG,
-    T_CMP
+    T_JNZ,
+    T_CMP,
+    T_TEST,
+    T_NEG,
+    T_DEC
 };
 
 struct Token {

@@ -42,20 +42,11 @@ Look at this stackoverflow post for how machine code is structured: (THIS IS REA
 
 ******************************************Refactor to C++*********************************
 Finish Assemlber class assembling
-    Make a function or method to assemble LabeRef for relative jumps (used in CALL, JG, JMP)
-        assemble_label_ref_relative_jump(Assembler1& a, NodeLabelRef* n);
-        When are labels actually used???
-    test basic assembler functionality before dealing with labels and jumps
-        assemble remaining nodes - start with function calls
-            get _print_bool working <-----------start here
+        fix bug with negative numbers not parsing/lexing properly
 
-            get _print_digit working
-            get _print_int working
-            [look at assembly.c for other instructions]
         remove assembler.hpp and assembler.cpp
         rename assembler1.hpp and assembler1.cpp
         rename Assembler1 class to Assembler
-
 
 Switch over to c++ for these reasons:
     can switch to C if performance is necessary

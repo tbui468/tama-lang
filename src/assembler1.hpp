@@ -60,6 +60,7 @@ class Assembler1 {
             {"add", T_ADD},
             {"sub", T_SUB},
             {"imul", T_IMUL},
+            {"div", T_DIV},
             {"idiv", T_IDIV},
             {"eax", T_EAX},
             {"ecx", T_ECX},
@@ -77,8 +78,14 @@ class Assembler1 {
             {"call", T_CALL},
             {"ret", T_RET},
             {"jmp", T_JMP},
+            {"jnz", T_JNZ},
             {"jg", T_JG},
-            {"cmp", T_CMP}
+            {"je", T_JE},
+            {"test", T_TEST},
+            {"cmp", T_CMP},
+            {"neg", T_NEG},
+            {"inc", T_INC},
+            {"dec", T_DEC}
         }};
 
         class Label {
@@ -124,7 +131,7 @@ class Assembler1 {
                                 }
                                 m_right->assemble(a);
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: add doesn't work with those operand types\n");
+                                ems_add(&ems, m_t.line, "Assembler Error: add doesn't work with those operand types");
                             }
                             break;
                         }
@@ -133,7 +140,7 @@ class Assembler1 {
                                 a.m_buf.push_back(0xe8);
                                 m_left->assemble(a);
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: call only works with labels for now\n");
+                                ems_add(&ems, m_t.line, "Assembler Error: call only works with labels for now");
                             }
                             break;
                         }
@@ -151,8 +158,59 @@ class Assembler1 {
                                     m_right->assemble(a);
                                 }
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: cmp only works imm32 for now\n");
+                                ems_add(&ems, m_t.line, "Assembler Error: cmp only works imm32 for now");
                             }
+                            break;
+                        }
+                        case T_DEC: {
+                            if (dynamic_cast<NodeReg*>(m_left)) {
+                                //ff /1 - DEC r/m32
+                                a.m_buf.push_back(0xff);
+                                NodeReg *reg = dynamic_cast<NodeReg*>(m_left);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x01 << 3 | rm_tbl[reg->m_t.type]);
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: dec only works with registers");
+                            }
+                            break;
+                        }
+                        case T_DIV: {
+                            //F7 /6 - DIV EDX:EAX by r/m32 with EAX := quotient and EDX := remainder
+                            if (dynamic_cast<NodeReg*>(m_left)) {
+                                a.m_buf.push_back(0xf7);
+                                NodeReg *reg = dynamic_cast<NodeReg*>(m_left);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x06 << 3 | rm_tbl[reg->m_t.type]);
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: div only works with register");
+                            }
+                            break;
+                        }
+                        case T_INC: {
+                            if (dynamic_cast<NodeReg*>(m_left)) {
+                                //ff /0 - INC r/m32
+                                a.m_buf.push_back(0xff);
+                                NodeReg *reg = dynamic_cast<NodeReg*>(m_left);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x0 << 3 | rm_tbl[reg->m_t.type]);
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: inc only works with register operands");
+                            }
+                            break;
+                        }
+                        case T_INTR: {
+                            NodeImm* ptr;
+                            if (!(ptr = dynamic_cast<NodeImm*>(m_left))) {
+                                ems_add(&ems, m_t.line, "Assembler Error: int operator must be followed by imm32.");
+                            } else {
+                                a.m_buf.push_back(0xcd);
+                                NodeImm* imm = dynamic_cast<NodeImm*>(m_left);
+                                a.m_buf.push_back(get_byte(imm->m_t)); //NOTE: interrupt operand must be 1 byte
+                            }
+                            break;
+                        }
+                        case T_JE: {
+                            //0f 84 cd
+                            a.m_buf.push_back(0x0f);
+                            a.m_buf.push_back(0x84);
+                            m_left->assemble(a);
                             break;
                         }
                         case T_JG: {
@@ -161,7 +219,7 @@ class Assembler1 {
                                 a.m_buf.push_back(0x8f);
                                 m_left->assemble(a);
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: jg only works with labels for now\n");
+                                ems_add(&ems, m_t.line, "Assembler Error: jg only works with labels for now");
                             }
                             break;
                         }
@@ -170,7 +228,18 @@ class Assembler1 {
                                 a.m_buf.push_back(0xe9);
                                 m_left->assemble(a);
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: jmp only works with labels for now\n");
+                                ems_add(&ems, m_t.line, "Assembler Error: jmp only works with labels for now");
+                            }
+                            break;
+                        }
+                        case T_JNZ: {
+                            if (dynamic_cast<NodeLabelRef*>(m_left)) {
+                                //0F 85 cd
+                                a.m_buf.push_back(0x0f);
+                                a.m_buf.push_back(0x85);
+                                m_left->assemble(a);
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: jnz only works with labels for now");
                             }
                             break;
                         }
@@ -237,6 +306,26 @@ class Assembler1 {
                             }
                             break;
                         }
+                        case T_NEG: {
+                            if (dynamic_cast<NodeReg*>(m_left)) {
+                                //F7 /3 - NEG r/m32
+                                a.m_buf.push_back(0xf7);
+                                NodeReg *reg = dynamic_cast<NodeReg*>(m_left);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x03 << 3 | rm_tbl[reg->m_t.type]);
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: neg only accepts registers as operands");
+                            }
+                            break;
+                        }
+                        case T_ORG: {
+                            NodeImm* ptr;
+                            if (!(ptr = dynamic_cast<NodeImm*>(m_left))) {
+                                ems_add(&ems, m_t.line, "Assembler Error: org operator must be followed by imm32.");
+                            } else {
+                                a.m_load_addr = get_double(ptr->m_t);
+                            }
+                            break;
+                        }
                         case T_PUSH: {
                             if (dynamic_cast<NodeImm*>(m_left)) {
                                 //68 id
@@ -259,28 +348,26 @@ class Assembler1 {
                             a.m_buf.push_back(0x58 + reg->m_t.type);
                             break;
                         }
-                        case T_ORG: {
-                            NodeImm* ptr;
-                            if (!(ptr = dynamic_cast<NodeImm*>(m_left))) {
-                                ems_add(&ems, m_t.line, "Assembler Error: org operator must be followed by imm32.");
-                            } else {
-                                a.m_load_addr = get_double(ptr->m_t);
-                            }
-                            break;
-                        }
-                        case T_INTR: {
-                            NodeImm* ptr;
-                            if (!(ptr = dynamic_cast<NodeImm*>(m_left))) {
-                                ems_add(&ems, m_t.line, "Assembler Error: int operator must be followed by imm32.");
-                            } else {
-                                a.m_buf.push_back(0xcd);
-                                NodeImm* imm = dynamic_cast<NodeImm*>(m_left);
-                                a.m_buf.push_back(get_byte(imm->m_t)); //NOTE: interrupt operand must be 1 byte
-                            }
-                            break;
-                        }
                         case T_RET: {
                             a.m_buf.push_back(0xc3);
+                            break;
+                        }
+                        case T_TEST: {
+                            if (dynamic_cast<NodeReg*>(m_left) && dynamic_cast<NodeImm*>(m_right)) {
+                                NodeReg *reg = dynamic_cast<NodeReg*>(m_left);
+                                if (reg->m_t.type == T_EAX) {
+                                    //A9 id - TEST EAX, imm32
+                                    a.m_buf.push_back(0xa9);
+                                    m_right->assemble(a);
+                                } else {
+                                    //F7 /0 id - TEST r/m32, imm32
+                                    a.m_buf.push_back(0xf7);
+                                    a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x0 << 3 | rm_tbl[reg->m_t.type]);
+                                    m_right->assemble(a);
+                                }
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: test operator only works with [reg], [imm] for now");
+                            }
                             break;
                         }
                         case T_XOR: {
