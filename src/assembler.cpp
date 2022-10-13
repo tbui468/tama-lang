@@ -9,8 +9,11 @@
 void Assembler::emit_code(const std::string& input_file, const std::string& output_file) {
     read(input_file);
     lex();
+    if (ems.count > 0) return;
     parse();
+    if (ems.count > 0) return;
     assemble();
+    if (ems.count > 0) return;
     write(output_file);
 }
 

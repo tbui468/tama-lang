@@ -41,8 +41,6 @@ Look at this stackoverflow post for how machine code is structured: (THIS IS REA
     https://stackoverflow.com/questions/45526209/referencing-registers-in-machine-code
 
 ******************************************Refactor to C++*********************************
-Need to stop assembly process if errors occur at lexing/parsing/assembly stages (or at least display error messages)
-
 Make new C++ class called Translater
     TODO: these should be in a separate class or translation unit since they are shared for botht he assembler and translater
         struct Token peek_one();
