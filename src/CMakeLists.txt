@@ -10,6 +10,7 @@ set(Sources
     lexer.cpp
     lexer_new.cpp
     parser.cpp
+    translater.cpp
     )
 
 set(Headers
@@ -23,6 +24,7 @@ set(Headers
     lexer.hpp
     lexer_new.hpp
     parser.hpp
+    translater.hpp
     )
 
 add_executable(

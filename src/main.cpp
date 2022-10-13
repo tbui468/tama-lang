@@ -11,6 +11,7 @@
 #include "lexer.hpp"
 #include "parser.hpp"
 #include "assembler.hpp"
+#include "translater.hpp"
 
 #define MAX_MSG_LEN 256
 
@@ -31,6 +32,7 @@ char *load_code(char* filename) {
 
 
 int main (int argc, char **argv) {
+    /*
     int TMD_COUNT = 11;
     struct ReservedWord tmd_reserved[11] = {
         {"print", 5, T_PRINT},
@@ -44,7 +46,7 @@ int main (int argc, char **argv) {
         {"elif", 4, T_ELIF},
         {"else", 4, T_ELSE},
         {"while", 5, T_WHILE}
-    };
+    };*/
 
     ems_init(&ems);
 
@@ -53,8 +55,10 @@ int main (int argc, char **argv) {
         printf("Usage: tama <filename>\n");
         exit(1);
     }
+
     char *code = load_code(argv[1]);
 
+    /*
     //Tokenize source code
     struct Lexer l;
     lexer_init(&l, code, tmd_reserved, TMD_COUNT);
@@ -110,9 +114,10 @@ int main (int argc, char **argv) {
 
     if (ems.count <= 0) {
 //        compiler_output_assembly(&c);
-    }
+    }*/
 
-
+//    Translater translater;
+//    translater.emit_asm(code, "out.asm");
 
     Assembler assembler;
     assembler.emit_code("new_out.asm", "out.bin");
@@ -121,9 +126,9 @@ int main (int argc, char **argv) {
     
     //cleanup
     printf("Memory allocated: %ld\n", allocated);
-    compiler_free(&c);
-    na_free(&na);
-    ta_free(&ta);
+//    compiler_free(&c);
+//    na_free(&na);
+//    ta_free(&ta);
     ems_free(&ems);
     printf("Allocated memory remaining: %ld\n", allocated);
 

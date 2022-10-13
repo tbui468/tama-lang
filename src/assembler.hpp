@@ -6,6 +6,7 @@
 #include <array>
 #include <unordered_map>
 #include <iostream>
+#include <cassert>
 
 #include "error.hpp"
 #include "token.hpp"
@@ -104,6 +105,7 @@ class Assembler {
             public:
                 virtual void assemble(Assembler& a) = 0;
                 virtual std::string to_string() = 0;
+                virtual int32_t eval() = 0;
         };
 
         class NodeOp: public Node {
@@ -113,6 +115,9 @@ class Assembler {
                 Node *m_right;
             public:
                 NodeOp(struct Token t, Node* left, Node* right): m_t(t), m_left(left), m_right(right) {}
+                int32_t eval() {
+                    assert(false && "NodeOp cannot call eval");
+                }
                 void assemble(Assembler& a) override {
                     switch(m_t.type) {
                         case T_ADD: {
@@ -121,7 +126,7 @@ class Assembler {
                                 NodeReg* dst = dynamic_cast<NodeReg*>(m_left);
                                 NodeReg* src = dynamic_cast<NodeReg*>(m_right);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | r_tbl[src->m_t.type] | rm_tbl[dst->m_t.type]);
-                            } else if (dynamic_cast<NodeReg*>(m_left) && dynamic_cast<NodeImm*>(m_right)) {
+                            } else if (dynamic_cast<NodeReg*>(m_left) && is_expr(m_right)) {
                                 NodeReg* reg = dynamic_cast<NodeReg*>(m_left);
                                 if (reg->m_t.type == T_EAX) {
                                     a.m_buf.push_back(0x05);
@@ -147,7 +152,7 @@ class Assembler {
                         case T_CMP: {
                             //0x3d id <----cmp    eax, imm32
                             //0x81 /7 id <----- cmp   r/m32, imm32
-                            if (dynamic_cast<NodeReg*>(m_left) && dynamic_cast<NodeImm*>(m_right)) {
+                            if (dynamic_cast<NodeReg*>(m_left) && is_expr(m_right)) {
                                 NodeReg *reg = dynamic_cast<NodeReg*>(m_left);
                                 if (reg->m_t.type == T_EAX) {
                                     a.m_buf.push_back(0x3d);
@@ -196,13 +201,11 @@ class Assembler {
                             break;
                         }
                         case T_INTR: {
-                            NodeImm* ptr;
-                            if (!(ptr = dynamic_cast<NodeImm*>(m_left))) {
+                            if (!is_expr(m_left)) {
                                 ems_add(&ems, m_t.line, "Assembler Error: int operator must be followed by imm32.");
                             } else {
                                 a.m_buf.push_back(0xcd);
-                                NodeImm* imm = dynamic_cast<NodeImm*>(m_left);
-                                a.m_buf.push_back(get_byte(imm->m_t)); //NOTE: interrupt operand must be 1 byte
+                                a.m_buf.push_back((uint8_t)(m_left->eval())); //int instruction is followed by a single byte
                             }
                             break;
                         }
@@ -244,7 +247,7 @@ class Assembler {
                             break;
                         }
                         case T_MOV: {
-                            if (dynamic_cast<NodeReg*>(m_left) && dynamic_cast<NodeImm*>(m_right)) {
+                            if (dynamic_cast<NodeReg*>(m_left) && is_expr(m_right)) {
                                 NodeReg *reg = dynamic_cast<NodeReg*>(m_left);
                                 a.m_buf.push_back(0xb8 + reg->m_t.type);
                                 m_right->assemble(a);
@@ -259,7 +262,6 @@ class Assembler {
 
                                 NodeMem *mem = dynamic_cast<NodeMem*>(m_left);
                                 NodeReg *base = dynamic_cast<NodeReg*>(mem->m_base);
-                                NodeImm *disp = dynamic_cast<NodeImm*>(mem->m_displacement);
                                 NodeReg *reg = dynamic_cast<NodeReg*>(m_right);
 
                                 if (base->m_t.type != T_EBP) {
@@ -268,12 +270,12 @@ class Assembler {
 
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_01] | r_tbl[reg->m_t.type] | rm_tbl[base->m_t.type]);
 
-                                if (disp) {
-                                    int dis = get_double(disp->m_t);
+                                if (is_expr(mem->m_displacement)) {
+                                    int32_t dis = mem->m_displacement->eval();
                                     if (dis < -128 || dis > 127) {
                                         printf("32-bit displacements not supported (yet)!\n");
                                     }
-                                    a.m_buf.push_back(get_byte(disp->m_t));
+                                    a.m_buf.push_back((uint8_t)dis);
                                 } else {
                                     a.m_buf.push_back(0x00);
                                 }
@@ -284,7 +286,6 @@ class Assembler {
                                 NodeReg* reg = dynamic_cast<NodeReg*>(m_left);
                                 NodeMem* mem = dynamic_cast<NodeMem*>(m_right);
                                 NodeReg* base = dynamic_cast<NodeReg*>(mem->m_base);
-                                NodeImm* disp = dynamic_cast<NodeImm*>(mem->m_displacement);
 
                                 if (base->m_t.type != T_EBP) {
                                     printf("Dereferencing only supported with ebp for now!\n");
@@ -292,12 +293,12 @@ class Assembler {
 
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_01] | r_tbl[reg->m_t.type] | rm_tbl[base->m_t.type]);
 
-                                if (disp) {
-                                    int dis = get_double(disp->m_t);
+                                if (is_expr(mem->m_displacement)) {
+                                    int32_t dis = mem->m_displacement->eval();
                                     if (dis < -128 || dis > 127) {
                                         printf("32-bit displacements not supported!\n");
                                     }
-                                    a.m_buf.push_back(get_byte(disp->m_t));
+                                    a.m_buf.push_back((uint8_t)dis);
                                 } else {
                                     a.m_buf.push_back(0x00);
                                 }
@@ -318,20 +319,18 @@ class Assembler {
                             break;
                         }
                         case T_ORG: {
-                            NodeImm* ptr;
-                            if (!(ptr = dynamic_cast<NodeImm*>(m_left))) {
+                            if (!is_expr(m_left)) {
                                 ems_add(&ems, m_t.line, "Assembler Error: org operator must be followed by imm32.");
                             } else {
-                                a.m_load_addr = get_double(ptr->m_t);
+                                a.m_load_addr = m_left->eval();
                             }
                             break;
                         }
                         case T_PUSH: {
-                            if (dynamic_cast<NodeImm*>(m_left)) {
+                            if (is_expr(m_left)) {
                                 //68 id
                                 a.m_buf.push_back(0x68);
-                                NodeImm* imm = dynamic_cast<NodeImm*>(m_left);
-                                imm->assemble(a);
+                                m_left->assemble(a);
                             } else if (dynamic_cast<NodeReg*>(m_left)) {
                                 //ff /6
                                 a.m_buf.push_back(0xff);
@@ -353,7 +352,7 @@ class Assembler {
                             break;
                         }
                         case T_TEST: {
-                            if (dynamic_cast<NodeReg*>(m_left) && dynamic_cast<NodeImm*>(m_right)) {
+                            if (dynamic_cast<NodeReg*>(m_left) && is_expr(m_right)) {
                                 NodeReg *reg = dynamic_cast<NodeReg*>(m_left);
                                 if (reg->m_t.type == T_EAX) {
                                     //A9 id - TEST EAX, imm32
@@ -397,25 +396,14 @@ class Assembler {
                 }
         };
 
-        class NodeImm: public Node {
-            public:
-                struct Token m_t;
-            public:
-                NodeImm(struct Token t): m_t(t) {}
-                void assemble(Assembler& a) override {
-                    uint32_t num = get_double(m_t);
-                    a.m_buf.insert(a.m_buf.end(), (uint8_t*)&num, (uint8_t*)&num + sizeof(uint32_t));
-                }
-                std::string to_string() {
-                    return "Imm";
-                }
-        };
-
         class NodeReg: public Node {
             public:
                 struct Token m_t;
             public:
                 NodeReg(struct Token t): m_t(t) {}
+                int32_t eval() {
+                    assert(false && "NodeReg cannot call eval");
+                }
                 void assemble(Assembler& a) override {
                     //TODO
                 }
@@ -424,11 +412,85 @@ class Assembler {
                 }
         };
 
+        class NodeImm: public Node {
+            public:
+                struct Token m_t;
+            public:
+                NodeImm(struct Token t): m_t(t) {}
+                void assemble(Assembler& a) override {
+                    uint32_t num = eval();
+                    a.m_buf.insert(a.m_buf.end(), (uint8_t*)&num, (uint8_t*)&num + sizeof(uint32_t));
+                }
+                int32_t eval() {
+                    return get_double(m_t);
+                }
+                std::string to_string() {
+                    return "NodeImm";
+                }
+        };
+
+        class NodeUnary: public Node {
+            public:
+                struct Token m_t;
+                Node *m_right;
+            public:
+                NodeUnary(struct Token t, Node* right): m_t(t), m_right(right) {}
+                void assemble(Assembler& a) override {
+                    int32_t result = eval();
+                    a.m_buf.insert(a.m_buf.end(), (uint8_t*)&result, (uint8_t*)&result + sizeof(int32_t));
+                }
+                int32_t eval() {
+                    //assert that right is NodeImm, NodeUnary or NodeBinary
+                    if (*m_t.start == '-') {
+                        return -1 * m_right->eval();
+                    }
+                    
+                    ems_add(&ems, m_t.line, "Assembler Error: Only '-' are recognized as unary operators");
+                    return 0;
+                }
+                std::string to_string() {
+                    return "NodeUnary";
+                }
+        };
+
+        class NodeBinary: public Node {
+            public:
+                struct Token m_t;
+                Node *m_left;
+                Node *m_right;
+            public:
+                NodeBinary(struct Token t, Node *left, Node* right): m_t(t), m_left(left), m_right(right) {}
+                void assemble(Assembler& a) override {
+                    int32_t result = eval();
+                    a.m_buf.insert(a.m_buf.end(), (uint8_t*)&result, (uint8_t*)&result + sizeof(int32_t));
+                }
+                int32_t eval() {
+                    //assert that left/right are NodeImm, NodeUnary or NodeBinary
+                    uint32_t left = m_left->eval();
+                    uint32_t right = m_right->eval();
+                    switch(m_t.type) {
+                        case T_PLUS:    return left + right;
+                        case T_MINUS:   return left - right;
+                        case T_STAR:    return left * right;
+                        case T_SLASH:   return left / right;
+                        default:
+                            ems_add(&ems, m_t.line, "Assembler Error: binary operator must be *+-/"); 
+                            return 0;
+                    }
+                }
+                std::string to_string() {
+                    return "NodeBinary";
+                }
+        };
+
         class NodeLabelRef: public Node {
             public:
                 struct Token m_t;
             public:
                 NodeLabelRef(struct Token t): m_t(t) {}
+                int32_t eval() {
+                    assert(false && "NodeLabelRef cannot call eval");
+                }
                 void assemble(Assembler& a) override {
                     std::string s(m_t.start, m_t.len);
                     std::unordered_map<std::string, Label>::iterator it = a.m_labels.find(s);
@@ -451,6 +513,9 @@ class Assembler {
                 struct Token m_t;
             public:
                 NodeLabelDef(struct Token t): m_t(t) {}
+                int32_t eval() {
+                    assert(false && "NodeLabelDef cannot be evaluated");
+                }
                 void assemble(Assembler& a) override {
                     std::string s(m_t.start, m_t.len);
                     std::unordered_map<std::string, Label>::iterator it = a.m_labels.find(s);
@@ -474,10 +539,12 @@ class Assembler {
         class NodeMem: public Node {
             public:
                 Node *m_base;
-                struct Token m_op;
                 Node *m_displacement;
             public:
-                NodeMem(Node *base, struct Token op, Node *displacement): m_base(base), m_op(op), m_displacement(displacement) {}
+                NodeMem(Node *base, Node *displacement): m_base(base), m_displacement(displacement) {}
+                int32_t eval() {
+                    assert(false && "NodeLabelDef cannot be evaluated");
+                }
                 void assemble(Assembler& a) override {
                     //TODO
                 }
@@ -510,9 +577,12 @@ class Assembler {
         void lex();
 
         void parse();
-        Node* parse_expr();
-        Node* parse_operand();
-        Node* parse_stmt();
+        Node *parse_unit();
+        Node *parse_unary();
+        Node *parse_factor();
+        Node *parse_term();
+        Node *parse_operand();
+        Node *parse_stmt();
         struct Token peek_one();
         struct Token peek_two();
         struct Token next_token();
@@ -527,6 +597,10 @@ class Assembler {
         void patch_labels();
         void patch_rel_jumps();
         void write(const std::string& output_file);
+
+        static bool is_expr(Node *n) {
+            return dynamic_cast<NodeImm*>(n) || dynamic_cast<NodeUnary*>(n) || dynamic_cast<NodeBinary*>(n);
+        }
 };
 
 

@@ -24,11 +24,11 @@ void Assembler::read(const std::string& input_file) {
 void Assembler::lex() {
     m_tokens = m_lexer.lex(m_assembly, m_reserved_words);
     for (struct Token t: m_tokens) {
-        printf("%.*s\n", t.len, t.start);
+//        printf("%.*s\n", t.len, t.start);
     }
 }
 
-Assembler::Node *Assembler::parse_operand() {
+Assembler::Node *Assembler::parse_unit() {
     struct Token next = next_token();
     switch (next.type) {
         case T_INT:
@@ -45,34 +45,61 @@ Assembler::Node *Assembler::parse_operand() {
             return new NodeReg(next);
         case T_IDENTIFIER:
             return new NodeLabelRef(next);
+        case T_L_BRACKET: {
+            Node* reg = parse_unit();
+            if (!dynamic_cast<NodeReg*>(reg)) {
+                ems_add(&ems, next.line, "Parse Error: Memory access requires register before displacement");
+            }
+            if (peek_one().type == T_R_BRACKET) {
+                consume_token(T_R_BRACKET);
+                return new NodeMem(reg, NULL);
+            } else if (peek_one().type == T_PLUS) {
+                next_token(); //Skip '+'
+                Node* displacement = parse_operand();
+                consume_token(T_R_BRACKET);
+                return new NodeMem(reg, displacement);
+            } else if (peek_one().type == T_MINUS) {
+                Node *displacement = parse_operand();
+                consume_token(T_R_BRACKET);
+                return new NodeMem(reg, displacement);
+            }
+        }
         default:
             ems_add(&ems, next.line, "Parse Error: Unrecognized token!");
     }
     return NULL;
 }
 
-//TODO: parse_unary
-//TODO: parse_term
-
-Assembler::Node *Assembler::parse_expr() {
-    if (peek_one().type == T_L_BRACKET) {
-        consume_token(T_L_BRACKET);
-        struct Node* reg = parse_operand();
-        if (peek_one().type == T_R_BRACKET) {
-            consume_token(T_R_BRACKET);
-            struct Token dummy;
-            return new NodeMem(reg, dummy, NULL);
-        } else if (peek_one().type == T_PLUS || peek_one().type == T_MINUS) {
-            struct Token op = next_token();
-            struct Node* displacement = parse_operand();
-            consume_token(T_R_BRACKET);
-            return new NodeMem(reg, op, displacement);
-        }
+Assembler::Node *Assembler::parse_unary() {
+    if (peek_one().type == T_MINUS) {
+        struct Token op = next_token();
+        return new NodeUnary(op, parse_unary());
     } else {
-        return parse_operand();
+        return parse_unit();
     }
-    ems_add(&ems, peek_one().line, "AParse Error: Invalid token type!");
-    return NULL;
+}
+
+Assembler::Node *Assembler::parse_factor() {
+    Node *left = parse_unary();
+    while (peek_one().type == T_STAR || peek_one().type == T_SLASH) {
+        struct Token op = next_token();
+        left = new NodeBinary(op, left, parse_unary());
+    }
+    return left;
+}
+
+Assembler::Node *Assembler::parse_term() {
+    Node *left = parse_factor();
+    while (peek_one().type == T_PLUS || peek_one().type == T_MINUS) {
+        struct Token op = next_token();
+        left = new NodeBinary(op, left, parse_factor());
+    }
+    return left;
+}
+
+Assembler::Node *Assembler::parse_operand() {
+    Node *operand = parse_term();
+    return operand;
 }
 
 Assembler::Node *Assembler::parse_stmt() {
@@ -95,9 +122,9 @@ Assembler::Node *Assembler::parse_stmt() {
             case T_XOR:
             case T_CMP:
             case T_TEST:
-                left = parse_expr();
+                left = parse_operand();
                 consume_token(T_COMMA);
-                right = parse_expr();
+                right = parse_operand();
                 break;
             //single operand
             case T_POP:
@@ -114,14 +141,14 @@ Assembler::Node *Assembler::parse_stmt() {
             case T_NEG:
             case T_INC:
             case T_DEC:
-                left = parse_expr();
+                left = parse_operand();
                 break;
             //no operands
             case T_CDQ:
             case T_RET:
                 break;
             default:
-                ems_add(&ems, next.line, "AParse Error: Invalid token type!");
+                ems_add(&ems, next.line, "Parse Error: Invalid token type!");
         }
         return new NodeOp(op, left, right);
     }
@@ -325,7 +352,6 @@ void Assembler::patch_rel_jumps() {
 }
 
 void Assembler::assemble() {
-
     append_elf_header();
     append_program_header();
     append_program();
