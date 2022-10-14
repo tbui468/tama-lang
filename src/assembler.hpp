@@ -11,7 +11,7 @@
 #include "error.hpp"
 #include "token.hpp"
 #include "reserved_word.hpp"
-#include "lexer_new.hpp"
+#include "lexer.hpp"
 
 class Assembler {
     public:
@@ -559,7 +559,7 @@ class Assembler {
         std::vector<Node*> m_nodes = std::vector<Node*>();
         std::vector<uint8_t> m_buf = std::vector<uint8_t>();
         std::unordered_map<std::string, Label> m_labels = std::unordered_map<std::string, Label>();
-        LexerNew m_lexer;
+        Lexer m_lexer;
         uint32_t m_program_addr_offset = 0;
         uint32_t m_phdr_addr_offset = 0;
         uint32_t m_ehdr_size_offset = 0;

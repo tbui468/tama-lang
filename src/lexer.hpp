@@ -1,32 +1,29 @@
-#ifndef TMD_LEXER_H
-#define TMD_LEXER_H
+#ifndef LEXER_HPP
+#define LEXER_HPP
 
-#include <stdbool.h>
+#include <string>
+#include <vector>
 
 #include "token.hpp"
+#include "reserved_word.hpp"
 
-struct Lexer {
-    char* code;
-    int current;
-    int line;
-    struct ReservedWord *reserved_words;
-    int reserved_count;
+class Lexer {
+    private:
+        std::string m_code;
+        int m_line;
+        int m_current;
+        std::vector<struct ReservedWordNew> m_reserved_words;
+        std::vector<struct Token> m_tokens;
+    public:
+        std::vector<struct Token> lex(const std::string& code, const std::vector<struct ReservedWordNew>& reserved_words);
+    private:
+        void skip_ws();
+        bool is_digit(char c);
+        bool is_char(char c);
+        struct Token read_word();
+        struct Token read_number();
+        struct Token next_token();
 };
 
-struct ReservedWord {
-    char* word;
-    int len;
-    enum TokenType type;
-};
 
-
-void lexer_init(struct Lexer *l, char* code, struct ReservedWord *reserved_words, int reserved_count);
-void lexer_skip_ws(struct Lexer *l);
-bool is_digit(char c);
-bool is_char(char c);
-struct Token lexer_read_word(struct Lexer *l);
-struct Token lexer_read_number(struct Lexer *l);
-struct Token lexer_next_token(struct Lexer *l);
-
-#endif //TMD_LEXER_H
-
+#endif //LEXER_HPP

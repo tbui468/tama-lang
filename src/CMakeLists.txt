@@ -8,9 +8,10 @@ set(Sources
     error.cpp
     compiler.cpp
     lexer.cpp
-    lexer_new.cpp
     parser.cpp
+    parser_new.cpp
     translater.cpp
+    semant.cpp
     )
 
 set(Headers
@@ -22,9 +23,11 @@ set(Headers
     error.hpp
     compiler.hpp
     lexer.hpp
-    lexer_new.hpp
     parser.hpp
+    parser_new.hpp
     translater.hpp
+    semant.hpp
+    reserved_word.hpp
     )
 
 add_executable(

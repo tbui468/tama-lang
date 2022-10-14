@@ -11,20 +11,6 @@ Start writing out README file
         Why use C? Curious about limitations
     Diagram
     Modules
-        TLexer
-        TParser
-        Compiler
-            TODO: 
-                  Refactor VarData to Symbol (identifier, value, type data)
-                  Refactor VarDataArray to Environment (linked list or hash table from Cebra)
-                  Add IR module(s):
-                      Translate to IR
-                      Canonicalize IR
-                      Write interface to emit assembly for x86, x86-64, ARM, etc
-                      Write implementation for x86 for now
-        ALexer
-        AParser
-        x86 Assembler
             TODO: produce non-executable ELF files (to allow linking with other files)
         Linker
             TODO: need to make this
@@ -40,7 +26,37 @@ Reference for x86 machine code
 Look at this stackoverflow post for how machine code is structured: (THIS IS REALLY GOOD!)
     https://stackoverflow.com/questions/45526209/referencing-registers-in-machine-code
 
+New structure:
+    semant.cpp <----
+        lexing, parsing, type-checking, semantic analysis
+    translater.cpp <--this was the old compiler
+        AST to x86 assembly (can add IR modules later)
+    assembler.cpp
+        lex, parse, emit ELF 
+    linker.cpp
+        link multiple ELF object files to create executable
+
+Modules after adding in IR:
+    tmdSemant.cpp
+        lexing, parsing, type-checking, symbols/environments, semantic analysis
+    tmdTranslater.cpp
+        AST to IR
+    optimizer.cpp (could make this into seperate modules)
+        canonicalize, instruction selection, liveness analysis, register allocation, constant folding, etc
+    x86Emitter.cpp
+        IR to architecture-specific assembly
+    x86ElfAssembler.cpp
+        lex, parse, emit ELF 
+    elfLinker.cpp
+        link multiple ELF object files to create executable
+
 ******************************************Refactor to C++*********************************
+Idea!!! Make a class ParserNew (rename later when the old parser is removed)
+    has peek methods, and a virtual parse method
+    the implementation of parse can be defined inside of the AsmParser and TmdParser
+    Have the AsmParser and TmdParser both inherit from Parser
+        Then the two parsers can just implement their own parsing algorithms
+
 Make new C++ class called Translater
     TODO: these should be in a separate class or translation unit since they are shared for botht he assembler and translater
         struct Token peek_one();
@@ -74,8 +90,6 @@ Switch over to c++ for these reasons:
     could use visitor pattern to let compiler catch errors when adding new nodes
 
 ************************************Misc*********************************
-emit_bin() <--instead of write() or whatever I called it
-emit_asm() <--instead of write() or whatever I called it
 Symbol <-- instead of VarData
 Environment <-- instead of VarDataArray
 Generalize assembly operation nodes: ANodeOp(op, operand1, operand2) <-- just make operand1/operand2 NULL for no operand instructions)
