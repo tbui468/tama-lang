@@ -29,7 +29,7 @@ int main (int argc, char **argv) {
     }
 
     Semant s;
-    s.generate_ast(argv[1]);
+    s.generate_asm(argv[1], "out.asm");
 
 /*
     //Parse tokens into AST
@@ -66,7 +66,7 @@ int main (int argc, char **argv) {
 //    translater.emit_asm(ast_nodes, "out.asm");
 
     Assembler assembler;
-    assembler.emit_code("new_out.asm", "out.bin");
+    assembler.emit_code("out.asm", "out.bin");
    
     ems_print(&ems);
     

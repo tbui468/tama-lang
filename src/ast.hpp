@@ -1,7 +1,17 @@
 #ifndef TMD_AST_H
 #define TMD_AST_H
 
+#include <string>
+#include <vector>
 #include "token.hpp"
+
+class Ast {
+    public:
+        virtual std::string to_string() = 0;
+        virtual enum TokenType translate(std::vector<uint8_t>& buf) = 0;
+};
+
+//TODO: move all ast nodes to assembler or semanticAnalyzer
 
 enum NodeType {
     NODE_BINARY,

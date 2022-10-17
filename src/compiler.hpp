@@ -5,13 +5,14 @@
 #include "byte_array.hpp"
 #include "ast.hpp"
 
+//Symbol class
 struct VarData {
     struct Token var;
     struct Token type;
     int bp_offset;
 };
 
-
+//Environment class
 struct VarDataArray {
     struct VarData *vds;
     int count;

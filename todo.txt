@@ -51,37 +51,32 @@ Modules after adding in IR:
         link multiple ELF object files to create executable
 
 ******************************************Refactor to C++*********************************
-Idea!!! Make a class ParserNew (rename later when the old parser is removed)
-    has peek methods, and a virtual parse method
-    the implementation of parse can be defined inside of the AsmParser and TmdParser
-    Have the AsmParser and TmdParser both inherit from Parser
-        Then the two parsers can just implement their own parsing algorithms
+Assemble IMUL - need this for testing 
 
-Make new C++ class called Translater
-    TODO: these should be in a separate class or translation unit since they are shared for botht he assembler and translater
-        struct Token peek_one();
-        struct Token peek_two();
-        struct Token next_token();
-        struct Token consume_token(enum TokenType tt);
-        bool end_of_tokens();
-    translates .tmd file to assembly
-        put parser directly inside translater for now (similar to Assembler has nodes inside of it)
-    in future, will translate .tmd to intermediate representation (SSA, probably)
-    Then will have assembler translate to machine code
-
-Remove lexer.hpp and lexer.cpp
-Rename lexer_new.hpp and lexer_new.cpp to lexer
+translate/typecheck/analyze remaining Ast nodes
+    NODE_BINARY
+    NODE_EXPR_STMT
+    NODE_DECL_SYM
+    NODE_GET_SYM
+    NODE_SET_SYM
+    NODE_BLOCK
+    NODE_IF
+    NODE_WHILE
+    
 
 Make new C++ class called Linker
+    prioritize relocation of code for now (dynamic linking and other fancy stuff comes later)
     link multiple object files (where one has a 'main' function)
-    need to implement functions in tamarind
+    have assembler produce executables if _start symbol exists (so we don't need to implement tamarind functions yet)
+        otherwise, produce libraries (just for static linking for now)
 
     src.tmd -> Translater -> Assembler -> Linker
     src.tmd -> Translater (tmd) -> Optimizer (SSA) -> Assembler (x86) -> Linker (ELF) -> out.bin
 
 Make a new C++ class called Optimizer
-    Have Translater output SSA
-    Have x86 Assembler read in SSA
+    Have Semant output IR
+    Have IRCompiler output assembly for given architecture
+    Have x86Assembler output assembly for given file format (ELF, ECOFF, MACHO)
 
 Switch over to c++ for these reasons:
     can switch to C if performance is necessary

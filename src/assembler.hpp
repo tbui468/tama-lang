@@ -15,6 +15,7 @@
 
 class Assembler {
     public:
+        //Switch to hex << 6 format for easier reading
         inline static std::array<uint8_t, 4> mod_tbl {{
             0x00,
             0x40,
@@ -189,6 +190,19 @@ class Assembler {
                             }
                             break;
                         }
+                        case T_IMUL: {
+                            if (dynamic_cast<NodeReg*>(m_left) && dynamic_cast<NodeReg*>(m_right)) {
+                                //0F AF /r - IMUL r32, r/m32
+                                a.m_buf.push_back(0x0f);
+                                a.m_buf.push_back(0xaf);
+                                NodeReg* reg = dynamic_cast<NodeReg*>(m_left);
+                                NodeReg* r_m = dynamic_cast<NodeReg*>(m_right);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | r_tbl[reg->m_t.type] | rm_tbl[r_m->m_t.type]);
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: SUB does not work with those operands.");
+                            }
+                            break;
+                        }
                         case T_INC: {
                             if (dynamic_cast<NodeReg*>(m_left)) {
                                 //ff /0 - INC r/m32
@@ -349,6 +363,30 @@ class Assembler {
                         }
                         case T_RET: {
                             a.m_buf.push_back(0xc3);
+                            break;
+                        }
+                        case T_SUB: {
+                            if (dynamic_cast<NodeReg*>(m_left) && dynamic_cast<NodeReg*>(m_right)) {
+                                //29 /r - SUB r/m32, r32
+                                NodeReg* r_m = dynamic_cast<NodeReg*>(m_left);
+                                NodeReg* reg = dynamic_cast<NodeReg*>(m_right);
+                                a.m_buf.push_back(0x29); 
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | r_tbl[reg->m_t.type] | rm_tbl[r_m->m_t.type]);
+                            } else if (dynamic_cast<NodeReg*>(m_left) && is_expr(m_right)) {
+                                NodeReg* reg = dynamic_cast<NodeReg*>(m_left);
+                                if (reg->m_t.type == T_EAX) {
+                                    //2D id - SUB EAX, imm32
+                                    a.m_buf.push_back(0x2d);
+                                    m_right->assemble(a);
+                                } else {
+                                    //81 /5 id - SUB r/m32, imm32
+                                    a.m_buf.push_back(0x81);
+                                    a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x5 << 3 | rm_tbl[reg->m_t.type]);
+                                    m_right->assemble(a);
+                                }
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: SUB does not work with those operands.");
+                            }
                             break;
                         }
                         case T_TEST: {
