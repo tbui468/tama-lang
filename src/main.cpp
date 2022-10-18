@@ -11,7 +11,6 @@
 #include "lexer.hpp"
 #include "parser.hpp"
 #include "assembler.hpp"
-#include "translater.hpp"
 #include "semant.hpp"
 
 #define MAX_MSG_LEN 256

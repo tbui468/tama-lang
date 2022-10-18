@@ -10,7 +10,6 @@ set(Sources
     lexer.cpp
     parser.cpp
     parser_new.cpp
-    translater.cpp
     semant.cpp
     )
 
@@ -25,9 +24,10 @@ set(Headers
     lexer.hpp
     parser.hpp
     parser_new.hpp
-    translater.hpp
     semant.hpp
     reserved_word.hpp
+    environment.hpp
+    tmdAst.hpp
     )
 
 add_executable(

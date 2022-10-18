@@ -1,17 +1,19 @@
-#ifndef TMD_AST_H
-#define TMD_AST_H
+#ifndef AST_HPP
+#define AST_HPP
 
 #include <string>
 #include <vector>
 #include "token.hpp"
 
+class Semant;
+
 class Ast {
     public:
         virtual std::string to_string() = 0;
-        virtual enum TokenType translate(std::vector<uint8_t>& buf) = 0;
+        virtual enum TokenType translate(Semant& s) = 0;
 };
 
-//TODO: move all ast nodes to assembler or semanticAnalyzer
+//TODO: get rid of this once Semant class works
 
 enum NodeType {
     NODE_BINARY,
@@ -188,4 +190,4 @@ struct Node *anode_deref(struct Node *reg, struct Token t, struct Node *imm);
 void ast_print(struct Node* n);
 void ast_free(struct Node* n);
 
-#endif //TMD_AST_H
+#endif //AST_HPP

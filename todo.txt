@@ -51,11 +51,9 @@ Modules after adding in IR:
         link multiple ELF object files to create executable
 
 ******************************************Refactor to C++*********************************
-Assemble IMUL - need this for testing 
+Test end-to-end before adding locals to Semant
 
 translate/typecheck/analyze remaining Ast nodes
-    NODE_BINARY
-    NODE_EXPR_STMT
     NODE_DECL_SYM
     NODE_GET_SYM
     NODE_SET_SYM
@@ -70,12 +68,9 @@ Make new C++ class called Linker
     have assembler produce executables if _start symbol exists (so we don't need to implement tamarind functions yet)
         otherwise, produce libraries (just for static linking for now)
 
-    src.tmd -> Translater -> Assembler -> Linker
-    src.tmd -> Translater (tmd) -> Optimizer (SSA) -> Assembler (x86) -> Linker (ELF) -> out.bin
-
 Make a new C++ class called Optimizer
-    Have Semant output IR
-    Have IRCompiler output assembly for given architecture
+    Have Semant output IR trees (keep it simple for now)
+    Have IRCompiler output assembly for given architecture from optimized IR
     Have x86Assembler output assembly for given file format (ELF, ECOFF, MACHO)
 
 Switch over to c++ for these reasons:
@@ -316,9 +311,9 @@ Like python, but compiled to assembly and statically type-checked
         print(i)
     }
 
-    fun my_add(a: int, b: int) -> {
-        x: int = a + b
-        -> x 
+    fun my_add(a: int, b: int) -> ans: int { //named return values could be useful
+        ans = a + b
+        ->
     }
 
     z := 25

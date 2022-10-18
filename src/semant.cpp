@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "semant.hpp"
+#include "tmdAst.hpp"
 #include "error.hpp"
 
 void Semant::generate_asm(const std::string& input_file, const std::string& output_file) {
@@ -41,7 +42,7 @@ void Semant::translate() {
     m_buf.insert(m_buf.end(), (uint8_t*)start.data(), (uint8_t*)start.data() + start.size());
 
     for (Ast* n: m_nodes) {
-        n->translate(m_buf);
+        n->translate(*this);
     }
 
     std::string end = "\n"
@@ -58,7 +59,7 @@ void Semant::translate() {
     m_buf.insert(m_buf.end(), (uint8_t*)lib.data(), (uint8_t*)lib.data() + lib.size());
 }
 
-void Semant::write_op(std::vector<uint8_t>& buf, const char* format, ...) {
+void Semant::write_op(const char* format, ...) {
     va_list ap;
     va_start(ap, format);
     char s[256];
@@ -67,7 +68,7 @@ void Semant::write_op(std::vector<uint8_t>& buf, const char* format, ...) {
     s[n] = '\n';
     s[n + 1] = '\0';
     std::string str(s);
-    buf.insert(buf.end(), (uint8_t*)str.data(), (uint8_t*)str.data() + str.size());
+    m_buf.insert(m_buf.end(), (uint8_t*)str.data(), (uint8_t*)str.data() + str.size());
 }
 
 void Semant::write(const std::string& output_file) {
@@ -91,7 +92,7 @@ Ast* Semant::TmdParser::parse_literal() {
     if (next.type == T_L_PAREN) {
         return parse_group();
     } else if (next.type == T_IDENTIFIER) {
-        return new AstGetVar(next_token());
+        return new AstGetSym(next_token());
     } else if (next.type == T_INT) {
         return new AstLiteral(next_token());
     } else if (next.type == T_TRUE) {
@@ -220,7 +221,7 @@ Ast* Semant::TmdParser::parse_assignment() {
         struct Token var = consume_token(T_IDENTIFIER);
         consume_token(T_EQUAL);
         Ast *expr = parse_expr();
-        return new AstSetVar(var, expr);
+        return new AstSetSym(var, expr);
     } else {
         return parse_or();
     }
@@ -255,7 +256,7 @@ Ast* Semant::TmdParser::parse_stmt() {
         struct Token type = next_token();
         consume_token(T_EQUAL);
         Ast *expr = parse_expr();
-        return new AstDeclVar(var, type, expr);
+        return new AstDeclSym(var, type, expr);
     } else if (next.type == T_L_BRACE) {
         return parse_block();
     } else if (next.type == T_IF) {
