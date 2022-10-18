@@ -26,8 +26,8 @@ class Environment {
         Symbol* get_symbol(struct Token symbol) {
             Scope* current = m_head;
             while(current) {
-                std::unordered_map<std::string, Symbol>::iterator it = m_head->m_symbols.find(std::string(symbol.start, symbol.len));
-                if (it != m_head->m_symbols.end()) {
+                std::unordered_map<std::string, Symbol>::iterator it = current->m_symbols.find(std::string(symbol.start, symbol.len));
+                if (it != current->m_symbols.end()) {
                     return &(it->second);
                 }
                 current = current->m_next;
@@ -65,10 +65,12 @@ class Environment {
             m_head = s;
         }
 
-        void end_scope() {
+        int end_scope() {
             Scope* old = m_head;
             m_head = old->m_next;
+            int count = old->m_symbols.size();
             delete old;
+            return count;
         }
 };
 

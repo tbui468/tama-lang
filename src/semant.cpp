@@ -75,6 +75,12 @@ void Semant::write_op(const char* format, ...) {
     m_buf.insert(m_buf.end(), (uint8_t*)str.data(), (uint8_t*)str.data() + str.size());
 }
 
+int Semant::generate_label_id() {
+    int ret = m_label_id_counter;
+    m_label_id_counter++;
+    return ret;
+}
+
 void Semant::write(const std::string& output_file) {
     std::ofstream f(output_file, std::ios::out | std::ios::binary);
     f.write((const char*)m_buf.data(), m_buf.size());
@@ -272,12 +278,12 @@ Ast* Semant::TmdParser::parse_stmt() {
             next_token();
             else_block = parse_block();
         }
-        return new AstIf(condition, then_block, else_block);
+        return new AstIf(if_token, condition, then_block, else_block);
     } else if (next.type == T_WHILE) {
         struct Token while_token = next_token();
         Ast* condition = parse_expr();
         Ast* while_block = parse_block();
-        return new AstWhile(condition, while_block);
+        return new AstWhile(while_token, condition, while_block);
     } else {
         return new AstExprStmt(parse_expr());
     }

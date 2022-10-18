@@ -51,19 +51,21 @@ Modules after adding in IR:
         link multiple ELF object files to create executable
 
 ******************************************Refactor to C++*********************************
-Add environments and local variables to front-end translator (eg, finish translating those nodes)
 
-translate/typecheck/analyze remaining Ast nodes
-    NODE_BLOCK
-    NODE_IF
-    NODE_WHILE
+remove r_tbl and rm_tbl and replace with bit_pattern() method
+    this makes it a little robust that requiring tokens types to be in correct order
 
-Assemble
-or
-and
+Assemble logical operators
+    or
+    and
+    <
+    >
+    <=
+    >=
+    ==
+    !=
     
-
-Make new C++ class called Linker
+Make new C++ class called Linker (links ELF for now)
     prioritize relocation of code for now (dynamic linking and other fancy stuff comes later)
     link multiple object files (where one has a 'main' function)
     have assembler produce executables if _start symbol exists (so we don't need to implement tamarind functions yet)

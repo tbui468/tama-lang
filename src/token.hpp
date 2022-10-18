@@ -13,6 +13,14 @@ enum TokenType {
     T_EBP,
     T_ESI,
     T_EDI,
+    T_AL,
+    T_CL,
+    T_DL,
+    T_BL,
+    T_AH,
+    T_CH,
+    T_DH,
+    T_BH,
 
     //tokenizing tamarind file
     T_INT,
@@ -80,7 +88,9 @@ enum TokenType {
     T_CMP,
     T_TEST,
     T_NEG,
-    T_DEC
+    T_DEC,
+    T_MOVZX,
+    T_SETL
 };
 
 struct Token {

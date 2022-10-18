@@ -68,9 +68,11 @@ class Semant {
         TmdParser m_parser;
         std::vector<uint8_t> m_buf;
         Environment m_env;
+        int m_label_id_counter = 0;
     public:
         void generate_asm(const std::string& input_file, const std::string& output_file);
         void write_op(const char* format, ...);
+        int generate_label_id();
     private: 
         void read(const std::string& input_file);
         void lex();

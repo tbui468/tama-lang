@@ -1,9 +1,8 @@
-print(-1 * -1)
-print(100 - 98)
-x: int = 42
-z: int = 10
-x = 2
-z = 40
-print(x + z)
-y: bool = true
-print(y or y)
+x: int = 0
+
+while x < 10 {
+    print(x * 2)
+    x = x + 1
+}
+
+

@@ -45,12 +45,21 @@ Assembler::Node *Assembler::parse_unit() {
         case T_EBP:
         case T_ESI:
         case T_EDI:
-            return new NodeReg(next);
+            return new NodeReg32(next);
+        case T_AL:
+        case T_CL:
+        case T_DL:
+        case T_BL:
+        case T_AH:
+        case T_CH:
+        case T_DH:
+        case T_BH:
+            return new NodeReg8(next);
         case T_IDENTIFIER:
             return new NodeLabelRef(next);
         case T_L_BRACKET: {
             Node* reg = parse_unit();
-            if (!dynamic_cast<NodeReg*>(reg)) {
+            if (!dynamic_cast<NodeReg32*>(reg)) {
                 ems_add(&ems, next.line, "Parse Error: Memory access requires register before displacement");
             }
             if (peek_one().type == T_R_BRACKET) {
@@ -125,6 +134,7 @@ Assembler::Node *Assembler::parse_stmt() {
             case T_XOR:
             case T_CMP:
             case T_TEST:
+            case T_MOVZX:
                 left = parse_operand();
                 consume_token(T_COMMA);
                 right = parse_operand();
@@ -144,6 +154,7 @@ Assembler::Node *Assembler::parse_stmt() {
             case T_NEG:
             case T_INC:
             case T_DEC:
+            case T_SETL:
                 left = parse_operand();
                 break;
             //no operands
