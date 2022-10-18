@@ -192,16 +192,15 @@ class AstDeclSym: public Ast {
         }
         enum TokenType translate(Semant& s) {
             enum TokenType right_type = m_value->translate(s);
-            /*
             if (right_type != m_type.type) {
                 ems_add(&ems, m_symbol.line, "Type Error: Declaration type and assigned value type don't match!");
             }
 
-            if (m_envs->declared_in_scope(m_symbol)) {
+            if (s.m_env.declared_in_scope(m_symbol)) {
                 ems_add(&ems, m_symbol.line, "Semantic Error: Local symbol already declared in this scope!");
             }
 
-            m_envs->add_symbol(m_symbol, m_type);*/
+            s.m_env.add_symbol(m_symbol, m_type);
 
             //local variable is on stack at this point
             return right_type;
@@ -216,7 +215,20 @@ class AstGetSym: public Ast {
             return "getvar";
         }
         enum TokenType translate(Semant& s) {
-            return T_INT_TYPE;
+            Symbol* sym = s.m_env.get_symbol(m_symbol);
+
+            enum TokenType ret_type = T_NIL_TYPE; //TODO: Should be error type to avoid multiple error messages
+
+            if (!sym) {
+                ems_add(&ems, m_symbol.line, "Semantic Error: Variable not declared!");
+            } else {
+                ret_type = sym->m_dtype;
+            }
+
+            s.write_op("    mov     %s, [%s - %d]", "eax", "ebp", 4 * (sym->m_bp_offset + 1));
+            s.write_op("    push    %s", "eax");
+            
+            return ret_type;
         }
 };
 
@@ -229,7 +241,24 @@ class AstSetSym: public Ast {
             return "setvar";
         }
         enum TokenType translate(Semant& s) {
-            return T_INT_TYPE;
+            Symbol *sym = s.m_env.get_symbol(m_symbol);
+            enum TokenType ret_type = T_NIL_TYPE; //TODO: should have special error type to avoid repeated error messages
+
+            if (!sym) {
+                ems_add(&ems, m_symbol.line, "Semantic Error: Variable not declared!");
+            } else {
+                enum TokenType assigned_type = m_value->translate(s);
+                if (sym->m_dtype != assigned_type) {
+                    ems_add(&ems, m_symbol.line, "Type Error: Declaration type and assigned value type don't match!");
+                } else {
+                    ret_type = assigned_type;
+                }
+            }
+
+            s.write_op("    pop     %s", "eax");
+            s.write_op("    mov     [%s - %d], %s", "ebp", 4 * (sym->m_bp_offset + 1), "eax");
+            s.write_op("    push    %s", "eax");
+            return ret_type;
         }
 };
 

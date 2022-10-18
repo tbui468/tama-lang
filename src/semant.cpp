@@ -38,12 +38,16 @@ void Semant::parse() {
 }
 
 void Semant::translate() {
-    std::string start = "org     0x08048000\n_start:\n";
+    std::string start = "org     0x08048000\n_start:\n    mov     ebp, esp\n"; //need to set the frame pointer before doing anything else
     m_buf.insert(m_buf.end(), (uint8_t*)start.data(), (uint8_t*)start.data() + start.size());
+
+    m_env.begin_scope();
 
     for (Ast* n: m_nodes) {
         n->translate(*this);
     }
+
+    m_env.end_scope();
 
     std::string end = "\n"
               "    mov     ebx, 0\n"

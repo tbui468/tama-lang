@@ -51,15 +51,16 @@ Modules after adding in IR:
         link multiple ELF object files to create executable
 
 ******************************************Refactor to C++*********************************
-Test end-to-end before adding locals to Semant
+Add environments and local variables to front-end translator (eg, finish translating those nodes)
 
 translate/typecheck/analyze remaining Ast nodes
-    NODE_DECL_SYM
-    NODE_GET_SYM
-    NODE_SET_SYM
     NODE_BLOCK
     NODE_IF
     NODE_WHILE
+
+Assemble
+or
+and
     
 
 Make new C++ class called Linker

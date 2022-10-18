@@ -67,6 +67,7 @@ class Semant {
         Lexer m_lexer;
         TmdParser m_parser;
         std::vector<uint8_t> m_buf;
+        Environment m_env;
     public:
         void generate_asm(const std::string& input_file, const std::string& output_file);
         void write_op(const char* format, ...);

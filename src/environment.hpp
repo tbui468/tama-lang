@@ -21,7 +21,7 @@ class Environment {
                 Scope(Scope* next): m_next(next) {}
         };
     public:
-        Scope* m_head;
+        Scope* m_head = nullptr;
     public:
         Symbol* get_symbol(struct Token symbol) {
             Scope* current = m_head;
@@ -60,7 +60,7 @@ class Environment {
             m_head->m_symbols.insert({std::string(symbol.start, symbol.len), Symbol(symbol, type, offset)});
             return true;
         }
-        void start_scope() {
+        void begin_scope() {
             Scope* s = new Scope(m_head);
             m_head = s;
         }
