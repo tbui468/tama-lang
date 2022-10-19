@@ -97,7 +97,9 @@ class Assembler {
             {"inc", T_INC},
             {"dec", T_DEC},
             {"setl", T_SETL},
-            {"movzx", T_MOVZX}
+            {"movzx", T_MOVZX},
+            {"or", T_OR},
+            {"and", T_AND}
         }};
 
         class Label {
@@ -148,6 +150,19 @@ class Assembler {
                                 m_right->assemble(a);
                             } else {
                                 ems_add(&ems, m_t.line, "Assembler Error: add doesn't work with those operand types");
+                            }
+                            break;
+                        }
+                        case T_AND: {
+                            if (dynamic_cast<NodeReg32*>(m_left) && dynamic_cast<NodeReg32*>(m_right)) {
+                                //21 /r - AND r/m32, r32
+                                a.m_buf.push_back(0x21);
+
+                                NodeReg32* mem = dynamic_cast<NodeReg32*>(m_left);
+                                NodeReg32* reg = dynamic_cast<NodeReg32*>(m_right);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | reg->bit_pattern() << 3 | mem->bit_pattern());
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: and doesn't work with those operand types");
                             }
                             break;
                         }
@@ -360,6 +375,19 @@ class Assembler {
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x03 << 3 | rm_tbl[reg->m_t.type]);
                             } else {
                                 ems_add(&ems, m_t.line, "Assembler Error: neg only accepts registers as operands");
+                            }
+                            break;
+                        }
+                        case T_OR: {
+                            if (dynamic_cast<NodeReg32*>(m_left) && dynamic_cast<NodeReg32*>(m_right)) {
+                                //09 /r - OR r/m32, r32
+                                a.m_buf.push_back(0x09);
+
+                                NodeReg32* mem = dynamic_cast<NodeReg32*>(m_left);
+                                NodeReg32* reg = dynamic_cast<NodeReg32*>(m_right);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | reg->bit_pattern() << 3 | mem->bit_pattern());
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: and doesn't work with those operand types");
                             }
                             break;
                         }

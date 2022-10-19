@@ -18,8 +18,6 @@ class Semant {
 
     class TmdParser: public Parser {
         public:
-
-        public:
             std::vector<Ast*> parse_tokens(const std::vector<struct Token>& tokens) override {
                 m_tokens = tokens;
                 m_current = 0;

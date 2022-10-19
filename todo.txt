@@ -55,9 +55,9 @@ Modules after adding in IR:
 remove r_tbl and rm_tbl and replace with bit_pattern() method
     this makes it a little robust than requiring tokens types to be in correct order
 
+    Need to automate tests for compiler - refactors are getting dangerous with just hand-written tests
+
 Assemble logical operators
-    or
-    and
     <
     >
     <=

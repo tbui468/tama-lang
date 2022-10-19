@@ -135,6 +135,8 @@ Assembler::Node *Assembler::parse_stmt() {
             case T_CMP:
             case T_TEST:
             case T_MOVZX:
+            case T_AND:
+            case T_OR:
                 left = parse_operand();
                 consume_token(T_COMMA);
                 right = parse_operand();

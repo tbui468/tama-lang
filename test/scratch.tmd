@@ -1,5 +1,15 @@
 x: int = 0
 
+print(false and false)
+print(false and true)
+print(true and false)
+print(true and true)
+
+print(false or false)
+print(false or true)
+print(true or false)
+print(true or true)
+
 while x < 10 {
     print(x * 2)
     x = x + 3
