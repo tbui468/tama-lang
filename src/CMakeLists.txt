@@ -3,13 +3,10 @@ set(Sources
     ast.cpp
     memory.cpp
     token.cpp
-    byte_array.cpp
     assembler.cpp
     error.cpp
-    compiler.cpp
     lexer.cpp
     parser.cpp
-    parser_new.cpp
     semant.cpp
     )
 
@@ -17,13 +14,10 @@ set(Headers
     ast.hpp
     memory.hpp
     token.hpp
-    byte_array.hpp
     assembler.hpp
     error.hpp
-    compiler.hpp
     lexer.hpp
     parser.hpp
-    parser_new.hpp
     semant.hpp
     reserved_word.hpp
     environment.hpp

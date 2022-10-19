@@ -53,7 +53,7 @@ Modules after adding in IR:
 ******************************************Refactor to C++*********************************
 
 remove r_tbl and rm_tbl and replace with bit_pattern() method
-    this makes it a little robust that requiring tokens types to be in correct order
+    this makes it a little robust than requiring tokens types to be in correct order
 
 Assemble logical operators
     or
@@ -64,12 +64,42 @@ Assemble logical operators
     >=
     ==
     !=
+
+Arithmetic operators
+    %
     
 Make new C++ class called Linker (links ELF for now)
     prioritize relocation of code for now (dynamic linking and other fancy stuff comes later)
     link multiple object files (where one has a 'main' function)
     have assembler produce executables if _start symbol exists (so we don't need to implement tamarind functions yet)
         otherwise, produce libraries (just for static linking for now)
+
+Split semantic analysis and code generation in TmdAst
+    analyze() - type check and check definitions, etc
+    translate() - translate to IR (currently going straight to assembly)
+
+    Get something simple working end-to-end (these three Irt nodes should be enough ...?)
+        Expr:
+            call(f, l) - call function f on argument list l
+            const(i) - constant integer i
+        Stmt:
+            exp(e) - expression evaluated and result discarded
+
+    Canonicalize - remove discrepencies between Irt and machine-language programs (linearize)
+    Group into Basic Blocks - group so that blocks contain no internal jumps/labels (group)
+    Order Blocks into Traces - CJMP is immediately followed by false block (traceSchedule)
+
+    Use Tree Patterns to select instructions (algorithms like Maximal Munch)
+        this can produce an assembly language with infinite registers for now
+
+    Analzye control flow of the temp assembly to create control-flow graph
+
+    Analyze liveness of variables in control-flow graph to create interference graph
+
+    Color interference graph, and for each temporary either assign a register or store in memory
+
+    ???PDF268 says registers can be allocated for trees (rather than interference graph).
+        But this causes other problems - so is it worth it? (Hard to say at this point)
 
 Make a new C++ class called Optimizer
     Have Semant output IR trees (keep it simple for now)
@@ -82,270 +112,3 @@ Switch over to c++ for these reasons:
     a dedicated string type will simplify things further
     could use visitor pattern to let compiler catch errors when adding new nodes
 
-************************************Misc*********************************
-Symbol <-- instead of VarData
-Environment <-- instead of VarDataArray
-Generalize assembly operation nodes: ANodeOp(op, operand1, operand2) <-- just make operand1/operand2 NULL for no operand instructions)
-
-
-**********************************Add linker******************************************
-Write in C++ from the start to simplify
-Have assembler emit linkable ELF files along with executable ELF files
-    any file with 'main' function can be executable
-    need to implement functions in tamarind and set main as entry point
-
-
-Test compiler driver end-to-end (with only printing booleans for now
-    Uncomment code so that compiler emits assembly
-    Have compiler all functions in fun.asm for now (remove comments since my assembler doesn't recognize them right now)
-    x: int = 10
-    x = 15
-    y: int = -90
-    print(5 < x)  //should print true
-    print(y > x) //should print false
-
-    //write script with conditionals and while loops
-    x: int = 0
-    while x < 10 {
-        if x % 2 == 0 {
-            print(true)
-        }
-        x = x + 1
-    }
-
-Test compiler driver end-to-end:
-    print out 32-bit signed integers
-
-****************************************Clean these notes up after finishing basic assembler********************
-
-*******Need to assemble these instructions into machine code
-            jmp     imm/lbl
-            jz
-            je
-            cmp     r, imm
-            cmp     r, r
-            test    r, imm
-            test    r, r
-            neg     r32
-            inc     r32
-            sete    r8
-            setl    r8
-            setg    r8
-            movzx   r32, r8
-            call    <identifier>
-            ret
-       
-            Get _print_int working - should be able to print out 32-bit integers of arbitrary length (including negatives)
-
-        Make linker to allow different modules to be compiled into object files, then the object files can be linked
-            need to allow code to refer to external variables (can add external functions later)
-            one.tmd
-                extern c: int
-                print(c)
-
-            two.tmd
-                c: int = 25
-
-            assembler should produce one.obj and two.obj
-            linker should take both object files as inputs and produce out.bin
-
-
-    example: 
-        add    ecx, eax
-        [00000001][ 11][000][001] 0xc101 (0xc803 is the same)
-        [op, d, s][MOD][REG][R/M]
-
-        we need the 6-bit code for instructions with two register operands
-        000000 add
-        100010 mov
-        001010 sub
-
-    uint8_t ins = inst[INS_ADD];
-    uint8_t dir = dirs[DIR_REG]; //1 is register, 0 is r/m
-    uint8_t siz = sizs[SIZ_32];
-    uint8_t opc = instruction | direction | size;
-
-    uint8_t mod = mods[MOD_REG];
-    uint8_t reg = regs[REG_EAX];
-    uint8_t r_m = r_ms[RM_ECX];
-
-0-4 byte prefixes - used to modify instructions
-1-2 byte opcodes
-    I. single byte
-        ex: bit 0 in 'add' determines 8-bit or 16/32-bit registers/memory (1 by default for 32-bit systems)
-            bit 1 in 'add' determines whether destination is REG (1) or R/M (0)
-    II. 0x0f prefix byte + opcode
-    *up to 512 instruction classes
-0-1 mod-reg-r/m byte (further sub divided into bits)
-    I.      MOD: 2 bits (11 means R/M is a register, else for displacement/indirect addressing?)
-    II.     REG: 3 bits (one bit pattern for each of the 8 registers)
-    III.    R/M: 3 bits
-0-1 scaled index byte (further sub divided into bits)
-    I.      Scale: 2 bits
-    II.     Index: 3 bits
-    III.    Base: 3 bits
-0-4 displacement
-0-4 immediate
-
-May be time to refactor into different c modules
-    Tokens.h
-    Lexer.h
-    Lexer.c
-
-GOAL 1: Make a assembler/linker for it
-    Add more machine code mappings for assembler
-        add enough to get it turing complete (booleans, conditionals, loops)
-
-        dereferencing (including shifts inside using expressions)
-            mov     eax, [ebp - 4] ;moving top of stack into eax
-            how does this translate into machine code?
-            read stackoverflow post above about x86 machine code
-        call
-        ret
-
-
-        //TEST ALL ABOVE - should work with current compiler
-        //check out.asm and make sure ALL operations are assembled!!!
-
-        //Need to have error messages appear for wrong inputs into assembler - there are a lot of ways to get this wrong
-            eg, the first operand in an immediate value for many operations
-
-GOAL 2: Linker stuff (linking multiple elf files statically)
-    will each ELF object file need a relocation table (showing with addresses need to be relocated)
-        is 'org' used in relocation?  Am I mixing the assembler and linker?  Or is there another relocation step in the linker too?
-    symbol resolution with object files
-
-
-GOAL 3: For loops, functions, switch statements, arrays and structs (and classes?), pointers/references
-
-Assembler should allow 1 byte add/sub operations (currently defaulting to 4 byte operands when using immediates)
-Assembler needs to check for overflow with imul
-
-Tests for testing features (it's annoying to have to change test code to retest everything)
-    Need way to compare input and expected output
-    Make a directory called test with test .tmd files, and expected .txt(?) files
-    Make a bash script to run all test and display output
-    Sample output:
-        locals:         passed
-        conditionals:   passed
-        loops:          failed
-
-    Need tests for checking error messages too:
-        tokenizing errors:  passed
-        type errors:        passed
-        parse errors:       failed
-
-    write a script (put in test directory) that runs 
-        and compares variable_code.tmd and variable_sol.txt (example)
-        could write it in python too
-
-    Tests for assembler (example of what should be tested)
-        org     0x08048000 
-
-        mov     ebx, 34
-        push    ebx
-        push    58
-        mov     ebx, 0
-        pop     ebx
-        pop     ecx
-        add     ebx, ecx
-        sub     ebx, 8
-        mov     eax, ebx
-        cdq
-        mov     ebx, 42
-        idiv    ebx
-        mov     esi, 40
-        imul    eax, esi
-        sub     eax, 38
-        mov     ebx, eax
-        mov     eax, 1
-        int     0x80
-        
-
-TODO!!! Need to maintain conventions of registers being clobbered or preserved on function calls:
-    eax, edx, and ecx are clobbered
-    ebx, esi, and edi are preserved
-
-    I'm using ebx right now to arithmetic - I should replace it with edx, ecx OR save ebx/esi/edi on stack and then restore them    
-
-Switch statements using jump tables (call them 'when' statements)
-    x: int = 7
-    when x {
-        is 5 {
-            print("it's 5!")
-        }
-        is 6 {
-            print("it's 6!")
-        }
-        is 7 {
-            print("it's 7!")
-        }
-    }
-
-Function definitions
-    fun add(a: int, b: int) -> int {
-        result: int = a + b
-        -> result
-    }
-
-Need to deal with overflow with multiplication/add
-
-Floating point arithmetic
-    This will require a bit of testing in assembly to see how it works
-
-mmap for dynamic memory allocation ....???
-    memory allocation + pointers/references
-
-Idea: compile to x86 assembly (which we can then assemble to machine code..)
-    https://cs.lmu.edu/~ray/notes/nasmtutorial/
-
-Like python, but compiled to assembly and statically type-checked
-    print(3 + 7)
-    x: int = 27
-
-    if x < 30 {
-        print("A") 
-    }
-
-    print("B")
-    x = true #this will report an error
-
-    for i in 10..3 by -2 {
-        print(i)
-    }
-
-    fun my_add(a: int, b: int) -> ans: int { //named return values could be useful
-        ans = a + b
-        ->
-    }
-
-    z := 25
-    print(z + 4)
-
-    a: int32 = 232
-    b: int64 = 23
-    c: float32
-    d: float64
-    e: bool
-    f: char
-    g: str
-
-Get entire language compiling for arithmetic expressions
-    Error
-        Make a struct to hold/reorder error messages
-        Need line information to make error messages better
-    Lexer
-        Let lexer recognize variable declaration and assignment
-    Parser
-        could do recursive descent or the other one (I forget the name)
-        will need to define AST nodes too
-        Might be easier to make p (the parser) a static variable for now 
-            instead of passing a struct Parser* to all parsing functions
-    Type Checker
-        traverse AST once to catch type errors
-    Compiler
-        traverse AST again to generate IA32 assembly
-
-    Assembler
-
-    Linker

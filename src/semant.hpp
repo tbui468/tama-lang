@@ -10,13 +10,13 @@
 #include "token.hpp"
 #include "lexer.hpp"
 #include "ast.hpp"
-#include "parser_new.hpp"
+#include "parser.hpp"
 #include "error.hpp"
 #include "environment.hpp"
 
 class Semant {
 
-    class TmdParser: public ParserNew {
+    class TmdParser: public Parser {
         public:
 
         public:
