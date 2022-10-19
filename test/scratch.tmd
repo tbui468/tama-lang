@@ -1,14 +1,12 @@
 x: int = 0
+y: int = 9
 
-print(false and false)
-print(false and true)
-print(true and false)
-print(true and true)
-
-print(false or false)
-print(false or true)
-print(true or false)
-print(true or true)
+print(x < y)
+print(x > y)
+print(x <= y)
+print(x >= y)
+print(x != y)
+print(x == y)
 
 while x < 10 {
     print(x * 2)

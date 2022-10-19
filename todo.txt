@@ -58,12 +58,11 @@ remove r_tbl and rm_tbl and replace with bit_pattern() method
     Need to automate tests for compiler - refactors are getting dangerous with just hand-written tests
 
 Assemble logical operators
-    <
-    >
-    <=
-    >=
-    ==
-    !=
+    setg    al
+    setle   al
+    setge   al
+    sete    al
+    setne   al
 
 Arithmetic operators
     %
@@ -71,8 +70,25 @@ Arithmetic operators
 Make new C++ class called Linker (links ELF for now)
     prioritize relocation of code for now (dynamic linking and other fancy stuff comes later)
     link multiple object files (where one has a 'main' function)
-    have assembler produce executables if _start symbol exists (so we don't need to implement tamarind functions yet)
+    have assembler produce executables if _main symbol exists (so we don't need to implement tamarind functions yet)
         otherwise, produce libraries (just for static linking for now)
+
+    Will need functions to fully test (but do we?  Assembler can produce object files, can't it?)
+    It could but we still need to differentiate between tmd functions and asm functions part of the standard tmd library
+        lib.tmd
+            fun add(x:int, y:int) -> sum: int {
+                sum = x + y
+            }
+
+        test.tmd
+            fun main() {
+                print(add(2, 3))
+                print(add(5, 3))
+            }
+
+        tama lib.tmd test.tmd (produces lib.o, test.o and out.bin)
+
+        Running out.bin should print 5 and 8
 
 Split semantic analysis and code generation in TmdAst
     analyze() - type check and check definitions, etc

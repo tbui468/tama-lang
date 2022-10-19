@@ -157,6 +157,11 @@ Assembler::Node *Assembler::parse_stmt() {
             case T_INC:
             case T_DEC:
             case T_SETL:
+            case T_SETG:
+            case T_SETLE:
+            case T_SETGE:
+            case T_SETE:
+            case T_SETNE:
                 left = parse_operand();
                 break;
             //no operands

@@ -90,7 +90,12 @@ enum TokenType {
     T_NEG,
     T_DEC,
     T_MOVZX,
-    T_SETL
+    T_SETL,
+    T_SETG,
+    T_SETLE,
+    T_SETGE,
+    T_SETE,
+    T_SETNE
 };
 
 struct Token {

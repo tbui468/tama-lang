@@ -99,7 +99,12 @@ class Assembler {
             {"setl", T_SETL},
             {"movzx", T_MOVZX},
             {"or", T_OR},
-            {"and", T_AND}
+            {"and", T_AND},
+            {"setg", T_SETG},
+            {"setle", T_SETLE},
+            {"setge", T_SETGE},
+            {"sete", T_SETE},
+            {"setne", T_SETNE}
         }};
 
         class Label {
@@ -433,6 +438,66 @@ class Assembler {
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x0 << 3 | reg8->bit_pattern());
                             } else {
                                 ems_add(&ems, m_t.line, "Assembler Error: setl with those operands not supported");
+                            }
+                            break;
+                        }
+                        case T_SETG: {
+                            if (dynamic_cast<NodeReg8*>(m_left)) {
+                                //0f 9f
+                                a.m_buf.push_back(0x0f);
+                                a.m_buf.push_back(0x9f);
+                                NodeReg8* reg8 = dynamic_cast<NodeReg8*>(m_left);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x0 << 3 | reg8->bit_pattern());
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: setg with those operands not supported");
+                            }
+                            break;
+                        }
+                        case T_SETLE: {
+                            if (dynamic_cast<NodeReg8*>(m_left)) {
+                                //0f 9e 
+                                a.m_buf.push_back(0x0f);
+                                a.m_buf.push_back(0x9e);
+                                NodeReg8* reg8 = dynamic_cast<NodeReg8*>(m_left);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x0 << 3 | reg8->bit_pattern());
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: setle with those operands not supported");
+                            }
+                            break;
+                        }
+                        case T_SETGE: {
+                            if (dynamic_cast<NodeReg8*>(m_left)) {
+                                //0f 9d
+                                a.m_buf.push_back(0x0f);
+                                a.m_buf.push_back(0x9d);
+                                NodeReg8* reg8 = dynamic_cast<NodeReg8*>(m_left);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x0 << 3 | reg8->bit_pattern());
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: setge with those operands not supported");
+                            }
+                            break;
+                        }
+                        case T_SETE: {
+                            if (dynamic_cast<NodeReg8*>(m_left)) {
+                                //0f 94
+                                a.m_buf.push_back(0x0f);
+                                a.m_buf.push_back(0x94);
+                                NodeReg8* reg8 = dynamic_cast<NodeReg8*>(m_left);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x0 << 3 | reg8->bit_pattern());
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: sete with those operands not supported");
+                            }
+                            break;
+                        }
+                        case T_SETNE: {
+                            if (dynamic_cast<NodeReg8*>(m_left)) {
+                                //0f 95
+                                a.m_buf.push_back(0x0f);
+                                a.m_buf.push_back(0x95);
+                                NodeReg8* reg8 = dynamic_cast<NodeReg8*>(m_left);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x0 << 3 | reg8->bit_pattern());
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: setne with those operands not supported");
                             }
                             break;
                         }
