@@ -38,23 +38,18 @@ void Semant::parse() {
 }
 
 void Semant::translate() {
-    std::string start = "org     0x08048000\n_start:\n    mov     ebp, esp\n"; //need to set the frame pointer before doing anything else
+    std::string start = "org     0x08048000\n"
+                        "_start:\n"
+                        "    mov     ebp, esp\n"
+                        "    call    main\n"
+                        "    mov     ebx, 0\n"
+                        "    mov     eax, 0x01\n"
+                        "    int     0x80\n";
     m_buf.insert(m_buf.end(), (uint8_t*)start.data(), (uint8_t*)start.data() + start.size());
-
-    m_env.begin_scope();
 
     for (Ast* n: m_nodes) {
         n->translate(*this);
     }
-
-    m_env.end_scope();
-
-    std::string end = "\n"
-              "    mov     ebx, 0\n"
-              "    mov     eax, 0x01\n"
-              "    int     0x80\n"
-              "\n";
-    m_buf.insert(m_buf.end(), (uint8_t*)end.data(), (uint8_t*)end.data() + end.size());
 
     std::ifstream f("../../assembly_test/fun.asm");
     std::stringstream buffer;
@@ -108,6 +103,8 @@ Ast* Semant::TmdParser::parse_literal() {
     } else if (next.type == T_TRUE) {
         return new AstLiteral(next_token());
     } else if (next.type == T_FALSE) {
+        return new AstLiteral(next_token());
+    } else if (next.type == T_NIL) {
         return new AstLiteral(next_token());
     } else {
         ems_add(&ems, next.line, "Parse Error: Unexpected token.");
@@ -284,6 +281,33 @@ Ast* Semant::TmdParser::parse_stmt() {
         Ast* condition = parse_expr();
         Ast* while_block = parse_block();
         return new AstWhile(while_token, condition, while_block);
+    } else if (next.type == T_FUN) {
+        consume_token(T_FUN);
+        struct Token symbol = consume_token(T_IDENTIFIER);
+        consume_token(T_L_PAREN);
+        std::vector<Ast*> params;
+        while (peek_one().type != T_R_PAREN) {
+            struct Token sym = consume_token(T_IDENTIFIER);
+            consume_token(T_COLON);
+            struct Token type = next_token();
+            params.push_back(new AstParam(sym, type));
+            if (peek_one().type == T_COMMA) {
+                consume_token(T_COMMA);
+            }
+        } 
+        consume_token(T_R_PAREN);
+        consume_token(T_MINUS);
+        consume_token(T_GREATER);
+
+        struct Token ret_type = next_token();
+        if (ret_type.type == T_NIL) ret_type.type = T_NIL_TYPE;
+
+        Ast* body = parse_block();
+        return new AstFunDef(symbol, params, ret_type, body);
+    } else if (next.type == T_RETURN) {
+        struct Token ret = next_token();
+        Ast* expr = parse_expr();
+        return new AstReturn(ret, expr);
     } else {
         return new AstExprStmt(parse_expr());
     }

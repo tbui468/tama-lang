@@ -128,6 +128,10 @@ class AstLiteral: public Ast {
                 s.write_op("    push    %d", 1);
             } else if (m_lexeme.type == T_FALSE) {
                 s.write_op("    push    %d", 0);
+            } else if (m_lexeme.type == T_NIL) {
+                s.write_op("    push    %d", 0);
+            } else {
+                ems_add(&ems, m_lexeme.line, "Synax Error: Invalid literal");
             }
 
             switch (m_lexeme.type) {
@@ -262,6 +266,34 @@ class AstSetSym: public Ast {
         }
 };
 
+class AstFunDef: public Ast {
+    public:
+        struct Token m_symbol;
+        std::vector<Ast*> m_params;
+        struct Token m_ret_type;
+        Ast* m_body;
+    public:
+        AstFunDef(struct Token symbol, std::vector<Ast*> params, struct Token ret_type, Ast* body):
+            m_symbol(symbol), m_params(params), m_ret_type(ret_type), m_body(body) {}
+        std::string to_string() {
+            return "param";
+        }
+        enum TokenType translate(Semant& s) {
+            s.write_op("%.*s:", m_symbol.len, m_symbol.start);
+            s.write_op("    push    %s", "ebp");
+            s.write_op("    mov     %s, %s", "ebp", "esp");
+
+            s.m_compiling_fun = this;
+            m_body->translate(s);
+            s.m_compiling_fun = nullptr;
+
+            s.write_op("__%.*s_ret:", m_symbol.len, m_symbol.start);
+            s.write_op("    pop     %s", "ebp");
+            s.write_op("    ret");
+            return T_NIL_TYPE;
+        }
+};
+
 class AstBlock: public Ast {
     public:
         std::vector<Ast*> m_stmts;
@@ -272,12 +304,17 @@ class AstBlock: public Ast {
         enum TokenType translate(Semant& s) {
             s.m_env.begin_scope();
             for (Ast* n: m_stmts) {
-                n->translate(s);
+                enum TokenType type = n->translate(s);
+                if (type == T_RET_TYPE) {
+                    AstFunDef* n = dynamic_cast<AstFunDef*>(s.m_compiling_fun);
+                    int sym_count = s.m_env.symbol_count(); 
+                    s.write_op("    add     %s, %d", "esp", 4 * sym_count);
+                    s.write_op("    jmp     __%.*s_ret", n->m_symbol.len, n->m_symbol.start);
+                    break;
+                }
             }
             int pop_count = s.m_env.end_scope();
-            for (int i = 0; i < pop_count; i++) {
-                s.write_op("    pop     %s", "eax");
-            }
+            s.write_op("    add     %s, %d", "esp", 4 * pop_count);
             return T_NIL_TYPE;
         }
 };
@@ -323,6 +360,7 @@ class AstWhile: public Ast {
         struct Token m_t;
         Ast* m_condition;
         Ast* m_while_block;
+    public:
         AstWhile(struct Token t, Ast* condition, Ast* while_block): m_t(t), m_condition(condition), m_while_block(while_block) {}
         std::string to_string() {
             return "while";
@@ -347,5 +385,65 @@ class AstWhile: public Ast {
 };
 
 
+class AstCall: public Ast {
+    public:
+        struct Token m_symbol;
+        std::vector<Ast*> m_args;
+    public:
+        AstCall(struct Token symbol, std::vector<Ast*> args): m_symbol(symbol), m_args(args) {}
+        std::string to_string() {
+            return "call";
+        }
+
+        enum TokenType translate(Semant& s) {
+            //TODO: look up function in environment (to get return type, parameter types, etc)
+            //evaluate arguments in reverse order and type check
+            //call symbol
+            //offset stack pointer to remove arguments
+            //return ret_type
+        }
+};
+
+class AstParam: public Ast {
+    public:
+        struct Token m_symbol;
+        struct Token m_dtype;
+    public:
+        AstParam(struct Token symbol, struct Token dtype): m_symbol(symbol), m_dtype(dtype) {}
+        std::string to_string() {
+            return "param";
+        }
+        enum TokenType translate(Semant& s) {
+            //TODO: how do I want to do this?
+            return T_NIL_TYPE;
+        }
+};
+
+class AstReturn: public Ast {
+    public:
+        struct Token m_return;
+        Ast* m_expr;
+    public:
+        AstReturn(struct Token ret, Ast* expr): m_return(ret), m_expr(expr) {}
+        std::string to_string() {
+            return "return";
+        }
+        enum TokenType translate(Semant& s) {
+            if (!s.m_compiling_fun) {
+                ems_add(&ems, m_return.line, "Synax Error: 'return' can only be used inside a function definition.");
+                return T_NIL_TYPE;
+            }
+
+            enum TokenType ret_type = m_expr->translate(s);
+            AstFunDef* n = dynamic_cast<AstFunDef*>(s.m_compiling_fun);
+            if (ret_type != n->m_ret_type.type) {
+                ems_add(&ems, m_return.line, "Synax Error: return data type does not match function return type.");
+            }
+
+            s.write_op("    pop     %s", "eax");
+            
+            return T_RET_TYPE;
+        }
+};
 
 #endif //TMD_AST_HPP

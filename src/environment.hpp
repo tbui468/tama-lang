@@ -35,6 +35,16 @@ class Environment {
 
             return nullptr;
         }
+        int symbol_count() {
+            int count = 0;
+            Scope* current = m_head;
+            while(current) {
+                count += current->m_symbols.size();
+                current = current->m_next;
+            }
+
+            return count;
+        }
         bool declared_in_scope(struct Token symbol) {
             if (m_head) {
                 std::unordered_map<std::string, Symbol>::iterator it = m_head->m_symbols.find(std::string(symbol.start, symbol.len));

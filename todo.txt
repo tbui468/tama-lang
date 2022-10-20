@@ -52,21 +52,75 @@ Modules after adding in IR:
 
 ******************************************Refactor to C++*********************************
 
+Remove most of ast.hpp (and ast.cpp?) since we are using c++ classes as nodes now
+
+Add __ to beginning of all internal labels in assembly
+
+Functions <-----------get functions workings (main first)
+    Maybe just let the rest of the code compile (for simplicity) <------try this
+        if T_RET_TYPE is returned (return value is saved in eax)
+            pop entire stack (get sum of all locals)
+            jmp to end label of function
+
+        let the rest of the code compile as usual, but it won't run (so scopes will end automatically)
+
+    Problem with AstFunDef
+        return statements/labels and stack unwinding is not working
+        current thoughts: have a label at end of each function, and then
+            jump to that label when a return statement is hit
+        current problem: need to unwind the stack of locals when return statement runs,
+            but blocks could be nested inside eachother
+
+        Solution???
+            On hitting a return statement, unwind stack all the way, then jump to end
+            Would require popping stacks up the chain until we hit main function block
+            if at any point AstBlock sees a T_UNWIND_TYPE, exit loop and end scope immediately
+            jump to end
+
+        Problem: 
+            How do we know if currently inside a block, if, while?
+            Need to unwind all three AstBlock, AstIf, AstWhile.
+            If AstDefFun gets an T_UNWIND_TYPE from one of it's nodes, need to end immediately
+
+    When translating return nodes, make sure type matches type in frame stack
+    When translating Ast nodes, need to take current frame into consideration (mainly for locals)
+    When translating AstGetSym, if parameter in current frame, need to access it using + offset (rather than - for locals)
+
+    Always inside a function:
+        Semant needs to track call frames (similar to how it tracks environments for locals)
+        When in a frame, need to keep track of arguments - all references to arguments mustA
+        so, AstRefSym MUST access frames to know if it's refering to a local or argument (which can be passed in registers or memory)
+
+    add:
+        ;start new frame
+        ;arguments should be in old frame (offset for x and  bp by +4 and +8, respectively)
+        ;   all references to arguments must be made there...
+
+        ;return
+
+    fun main() -> nil {
+        print("hello world")
+    }
+
+    fun add1(x:int, y:int) -> int {
+        return x + y
+    }
+
+    fun add2(x:int, y:int) -> nil {
+        print(x + y)
+    }
+
+
 remove r_tbl and rm_tbl and replace with bit_pattern() method
     this makes it a little robust than requiring tokens types to be in correct order
 
-    Need to automate tests for compiler - refactors are getting dangerous with just hand-written tests
+Automate tests for compiler - refactors are getting dangerous with just hand-written tests
+    have tests test output of programs:
+        print(3)
+        print(4)
 
-Assemble logical operators
-    setg    al
-    setle   al
-    setge   al
-    sete    al
-    setne   al
+        Should print 3 and 4 on separate lines - automate this with bash/python scripts
 
-Arithmetic operators
-    %
-    
 Make new C++ class called Linker (links ELF for now)
     prioritize relocation of code for now (dynamic linking and other fancy stuff comes later)
     link multiple object files (where one has a 'main' function)

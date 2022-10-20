@@ -55,7 +55,10 @@ class Semant {
             {"if", T_IF},
             {"elif", T_ELIF},
             {"else", T_ELSE},
-            {"while", T_WHILE}
+            {"while", T_WHILE},
+            {"fun", T_FUN},
+            {"return", T_RETURN},
+            {"nil", T_NIL}
         }};
     public:
         std::string m_code = "";
@@ -67,6 +70,7 @@ class Semant {
         std::vector<uint8_t> m_buf;
         Environment m_env;
         int m_label_id_counter = 0;
+        Ast* m_compiling_fun = nullptr;
     public:
         void generate_asm(const std::string& input_file, const std::string& output_file);
         void write_op(const char* format, ...);

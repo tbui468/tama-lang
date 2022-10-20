@@ -38,7 +38,8 @@ enum TokenType {
     T_EOF,
     T_COLON,
     T_INT_TYPE,
-    T_NIL_TYPE,
+    T_NIL_TYPE, //Only returned when type checked
+    T_RET_TYPE,
     T_EQUAL,
     T_IDENTIFIER,
     T_TRUE,
@@ -62,6 +63,8 @@ enum TokenType {
     T_L_BRACKET,
     T_R_BRACKET,
     T_COMMA,
+    T_FUN,
+    T_RETURN,
 
     //tokening assembly file
     T_MOV,
