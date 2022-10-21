@@ -29,14 +29,11 @@ class Type {
 class Symbol {
     public:
         std::string m_symbol;
-        //enum TokenType m_dtype;
         Type m_type;
         int m_bp_offset;
     public:
         Symbol(struct Token symbol, Type type, int bp_offset):
             m_symbol(std::string(symbol.start, symbol.len)), m_type(type), m_bp_offset(bp_offset) {}
-        //Symbol(struct Token symbol, struct Token type, int bp_offset): 
-        //    m_symbol(std::string(symbol.start, symbol.len)), m_dtype(type.type), m_bp_offset(bp_offset) {}
 };
 
 class Scope {
@@ -45,15 +42,36 @@ class Scope {
         std::unordered_map<std::string, Symbol> m_symbols;
     public:
         Scope(Scope* next): m_next(next) {}
+        Symbol* get_symbol(struct Token symbol) {
+            std::unordered_map<std::string, Symbol>::iterator it = m_symbols.find(std::string(symbol.start, symbol.len));
+            if (it != m_symbols.end()) {
+                return &(it->second);
+            }
+
+            return nullptr;
+        }
+
+        bool add_symbol(struct Token symbol, Type type) {
+            if (get_symbol(symbol)) {
+                return false; 
+            }
+
+            int offset = 0;
+            m_symbols.insert({std::string(symbol.start, symbol.len), Symbol(symbol, type, offset)});
+
+            return true;
+        }
 };
 
 class Environment {
     public:
         Scope* m_head = nullptr;
     public:
+        //TODO: refactor to get_local()
         Symbol* get_symbol(struct Token symbol) {
             Scope* current = m_head;
             while(current) {
+                //TODO: refactor to use Scope::get_symbol
                 std::unordered_map<std::string, Symbol>::iterator it = current->m_symbols.find(std::string(symbol.start, symbol.len));
                 if (it != current->m_symbols.end()) {
                     return &(it->second);
@@ -63,6 +81,7 @@ class Environment {
 
             return nullptr;
         }
+        //TODO: refactor to local_count
         int symbol_count() {
             int count = 0;
             Scope* current = m_head;
@@ -73,6 +92,7 @@ class Environment {
 
             return count;
         }
+        //TODO: refactor to local_decl_in_current_scope
         bool declared_in_scope(struct Token symbol) {
             if (m_head) {
                 std::unordered_map<std::string, Symbol>::iterator it = m_head->m_symbols.find(std::string(symbol.start, symbol.len));
@@ -83,6 +103,7 @@ class Environment {
 
             return false;
         }
+        //TODO: refactor to add_local
         bool add_symbol(struct Token symbol, Type type) {
             if (declared_in_scope(symbol)) {
                 return false; 

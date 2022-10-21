@@ -57,9 +57,9 @@ Remove most of ast.hpp (and ast.cpp?) since we are using c++ classes as nodes no
 Functions <-----------get functions workings (main first)
 
     AstFunDef needs to add symbol to global environment - then need to check this when functions are called
-        Convert m_envs and Symbol table to using new class Type
-        Ast nodes should return Type when translating now
         Move/rewrite Environment/Scope methods (scope needs more methods for m_globals in Semant.hpp)
+            Symbol *Scope::get_symbol()
+            void Scope::add_symbol()
         Add function definitions to global scope (report error if function is already defined)
         Type check functions in AstCall (report error if function not defined/wrong types)
 

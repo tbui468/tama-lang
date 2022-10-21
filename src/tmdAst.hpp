@@ -280,6 +280,15 @@ class AstFunDef: public Ast {
             return "param";
         }
         Type translate(Semant& s) {
+            std::vector<Type> ptypes = std::vector<Type>();
+            for (Ast* n: m_params) {
+                ptypes.push_back(n->translate(s)); //TODO: this may cause side-effects later...
+            }
+
+            if (!s.m_globals.add_symbol(m_symbol, Type(T_FUN_TYPE, m_ret_type.type, ptypes))) {
+                ems_add(&ems, m_symbol.line, "Syntax Error: Function with name already declared in global scope.");
+            }
+
             s.write_op("%.*s:", m_symbol.len, m_symbol.start);
             s.write_op("    push    %s", "ebp");
             s.write_op("    mov     %s, %s", "ebp", "esp");
@@ -423,7 +432,7 @@ class AstParam: public Ast {
             //Maybe nothing...
             //Really only need to restrict function body from declaring variable with same symbol as formal parameter
             //and check parameters before environment symbols when referencing/reassigning 
-            return Type(T_NIL_TYPE);
+            return Type(m_dtype.type);
         }
 };
 

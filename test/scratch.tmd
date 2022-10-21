@@ -1,6 +1,7 @@
-fun addd() -> nil {
-    print(3)
+fun main() -> nil {
+    return nil
 }
+
 
 
 fun main() -> nil {
