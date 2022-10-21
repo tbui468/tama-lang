@@ -40,6 +40,7 @@ enum TokenType {
     T_INT_TYPE,
     T_NIL_TYPE, //Only returned when type checked
     T_RET_TYPE,
+    T_FUN_TYPE,
     T_EQUAL,
     T_IDENTIFIER,
     T_TRUE,

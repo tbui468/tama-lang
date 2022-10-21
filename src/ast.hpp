@@ -6,11 +6,12 @@
 #include "token.hpp"
 
 class Semant;
+class Type;
 
 class Ast {
     public:
         virtual std::string to_string() = 0;
-        virtual enum TokenType translate(Semant& s) = 0;
+        virtual Type translate(Semant& s) = 0;
 };
 
 //TODO: get rid of this once Semant class works

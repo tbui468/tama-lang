@@ -1,12 +1,17 @@
+fun addd() -> nil {
+    print(3)
+}
+
+
 fun main() -> nil {
     print(42)
     x: int = 0
     while x < 5 {
-        print(x * 3)
+        print(x * 2)
         x = x + 1
     }
 
-    print(40 + 2)
+    print(42)
 
     return nil
 }

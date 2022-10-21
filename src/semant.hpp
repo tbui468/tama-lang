@@ -71,6 +71,7 @@ class Semant {
         Environment m_env;
         int m_label_id_counter = 0;
         Ast* m_compiling_fun = nullptr;
+        Scope m_globals {nullptr};
     public:
         void generate_asm(const std::string& input_file, const std::string& output_file);
         void write_op(const char* format, ...);

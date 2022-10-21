@@ -96,6 +96,16 @@ Ast* Semant::TmdParser::parse_literal() {
     struct Token next = peek_one();
     if (next.type == T_L_PAREN) {
         return parse_group();
+    } else if (next.type == T_IDENTIFIER && peek_two().type == T_L_PAREN) {
+        struct Token sym = next_token();
+        consume_token(T_L_PAREN);
+        std::vector<Ast*> params = std::vector<Ast*>();
+        while (peek_one().type != T_R_PAREN) {
+            params.push_back(parse_expr());
+            if (peek_one().type == T_COMMA)
+               consume_token(T_COMMA); 
+        }
+        return new AstCall(sym, params);
     } else if (next.type == T_IDENTIFIER) {
         return new AstGetSym(next_token());
     } else if (next.type == T_INT) {

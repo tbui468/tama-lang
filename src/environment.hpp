@@ -1,25 +1,53 @@
 #ifndef ENVIRONMENT_HPP
 #define ENVIRONMENT_HPP
 
+
+class Type {
+    public:
+        //if m_dtype == T_FUN_TYPE, then m_rtype and m_params can be used to find function type
+        enum TokenType m_dtype;
+        enum TokenType m_rtype;
+        std::vector<Type> m_ptypes;
+    public:
+        Type(enum TokenType dtype, enum TokenType rtype, std::vector<Type> params):
+            m_dtype(dtype), m_rtype(rtype), m_ptypes(params) {}
+        Type(enum TokenType dtype): m_dtype(dtype), m_rtype(T_NIL_TYPE), m_ptypes(std::vector<Type>()) {}
+        bool is_of_type(const Type& other) {
+            if (m_dtype != other.m_dtype) return false;
+            if (m_ptypes.size() != other.m_ptypes.size()) return false;
+
+            if (m_dtype == T_FUN_TYPE) {
+                for (int i = 0; i < m_ptypes.size(); i++) {
+                    if (!m_ptypes.at(i).is_of_type(other.m_ptypes.at(i))) return false;
+                }
+            }
+
+            return true;
+        }
+};
+
 class Symbol {
     public:
         std::string m_symbol;
-        enum TokenType m_dtype;
+        //enum TokenType m_dtype;
+        Type m_type;
         int m_bp_offset;
     public:
-        Symbol(struct Token symbol, struct Token type, int bp_offset): 
-            m_symbol(std::string(symbol.start, symbol.len)), m_dtype(type.type), m_bp_offset(bp_offset) {}
+        Symbol(struct Token symbol, Type type, int bp_offset):
+            m_symbol(std::string(symbol.start, symbol.len)), m_type(type), m_bp_offset(bp_offset) {}
+        //Symbol(struct Token symbol, struct Token type, int bp_offset): 
+        //    m_symbol(std::string(symbol.start, symbol.len)), m_dtype(type.type), m_bp_offset(bp_offset) {}
+};
+
+class Scope {
+    public:
+        Scope* m_next;
+        std::unordered_map<std::string, Symbol> m_symbols;
+    public:
+        Scope(Scope* next): m_next(next) {}
 };
 
 class Environment {
-    private:
-        class Scope {
-            public:
-                Scope* m_next;
-                std::unordered_map<std::string, Symbol> m_symbols;
-            public:
-                Scope(Scope* next): m_next(next) {}
-        };
     public:
         Scope* m_head = nullptr;
     public:
@@ -55,7 +83,7 @@ class Environment {
 
             return false;
         }
-        bool add_symbol(struct Token symbol, struct Token type) {
+        bool add_symbol(struct Token symbol, Type type) {
             if (declared_in_scope(symbol)) {
                 return false; 
             }

@@ -14,17 +14,16 @@ class AstBinary: public Ast {
         std::string to_string() {
             return "binary";
         }
-        enum TokenType translate(Semant& s) {
-            enum TokenType ret_type = T_NIL_TYPE;
-            enum TokenType left_type = m_left->translate(s);
-            enum TokenType right_type = m_right->translate(s);
-            if (left_type != right_type) {
+        Type translate(Semant& s) {
+            Type ret_type = Type(T_NIL_TYPE);
+            Type left_type = m_left->translate(s);
+            Type right_type = m_right->translate(s);
+            if (!left_type.is_of_type(right_type)) {
                 ems_add(&ems, m_op.line, "Type Error: Left and right types don't match!");
-                ret_type = T_NIL_TYPE; //TODO: Should be error type to avoid same error message cascade 
             } else if (m_op.type == T_PLUS || m_op.type == T_MINUS || m_op.type == T_SLASH || m_op.type == T_STAR) {
-                ret_type = T_INT_TYPE;
+                ret_type = Type(T_INT_TYPE);
             } else {
-                ret_type = T_BOOL_TYPE;
+                ret_type = Type(T_BOOL_TYPE);
             }
 
             s.write_op("    pop     %s", "ebx");
@@ -98,15 +97,17 @@ class AstUnary: public Ast {
         std::string to_string() {
             return "unary";
         }
-        enum TokenType translate(Semant& s) {
-            enum TokenType ret_type = m_right->translate(s);
+        Type translate(Semant& s) {
+            Type ret_type = m_right->translate(s);
 
             s.write_op("    pop     %s", "eax");
 
-            if (ret_type == T_INT_TYPE) {
+            if (ret_type.m_dtype == T_INT_TYPE) {
                 s.write_op("    neg     %s", "eax");
-            } else if (ret_type == T_BOOL_TYPE) {
+            } else if (ret_type.m_dtype == T_BOOL_TYPE) {
                 s.write_op("    xor     %s, %d", "eax", 1); 
+            } else {
+                ems_add(&ems, m_op.line, "Unary expression does not support that operator.");
             }
 
             s.write_op("    push    %s", "eax");
@@ -121,7 +122,7 @@ class AstLiteral: public Ast {
         std::string to_string() {
             return "literal";
         }
-        enum TokenType translate(Semant& s) {
+        Type translate(Semant& s) {
             if (m_lexeme.type == T_INT) {
                 s.write_op("    push    %.*s", m_lexeme.len, m_lexeme.start);
             } else if (m_lexeme.type == T_TRUE) {
@@ -136,12 +137,12 @@ class AstLiteral: public Ast {
 
             switch (m_lexeme.type) {
                 case T_INT:
-                    return T_INT_TYPE;
+                    return Type(T_INT_TYPE);
                 case T_TRUE:
                 case T_FALSE:
-                    return T_BOOL_TYPE;
+                    return Type(T_BOOL_TYPE);
                 default:
-                    return T_NIL_TYPE;
+                    return Type(T_NIL_TYPE);
             }
         }
 };
@@ -153,12 +154,12 @@ class AstPrint: public Ast {
         std::string to_string() {
             return "print";
         }
-        enum TokenType translate(Semant& s) {
-            enum TokenType arg_type = m_arg->translate(s);
+        Type translate(Semant& s) {
+            Type arg_type = m_arg->translate(s);
 
-            if (arg_type == T_INT_TYPE) {
+            if (arg_type.m_dtype == T_INT_TYPE) {
                 s.write_op("    call    %s", "_print_int");
-            } else if (arg_type == T_BOOL_TYPE) {
+            } else if (arg_type.m_dtype == T_BOOL_TYPE) {
                 s.write_op("    call    %s", "_print_bool");
             }
             s.write_op("    add     %s, %d", "esp", 4);
@@ -166,7 +167,7 @@ class AstPrint: public Ast {
             s.write_op("    push    %s", "0xa");
             s.write_op("    call    %s", "_print_char");
             s.write_op("    add     %s, %d", "esp", 4);
-            return T_NIL_TYPE;
+            return Type(T_NIL_TYPE);
         }
 };
 
@@ -177,11 +178,11 @@ class AstExprStmt: public Ast {
         std::string to_string() {
             return "exprstmt";
         }
-        enum TokenType translate(Semant& s) {
-            enum TokenType expr_type = m_expr->translate(s);
+        Type translate(Semant& s) {
+            Type expr_type = m_expr->translate(s);
 
             s.write_op("    pop     %s", "ebx");
-            return expr_type;
+            return Type(T_NIL_TYPE);
         }
 };
 
@@ -194,9 +195,9 @@ class AstDeclSym: public Ast {
         std::string to_string() {
             return "declvar";
         }
-        enum TokenType translate(Semant& s) {
-            enum TokenType right_type = m_value->translate(s);
-            if (right_type != m_type.type) {
+        Type translate(Semant& s) {
+            Type right_type = m_value->translate(s);
+            if (right_type.m_dtype != m_type.type) {
                 ems_add(&ems, m_symbol.line, "Type Error: Declaration type and assigned value type don't match!");
             }
 
@@ -204,7 +205,7 @@ class AstDeclSym: public Ast {
                 ems_add(&ems, m_symbol.line, "Syntax Error: Local symbol already declared in this scope!");
             }
 
-            s.m_env.add_symbol(m_symbol, m_type);
+            s.m_env.add_symbol(m_symbol, Type(m_type.type));
 
             //local variable is on stack at this point
             return right_type;
@@ -218,15 +219,15 @@ class AstGetSym: public Ast {
         std::string to_string() {
             return "getvar";
         }
-        enum TokenType translate(Semant& s) {
+        Type translate(Semant& s) {
             Symbol* sym = s.m_env.get_symbol(m_symbol);
 
-            enum TokenType ret_type = T_NIL_TYPE; //TODO: Should be error type to avoid multiple error messages
+            Type ret_type = Type(T_NIL_TYPE); //TODO: Should be error type to avoid multiple error messages
 
             if (!sym) {
                 ems_add(&ems, m_symbol.line, "Syntax Error: Variable not declared!");
             } else {
-                ret_type = sym->m_dtype;
+                ret_type = sym->m_type;
             }
 
             s.write_op("    mov     %s, [%s - %d]", "eax", "ebp", 4 * (sym->m_bp_offset + 1));
@@ -244,15 +245,15 @@ class AstSetSym: public Ast {
         std::string to_string() {
             return "setvar";
         }
-        enum TokenType translate(Semant& s) {
+        Type translate(Semant& s) {
             Symbol *sym = s.m_env.get_symbol(m_symbol);
-            enum TokenType ret_type = T_NIL_TYPE; //TODO: should have special error type to avoid repeated error messages
+            Type ret_type = Type(T_NIL_TYPE); //TODO: should have special error type to avoid repeated error messages
 
             if (!sym) {
                 ems_add(&ems, m_symbol.line, "Syntax Error: Variable not declared!");
             } else {
-                enum TokenType assigned_type = m_value->translate(s);
-                if (sym->m_dtype != assigned_type) {
+                Type assigned_type = m_value->translate(s);
+                if (!sym->m_type.is_of_type(assigned_type)) {
                     ems_add(&ems, m_symbol.line, "Type Error: Declaration type and assigned value type don't match!");
                 } else {
                     ret_type = assigned_type;
@@ -278,10 +279,12 @@ class AstFunDef: public Ast {
         std::string to_string() {
             return "param";
         }
-        enum TokenType translate(Semant& s) {
+        Type translate(Semant& s) {
             s.write_op("%.*s:", m_symbol.len, m_symbol.start);
             s.write_op("    push    %s", "ebp");
             s.write_op("    mov     %s, %s", "ebp", "esp");
+
+            //TODO: need to compile parameters
 
             s.m_compiling_fun = this;
             m_body->translate(s);
@@ -290,7 +293,7 @@ class AstFunDef: public Ast {
             s.write_op("__%.*s_ret:", m_symbol.len, m_symbol.start);
             s.write_op("    pop     %s", "ebp");
             s.write_op("    ret");
-            return T_NIL_TYPE;
+            return Type(T_NIL_TYPE);
         }
 };
 
@@ -301,11 +304,11 @@ class AstBlock: public Ast {
         std::string to_string() {
             return "block";
         }
-        enum TokenType translate(Semant& s) {
+        Type translate(Semant& s) {
             s.m_env.begin_scope();
             for (Ast* n: m_stmts) {
-                enum TokenType type = n->translate(s);
-                if (type == T_RET_TYPE) {
+                Type type = n->translate(s);
+                if (type.m_dtype == T_RET_TYPE) {
                     AstFunDef* n = dynamic_cast<AstFunDef*>(s.m_compiling_fun);
                     int sym_count = s.m_env.symbol_count(); 
                     s.write_op("    add     %s, %d", "esp", 4 * sym_count);
@@ -315,7 +318,7 @@ class AstBlock: public Ast {
             }
             int pop_count = s.m_env.end_scope();
             s.write_op("    add     %s, %d", "esp", 4 * pop_count);
-            return T_NIL_TYPE;
+            return Type(T_NIL_TYPE);
         }
 };
 
@@ -329,9 +332,9 @@ class AstIf: public Ast {
         std::string to_string() {
             return "if";
         }
-        enum TokenType translate(Semant& s) {
-            enum TokenType condition_type = m_condition->translate(s);
-            if (condition_type != T_BOOL_TYPE) {
+        Type translate(Semant& s) {
+            Type condition_type = m_condition->translate(s);
+            if (condition_type.m_dtype != T_BOOL_TYPE) {
                 ems_add(&ems, m_t.line, "Syntax Error: 'if' keyword must be followed by boolean expression.");
             }
 
@@ -351,7 +354,7 @@ class AstIf: public Ast {
 
             s.write_op("if_end%d:", id);
 
-            return T_NIL_TYPE;
+            return Type(T_NIL_TYPE);
         }
 };
 
@@ -365,22 +368,22 @@ class AstWhile: public Ast {
         std::string to_string() {
             return "while";
         }
-        enum TokenType translate(Semant& s) {
+        Type translate(Semant& s) {
             int id = s.generate_label_id();
 
             s.write_op("    jmp     %s%d", "while_condition", id);
             s.write_op("%s%d:", "while_block", id);
             m_while_block->translate(s);
             s.write_op("%s%d:", "while_condition", id);
-            enum TokenType condition_type = m_condition->translate(s);
-            if (condition_type != T_BOOL_TYPE) {
+            Type condition_type = m_condition->translate(s);
+            if (condition_type.m_dtype != T_BOOL_TYPE) {
                 ems_add(&ems, m_t.line, "Type Error: 'while' keyword must be followed by boolean expression.");
             }
             s.write_op("    pop     %s", "eax");
             s.write_op("    cmp     %s, %d", "eax", 1);
             s.write_op("    je      while_block%d", id);
 
-            return T_NIL_TYPE;
+            return Type(T_NIL_TYPE);
         }
 };
 
@@ -395,12 +398,14 @@ class AstCall: public Ast {
             return "call";
         }
 
-        enum TokenType translate(Semant& s) {
+        Type translate(Semant& s) {
             //TODO: look up function in environment (to get return type, parameter types, etc)
             //evaluate arguments in reverse order and type check
             //call symbol
             //offset stack pointer to remove arguments
+            //push eax onto stack (return value)
             //return ret_type
+            return Type(T_NIL_TYPE);
         }
 };
 
@@ -413,9 +418,12 @@ class AstParam: public Ast {
         std::string to_string() {
             return "param";
         }
-        enum TokenType translate(Semant& s) {
+        Type translate(Semant& s) {
             //TODO: how do I want to do this?
-            return T_NIL_TYPE;
+            //Maybe nothing...
+            //Really only need to restrict function body from declaring variable with same symbol as formal parameter
+            //and check parameters before environment symbols when referencing/reassigning 
+            return Type(T_NIL_TYPE);
         }
 };
 
@@ -428,21 +436,21 @@ class AstReturn: public Ast {
         std::string to_string() {
             return "return";
         }
-        enum TokenType translate(Semant& s) {
+        Type translate(Semant& s) {
             if (!s.m_compiling_fun) {
                 ems_add(&ems, m_return.line, "Synax Error: 'return' can only be used inside a function definition.");
-                return T_NIL_TYPE;
+                return Type(T_NIL_TYPE);
             }
 
-            enum TokenType ret_type = m_expr->translate(s);
+            Type ret_type = m_expr->translate(s);
             AstFunDef* n = dynamic_cast<AstFunDef*>(s.m_compiling_fun);
-            if (ret_type != n->m_ret_type.type) {
+            if (ret_type.m_dtype != n->m_ret_type.type) {
                 ems_add(&ems, m_return.line, "Synax Error: return data type does not match function return type.");
             }
 
             s.write_op("    pop     %s", "eax");
             
-            return T_RET_TYPE;
+            return Type(T_RET_TYPE);
         }
 };
 
