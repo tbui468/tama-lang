@@ -41,7 +41,7 @@ void Semant::translate() {
     std::string start = "org     0x08048000\n"
                         "_start:\n"
                         "    mov     ebp, esp\n"
-                        "    call    main\n"
+                        "    call    __main\n"
                         "    mov     ebx, 0\n"
                         "    mov     eax, 0x01\n"
                         "    int     0x80\n";

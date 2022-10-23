@@ -1,4 +1,4 @@
-fun bad(x: int, y: int) -> int {
+fun add(x: int, y: int) -> int {
     return x + y
 }
 
@@ -11,9 +11,9 @@ fun main() -> nil {
         x = x + 1
     }
 
-    z: int = bad(20, 22)
+    z: int = add(24, 2)
     print(z)
-    print(bad(39, 3))
+    print(add(39, 8))
 
     return nil
 }

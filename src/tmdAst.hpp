@@ -211,7 +211,7 @@ class AstFunDef: public Ast {
                 ems_add(&ems, m_symbol.line, "Syntax Error: Function with name already declared in global scope.");
             }
 
-            s.write_op("%.*s:", m_symbol.len, m_symbol.start);
+            s.write_op("__%.*s:", m_symbol.len, m_symbol.start);
             s.write_op("    push    %s", "ebp");
             s.write_op("    mov     %s, %s", "ebp", "esp");
 
@@ -430,17 +430,17 @@ class AstIf: public Ast {
 
             s.write_op("    pop     %s", "eax");
             s.write_op("    cmp     %s, %d", "eax", 0);
-            s.write_op("    je      else_block%d", id);
+            s.write_op("    je      __else_block%d", id);
 
             m_then_block->translate(s);
-            s.write_op("    jmp     if_end%d", id);
-            s.write_op("else_block%d:", id);
+            s.write_op("    jmp     __if_end%d", id);
+            s.write_op("__else_block%d:", id);
 
             if (m_else_block) {
                 m_else_block->translate(s);
             }
 
-            s.write_op("if_end%d:", id);
+            s.write_op("__if_end%d:", id);
 
             return Type(T_NIL_TYPE);
         }
@@ -459,17 +459,17 @@ class AstWhile: public Ast {
         Type translate(Semant& s) {
             int id = s.generate_label_id();
 
-            s.write_op("    jmp     %s%d", "while_condition", id);
-            s.write_op("%s%d:", "while_block", id);
+            s.write_op("    jmp     %s%d", "__while_condition", id);
+            s.write_op("%s%d:", "__while_block", id);
             m_while_block->translate(s);
-            s.write_op("%s%d:", "while_condition", id);
+            s.write_op("%s%d:", "__while_condition", id);
             Type condition_type = m_condition->translate(s);
             if (condition_type.m_dtype != T_BOOL_TYPE) {
                 ems_add(&ems, m_t.line, "Type Error: 'while' keyword must be followed by boolean expression.");
             }
             s.write_op("    pop     %s", "eax");
             s.write_op("    cmp     %s, %d", "eax", 1);
-            s.write_op("    je      while_block%d", id);
+            s.write_op("    je      __while_block%d", id);
 
             return Type(T_NIL_TYPE);
         }
@@ -504,7 +504,7 @@ class AstCall: public Ast {
                 }
             }
 
-            s.write_op("    call    %.*s", m_symbol.len, m_symbol.start);
+            s.write_op("    call    __%.*s", m_symbol.len, m_symbol.start);
             s.write_op("    add     %s, %d", "esp", m_args.size() * 4);
             s.write_op("    push    %s", "eax");
 

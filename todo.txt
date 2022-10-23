@@ -52,14 +52,6 @@ Modules after adding in IR:
 
 ******************************************Refactor to C++*********************************
 
-Need to prepend function names with two underscores (right now, naming a function 'add' will clash with assembly)
-    have all assembly functions use __ so that we don't have label collisions
-    have labels internal to routines use __[routine_name]_[label_name] (essentially namespacing internal labels)
-        eg __printint_end:
-
-remove r_tbl and rm_tbl and replace with bit_pattern() method
-    this makes it a little robust than requiring tokens types to be in correct order
-
 Make new C++ class called Linker (links ELF for now)
     prioritize relocation of code for now (dynamic linking and other fancy stuff comes later)
     link multiple object files (where one has a 'main' function)
