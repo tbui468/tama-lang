@@ -15,12 +15,11 @@
 
 class Assembler {
     public:
-        //Switch to hex << 6 format for easier reading
         inline static std::array<uint8_t, 4> mod_tbl {{
-            0x00,
-            0x40,
-            0x80,
-            0xc0    //r/m is register
+            0x00 << 6,
+            0x01 << 6,
+            0x02 << 6,
+            0x03 << 6
         }};
 
         enum class OpMod {
@@ -30,30 +29,6 @@ class Assembler {
             MOD_REG
         };
 
-        //registers table indices should match with enum TokenType register values
-        //00xxx000
-        inline static std::array<uint8_t, 8> r_tbl {{
-            0x00 << 3,   //eax
-            0x01 << 3,
-            0x02 << 3,
-            0x03 << 3,
-            0x04 << 3,
-            0x05 << 3,
-            0x06 << 3,
-            0x07 << 3
-        }};
-
-        //00000xxx
-        inline static std::array<uint8_t, 8> rm_tbl {{
-            0x00,   //eax
-            0x01,
-            0x02,
-            0x03,
-            0x04,
-            0x05,
-            0x06,
-            0x07
-        }};
 
         inline static std::vector<struct ReservedWordNew> m_reserved_words {{
             {"mov", T_MOV},
@@ -143,14 +118,14 @@ class Assembler {
                                 a.m_buf.push_back(0x01);
                                 NodeReg32* dst = dynamic_cast<NodeReg32*>(m_left);
                                 NodeReg32* src = dynamic_cast<NodeReg32*>(m_right);
-                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | r_tbl[src->m_t.type] | rm_tbl[dst->m_t.type]);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | src->bit_pattern() << 3 | dst->bit_pattern());
                             } else if (dynamic_cast<NodeReg32*>(m_left) && is_expr(m_right)) {
                                 NodeReg32* reg = dynamic_cast<NodeReg32*>(m_left);
                                 if (reg->m_t.type == T_EAX) {
                                     a.m_buf.push_back(0x05);
                                 } else {
                                     a.m_buf.push_back(0x81);
-                                    a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x00 << 3 | rm_tbl[reg->m_t.type]);
+                                    a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x00 << 3 | reg->bit_pattern());
                                 }
                                 m_right->assemble(a);
                             } else {
@@ -190,7 +165,7 @@ class Assembler {
                                     m_right->assemble(a);
                                 } else {
                                     a.m_buf.push_back(0x81);
-                                    a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x07 << 3 | rm_tbl[reg->m_t.type]);
+                                    a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x07 << 3 | reg->bit_pattern());
                                     m_right->assemble(a);
                                 }
                             } else if (dynamic_cast<NodeReg32*>(m_left) && dynamic_cast<NodeReg32*>(m_right)) {
@@ -210,7 +185,7 @@ class Assembler {
                                 //ff /1 - DEC r/m32
                                 a.m_buf.push_back(0xff);
                                 NodeReg32 *reg = dynamic_cast<NodeReg32*>(m_left);
-                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x01 << 3 | rm_tbl[reg->m_t.type]);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x01 << 3 | reg->bit_pattern());
                             } else {
                                 ems_add(&ems, m_t.line, "Assembler Error: dec only works with registers");
                             }
@@ -221,7 +196,7 @@ class Assembler {
                             if (dynamic_cast<NodeReg32*>(m_left)) {
                                 a.m_buf.push_back(0xf7);
                                 NodeReg32 *reg = dynamic_cast<NodeReg32*>(m_left);
-                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x06 << 3 | rm_tbl[reg->m_t.type]);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x06 << 3 | reg->bit_pattern());
                             } else {
                                 ems_add(&ems, m_t.line, "Assembler Error: div only works with register");
                             }
@@ -234,7 +209,7 @@ class Assembler {
                                 a.m_buf.push_back(0xaf);
                                 NodeReg32* reg = dynamic_cast<NodeReg32*>(m_left);
                                 NodeReg32* r_m = dynamic_cast<NodeReg32*>(m_right);
-                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | r_tbl[reg->m_t.type] | rm_tbl[r_m->m_t.type]);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | reg->bit_pattern() << 3 | r_m->bit_pattern());
                             } else {
                                 ems_add(&ems, m_t.line, "Assembler Error: SUB does not work with those operands.");
                             }
@@ -245,7 +220,7 @@ class Assembler {
                                 //ff /0 - INC r/m32
                                 a.m_buf.push_back(0xff);
                                 NodeReg32 *reg = dynamic_cast<NodeReg32*>(m_left);
-                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x0 << 3 | rm_tbl[reg->m_t.type]);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x0 << 3 | reg->bit_pattern());
                             } else {
                                 ems_add(&ems, m_t.line, "Assembler Error: inc only works with register operands");
                             }
@@ -306,7 +281,7 @@ class Assembler {
                                 a.m_buf.push_back(0x89);
                                 NodeReg32 *dst = dynamic_cast<NodeReg32*>(m_left);
                                 NodeReg32 *src = dynamic_cast<NodeReg32*>(m_right);
-                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | r_tbl[src->m_t.type] | rm_tbl[dst->m_t.type]);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | src->bit_pattern() << 3 | dst->bit_pattern());
                             } else if (dynamic_cast<NodeMem*>(m_left) && dynamic_cast<NodeReg32*>(m_right)) {
                                 //[0x89][01<reg>101][8-bit displacement] register to ebp memory with displacement
                                 a.m_buf.push_back(0x89);
@@ -319,7 +294,7 @@ class Assembler {
                                     printf("Dereferencing only supported with ebp for now!\n");
                                 }
 
-                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_01] | r_tbl[reg->m_t.type] | rm_tbl[base->m_t.type]);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_01] | reg->bit_pattern() << 3 | base->bit_pattern());
 
                                 if (is_expr(mem->m_displacement)) {
                                     int32_t dis = mem->m_displacement->eval();
@@ -342,7 +317,7 @@ class Assembler {
                                     printf("Dereferencing only supported with ebp for now!\n");
                                 }
 
-                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_01] | r_tbl[reg->m_t.type] | rm_tbl[base->m_t.type]);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_01] | reg->bit_pattern() << 3 | base->bit_pattern());
 
                                 if (is_expr(mem->m_displacement)) {
                                     int32_t dis = mem->m_displacement->eval();
@@ -377,7 +352,7 @@ class Assembler {
                                 //F7 /3 - NEG r/m32
                                 a.m_buf.push_back(0xf7);
                                 NodeReg32 *reg = dynamic_cast<NodeReg32*>(m_left);
-                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x03 << 3 | rm_tbl[reg->m_t.type]);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x03 << 3 | reg->bit_pattern());
                             } else {
                                 ems_add(&ems, m_t.line, "Assembler Error: neg only accepts registers as operands");
                             }
@@ -413,7 +388,7 @@ class Assembler {
                                 //ff /6
                                 a.m_buf.push_back(0xff);
                                 NodeReg32* reg = dynamic_cast<NodeReg32*>(m_left);
-                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x06 << 3 | rm_tbl[reg->m_t.type]);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x06 << 3 | reg->bit_pattern());
                             } else {
                                 ems_add(&ems, m_t.line, "Assembler Error: push with those operands not supported");
                             }
@@ -507,7 +482,7 @@ class Assembler {
                                 NodeReg32* r_m = dynamic_cast<NodeReg32*>(m_left);
                                 NodeReg32* reg = dynamic_cast<NodeReg32*>(m_right);
                                 a.m_buf.push_back(0x29); 
-                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | r_tbl[reg->m_t.type] | rm_tbl[r_m->m_t.type]);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | reg->bit_pattern() << 3 | r_m->bit_pattern());
                             } else if (dynamic_cast<NodeReg32*>(m_left) && is_expr(m_right)) {
                                 NodeReg32* reg = dynamic_cast<NodeReg32*>(m_left);
                                 if (reg->m_t.type == T_EAX) {
@@ -517,7 +492,7 @@ class Assembler {
                                 } else {
                                     //81 /5 id - SUB r/m32, imm32
                                     a.m_buf.push_back(0x81);
-                                    a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x5 << 3 | rm_tbl[reg->m_t.type]);
+                                    a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x5 << 3 | reg->bit_pattern());
                                     m_right->assemble(a);
                                 }
                             } else {
@@ -535,7 +510,7 @@ class Assembler {
                                 } else {
                                     //F7 /0 id - TEST r/m32, imm32
                                     a.m_buf.push_back(0xf7);
-                                    a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x0 << 3 | rm_tbl[reg->m_t.type]);
+                                    a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x0 << 3 | reg->bit_pattern());
                                     m_right->assemble(a);
                                 }
                             } else {
@@ -549,7 +524,7 @@ class Assembler {
 
                                 NodeReg32* dst = dynamic_cast<NodeReg32*>(m_left);
                                 NodeReg32* src = dynamic_cast<NodeReg32*>(m_right);
-                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | r_tbl[dst->m_t.type] | rm_tbl[src->m_t.type]);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | dst->bit_pattern() << 3 | src->bit_pattern());
                             } else {
                                 ems_add(&ems, m_t.line, "Assembler Error: xor only works with register operands for now.");
                             }

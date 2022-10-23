@@ -60,8 +60,6 @@ Need to prepend function names with two underscores (right now, naming a functio
 remove r_tbl and rm_tbl and replace with bit_pattern() method
     this makes it a little robust than requiring tokens types to be in correct order
 
-Remove most of ast.hpp (and ast.cpp?) since we are using c++ classes as nodes now
-
 Make new C++ class called Linker (links ELF for now)
     prioritize relocation of code for now (dynamic linking and other fancy stuff comes later)
     link multiple object files (where one has a 'main' function)
