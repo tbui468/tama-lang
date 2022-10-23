@@ -52,41 +52,27 @@ Modules after adding in IR:
 
 ******************************************Refactor to C++*********************************
 
-Remove most of ast.hpp (and ast.cpp?) since we are using c++ classes as nodes now
-
 Functions <-----------get functions workings (main first)
 
-    AstFunDef needs to add symbol to global environment - then need to check this when functions are called
-        Move/rewrite Environment/Scope methods (scope needs more methods for m_globals in Semant.hpp)
-            Symbol *Scope::get_symbol()
-            void Scope::add_symbol()
-        Add function definitions to global scope (report error if function is already defined)
-        Type check functions in AstCall (report error if function not defined/wrong types)
+    AstFunDef needs to be able to use arguments/parameters
+        AstGetSym
+            check m_compiling_fun to see if parameter before checking m_envs
+            if formal parameter, need to access memory in previous frame to get value
+            otherwise get the local variable
+        AstSetSym
+            check m_compiling_fun to see if paramter before checking m_envs
+            if formal parameter, need to access memory in previous frame to set value
+            otherwise set the local variable
 
     Need to prepend function names with two underscores (right now, naming a function 'add' will clash with assembly)
         have all assembly functions use __ so that we don't have label collisions
         have labels internal to routines use __[routine_name]_[label_name] (essentially namespacing internal labels)
             eg __printint_end:
 
-    Function calls - AstCall
-        eval and push arguments onto stack in reverse order
-        call function
-        return value is in eax
-        add to esp to remove arguments
-        push eax onto stack 
-
-    Need to compile params in AstFunDef and AstParam
-        this will affect AstGetSym and AstSetSym - they need to check parameters before locals for symbol
-
 remove r_tbl and rm_tbl and replace with bit_pattern() method
     this makes it a little robust than requiring tokens types to be in correct order
 
-Automate tests for compiler - refactors are getting dangerous with just hand-written tests
-    have tests test output of programs:
-        print(3)
-        print(4)
-
-        Should print 3 and 4 on separate lines - automate this with bash/python scripts
+Remove most of ast.hpp (and ast.cpp?) since we are using c++ classes as nodes now
 
 Make new C++ class called Linker (links ELF for now)
     prioritize relocation of code for now (dynamic linking and other fancy stuff comes later)
@@ -111,9 +97,14 @@ Make new C++ class called Linker (links ELF for now)
 
         Running out.bin should print 5 and 8
 
-Split semantic analysis and code generation in TmdAst
-    analyze() - type check and check definitions, etc
-    translate() - translate to IR (currently going straight to assembly)
+Automate tests for compiler - refactors are getting dangerous with just hand-written tests
+    have tests test output of programs:
+        print(3)
+        print(4)
+
+        Should print 3 and 4 on separate lines - automate this with bash/python scripts
+
+Have Semant Ast translate into IrT instead of x86 assembly
 
     Get something simple working end-to-end (these three Irt nodes should be enough ...?)
         Expr:

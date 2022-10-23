@@ -105,6 +105,7 @@ Ast* Semant::TmdParser::parse_literal() {
             if (peek_one().type == T_COMMA)
                consume_token(T_COMMA); 
         }
+        consume_token(T_R_PAREN);
         return new AstCall(sym, params);
     } else if (next.type == T_IDENTIFIER) {
         return new AstGetSym(next_token());

@@ -1,6 +1,8 @@
 #ifndef TMD_AST_HPP
 #define TMD_AST_HPP
 
+#include <cstring>
+
 #include "ast.hpp"
 #include "semant.hpp"
 
@@ -186,86 +188,6 @@ class AstExprStmt: public Ast {
         }
 };
 
-class AstDeclSym: public Ast {
-    public:
-        struct Token m_symbol;
-        struct Token m_type;
-        Ast* m_value;
-        AstDeclSym(struct Token symbol, struct Token type, Ast* value): m_symbol(symbol), m_type(type), m_value(value) {}
-        std::string to_string() {
-            return "declvar";
-        }
-        Type translate(Semant& s) {
-            Type right_type = m_value->translate(s);
-            if (right_type.m_dtype != m_type.type) {
-                ems_add(&ems, m_symbol.line, "Type Error: Declaration type and assigned value type don't match!");
-            }
-
-            if (s.m_env.declared_in_scope(m_symbol)) {
-                ems_add(&ems, m_symbol.line, "Syntax Error: Local symbol already declared in this scope!");
-            }
-
-            s.m_env.add_symbol(m_symbol, Type(m_type.type));
-
-            //local variable is on stack at this point
-            return right_type;
-        }
-};
-
-class AstGetSym: public Ast {
-    public:
-        struct Token m_symbol;
-        AstGetSym(struct Token symbol): m_symbol(symbol) {}
-        std::string to_string() {
-            return "getvar";
-        }
-        Type translate(Semant& s) {
-            Symbol* sym = s.m_env.get_symbol(m_symbol);
-
-            Type ret_type = Type(T_NIL_TYPE); //TODO: Should be error type to avoid multiple error messages
-
-            if (!sym) {
-                ems_add(&ems, m_symbol.line, "Syntax Error: Variable not declared!");
-            } else {
-                ret_type = sym->m_type;
-            }
-
-            s.write_op("    mov     %s, [%s - %d]", "eax", "ebp", 4 * (sym->m_bp_offset + 1));
-            s.write_op("    push    %s", "eax");
-            
-            return ret_type;
-        }
-};
-
-class AstSetSym: public Ast {
-    public:
-        struct Token m_symbol;
-        Ast* m_value;
-        AstSetSym(struct Token symbol, Ast* value): m_symbol(symbol), m_value(value) {}
-        std::string to_string() {
-            return "setvar";
-        }
-        Type translate(Semant& s) {
-            Symbol *sym = s.m_env.get_symbol(m_symbol);
-            Type ret_type = Type(T_NIL_TYPE); //TODO: should have special error type to avoid repeated error messages
-
-            if (!sym) {
-                ems_add(&ems, m_symbol.line, "Syntax Error: Variable not declared!");
-            } else {
-                Type assigned_type = m_value->translate(s);
-                if (!sym->m_type.is_of_type(assigned_type)) {
-                    ems_add(&ems, m_symbol.line, "Type Error: Declaration type and assigned value type don't match!");
-                } else {
-                    ret_type = assigned_type;
-                }
-            }
-
-            s.write_op("    pop     %s", "eax");
-            s.write_op("    mov     [%s - %d], %s", "ebp", 4 * (sym->m_bp_offset + 1), "eax");
-            s.write_op("    push    %s", "eax");
-            return ret_type;
-        }
-};
 
 class AstFunDef: public Ast {
     public:
@@ -277,7 +199,7 @@ class AstFunDef: public Ast {
         AstFunDef(struct Token symbol, std::vector<Ast*> params, struct Token ret_type, Ast* body):
             m_symbol(symbol), m_params(params), m_ret_type(ret_type), m_body(body) {}
         std::string to_string() {
-            return "param";
+            return "function definition";
         }
         Type translate(Semant& s) {
             std::vector<Type> ptypes = std::vector<Type>();
@@ -303,6 +225,163 @@ class AstFunDef: public Ast {
             s.write_op("    pop     %s", "ebp");
             s.write_op("    ret");
             return Type(T_NIL_TYPE);
+        }
+};
+
+
+class AstParam: public Ast {
+    public:
+        struct Token m_symbol;
+        struct Token m_dtype;
+    public:
+        AstParam(struct Token symbol, struct Token dtype): m_symbol(symbol), m_dtype(dtype) {}
+        std::string to_string() {
+            return "param";
+        }
+        Type translate(Semant& s) {
+            //TODO: how do I want to do this?
+            //Maybe nothing...
+            //Really only need to restrict function body from declaring variable with same symbol as formal parameter
+            //and check parameters before environment symbols when referencing/reassigning 
+            return Type(m_dtype.type);
+        }
+};
+
+
+class AstDeclSym: public Ast {
+    public:
+        struct Token m_symbol;
+        struct Token m_type;
+        Ast* m_value;
+        AstDeclSym(struct Token symbol, struct Token type, Ast* value): m_symbol(symbol), m_type(type), m_value(value) {}
+        std::string to_string() {
+            return "declvar";
+        }
+        Type translate(Semant& s) {
+            AstFunDef *f = dynamic_cast<AstFunDef*>(s.m_compiling_fun);
+            for (Ast* n: f->m_params) {
+                AstParam* p = dynamic_cast<AstParam*>(n);
+                if (strncmp(p->m_symbol.start, m_symbol.start, m_symbol.len) == 0) {
+                    ems_add(&ems, m_symbol.line, "Syntax Error: Formal parameter already declared using symbol");
+                    break;
+                }
+            }
+
+            Type right_type = m_value->translate(s);
+            if (right_type.m_dtype != m_type.type) {
+                ems_add(&ems, m_symbol.line, "Type Error: Declaration type and assigned value type don't match!");
+            }
+
+            if (s.m_env.declared_in_scope(m_symbol)) {
+                ems_add(&ems, m_symbol.line, "Syntax Error: Local symbol already declared in this scope!");
+            }
+
+            s.m_env.add_symbol(m_symbol, Type(m_type.type));
+
+            //local variable is on stack at this point
+            return right_type;
+        }
+};
+
+class AstGetSym: public Ast {
+    public:
+        struct Token m_symbol;
+        AstGetSym(struct Token symbol): m_symbol(symbol) {}
+        std::string to_string() {
+            return "getvar";
+        }
+        Type translate(Semant& s) {
+            int arg_offset = -1;
+            AstFunDef *f = dynamic_cast<AstFunDef*>(s.m_compiling_fun);
+            for (int i = 0; i < f->m_params.size(); i++) {
+                Ast* n = f->m_params[i];
+                AstParam* p = dynamic_cast<AstParam*>(n);
+                if (strncmp(p->m_symbol.start, m_symbol.start, m_symbol.len) == 0) {
+                    arg_offset = i;
+                    break;
+                }
+            }
+
+            if (arg_offset == -1) { //symbol is local
+                Symbol* sym = s.m_env.get_symbol(m_symbol);
+
+                if (!sym) {
+                    ems_add(&ems, m_symbol.line, "Syntax Error: Variable not declared!");
+                    return Type(T_NIL_TYPE);
+                }
+
+                s.write_op("    mov     %s, [%s - %d]", "eax", "ebp", 4 * (sym->m_bp_offset + 1));
+                s.write_op("    push    %s", "eax");
+                
+                return sym->m_type;
+            } else { //symbol is formal parameter
+                s.write_op("    mov     %s, [%s - %d]", "eax", "ebp", 4 * (-arg_offset - 2));
+                s.write_op("    push    %s", "eax");
+
+                Symbol *sym = s.m_globals.get_symbol(f->m_symbol);
+                Type type = sym->m_type.m_ptypes[arg_offset];
+
+                return type;
+            }
+
+        }
+};
+
+class AstSetSym: public Ast {
+    public:
+        struct Token m_symbol;
+        Ast* m_value;
+        AstSetSym(struct Token symbol, Ast* value): m_symbol(symbol), m_value(value) {}
+        std::string to_string() {
+            return "setvar";
+        }
+        Type translate(Semant& s) {
+
+            int arg_offset = -1;
+            AstFunDef *f = dynamic_cast<AstFunDef*>(s.m_compiling_fun);
+            for (int i = 0; i < f->m_params.size(); i++) {
+                Ast* n = f->m_params[i];
+                AstParam* p = dynamic_cast<AstParam*>(n);
+                if (strncmp(p->m_symbol.start, m_symbol.start, m_symbol.len) == 0) {
+                    arg_offset = i;
+                    break;
+                }
+            }
+
+            if (arg_offset == -1) { //symbol is a local
+                Symbol *sym = s.m_env.get_symbol(m_symbol);
+
+                if (!sym) {
+                    ems_add(&ems, m_symbol.line, "Syntax Error: Variable not declared!");
+                    return Type(T_NIL_TYPE);
+                }
+
+                Type assigned_type = m_value->translate(s);
+                if (!sym->m_type.is_of_type(assigned_type)) {
+                    ems_add(&ems, m_symbol.line, "Type Error: Declaration type and assigned value type don't match!");
+                    return Type(T_NIL_TYPE);
+                }
+
+                s.write_op("    pop     %s", "eax");
+                s.write_op("    mov     [%s - %d], %s", "ebp", 4 * (sym->m_bp_offset + 1), "eax");
+                s.write_op("    push    %s", "eax");
+                return assigned_type;
+            } else { //symbol is a formal parameter
+                Type assigned_type = m_value->translate(s);
+                Symbol *sym = s.m_globals.get_symbol(f->m_symbol);
+                Type type = sym->m_type.m_ptypes[arg_offset];
+                if (!type.is_of_type(assigned_type)) {
+                    ems_add(&ems, m_symbol.line, "Type Error: Formal parameter type and assigned value type don't match!");
+                    return Type(T_NIL_TYPE);
+                }
+
+                s.write_op("    pop     %s", "eax");
+                s.write_op("    mov     [%s - %d], %s", "ebp", 4 * (-arg_offset - 2), "eax");
+                s.write_op("    push    %s", "eax");
+
+
+                return type;
+            }
         }
 };
 
@@ -408,31 +487,28 @@ class AstCall: public Ast {
         }
 
         Type translate(Semant& s) {
-            //TODO: look up function in environment (to get return type, parameter types, etc)
-            //evaluate arguments in reverse order and type check
-            //call symbol
-            //offset stack pointer to remove arguments
-            //push eax onto stack (return value)
-            //return ret_type
-            return Type(T_NIL_TYPE);
-        }
-};
+            Symbol *sym = nullptr;
+            if (!(sym = s.m_globals.get_symbol(m_symbol))) {
+                ems_add(&ems, m_symbol.line, "Syntax Error: Function not defined.");
+                return Type(T_NIL_TYPE);
+            }
+            if (m_args.size() != sym->m_type.m_ptypes.size()) {
+                ems_add(&ems, m_symbol.line, "Type Error: Argument count does not match formal parameter count.");
+                return Type(T_NIL_TYPE);
+            }
 
-class AstParam: public Ast {
-    public:
-        struct Token m_symbol;
-        struct Token m_dtype;
-    public:
-        AstParam(struct Token symbol, struct Token dtype): m_symbol(symbol), m_dtype(dtype) {}
-        std::string to_string() {
-            return "param";
-        }
-        Type translate(Semant& s) {
-            //TODO: how do I want to do this?
-            //Maybe nothing...
-            //Really only need to restrict function body from declaring variable with same symbol as formal parameter
-            //and check parameters before environment symbols when referencing/reassigning 
-            return Type(m_dtype.type);
+            for (int i = m_args.size() - 1; i >= 0; i--) {
+                Type arg_type = m_args[i]->translate(s);
+                if (!arg_type.is_of_type(sym->m_type.m_ptypes[i])) {
+                    ems_add(&ems, m_symbol.line, "Type Error: Argument type doesn't match formal parameter type.");
+                }
+            }
+
+            s.write_op("    call    %.*s", m_symbol.len, m_symbol.start);
+            s.write_op("    add     %s, %d", "esp", m_args.size() * 4);
+            s.write_op("    push    %s", "eax");
+
+            return sym->m_type.m_rtype;
         }
 };
 

@@ -1,7 +1,6 @@
-fun main() -> nil {
-    return nil
+fun bad(x: int, y: int) -> int {
+    return x + y
 }
-
 
 
 fun main() -> nil {
@@ -12,7 +11,9 @@ fun main() -> nil {
         x = x + 1
     }
 
-    print(42)
+    z: int = bad(2, 70)
+    print(z)
+    print(bad(12, 30))
 
     return nil
 }
