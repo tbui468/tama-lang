@@ -52,22 +52,10 @@ Modules after adding in IR:
 
 ******************************************Refactor to C++*********************************
 
-Functions <-----------get functions workings (main first)
-
-    AstFunDef needs to be able to use arguments/parameters
-        AstGetSym
-            check m_compiling_fun to see if parameter before checking m_envs
-            if formal parameter, need to access memory in previous frame to get value
-            otherwise get the local variable
-        AstSetSym
-            check m_compiling_fun to see if paramter before checking m_envs
-            if formal parameter, need to access memory in previous frame to set value
-            otherwise set the local variable
-
-    Need to prepend function names with two underscores (right now, naming a function 'add' will clash with assembly)
-        have all assembly functions use __ so that we don't have label collisions
-        have labels internal to routines use __[routine_name]_[label_name] (essentially namespacing internal labels)
-            eg __printint_end:
+Need to prepend function names with two underscores (right now, naming a function 'add' will clash with assembly)
+    have all assembly functions use __ so that we don't have label collisions
+    have labels internal to routines use __[routine_name]_[label_name] (essentially namespacing internal labels)
+        eg __printint_end:
 
 remove r_tbl and rm_tbl and replace with bit_pattern() method
     this makes it a little robust than requiring tokens types to be in correct order
@@ -97,6 +85,11 @@ Make new C++ class called Linker (links ELF for now)
 
         Running out.bin should print 5 and 8
 
+    Assemble the printing functions (print_int, print_bool) into a library ELF, and then use that to test the linker
+        print.lib
+        test.tmd
+            extern print
+
 Automate tests for compiler - refactors are getting dangerous with just hand-written tests
     have tests test output of programs:
         print(3)
@@ -105,6 +98,8 @@ Automate tests for compiler - refactors are getting dangerous with just hand-wri
         Should print 3 and 4 on separate lines - automate this with bash/python scripts
 
 Have Semant Ast translate into IrT instead of x86 assembly
+    Count assembly instructions for a given .tmd program, then implement IR and count instructions again to compare
+        ideally, the number of instructions should be less
 
     Get something simple working end-to-end (these three Irt nodes should be enough ...?)
         Expr:

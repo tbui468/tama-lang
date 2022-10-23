@@ -1,6 +1,5 @@
 set(Sources
     main.cpp
-    ast.cpp
     memory.cpp
     token.cpp
     assembler.cpp
