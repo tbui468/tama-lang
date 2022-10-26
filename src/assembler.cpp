@@ -6,6 +6,31 @@
 
 #include "assembler.hpp"
 
+void Assembler::generate_obj(const std::string& input_file, const std::string& output_file) {
+    /*
+    read(input_file);
+    lex();
+    if (ems.count > 0) return;
+    parse();
+    if (ems.count > 0) return;
+
+    append_relocatable_elf_header();
+    append_program();
+    append_section_header_table();
+
+    if (ems.count > 0) return;
+    write(output_file);*/
+}
+
+
+void Assembler::append_elf_header2() {
+    Elf32ElfHeader eh;
+    m_buf.insert(m_buf.end(), (uint8_t*)&eh, (uint8_t*)&eh + sizeof(Elf32ElfHeader));
+
+    ((Elf32ElfHeader*)(m_buf.data()))->m_ehsize = m_buf.size();
+}
+
+
 void Assembler::emit_code(const std::string& input_file, const std::string& output_file) {
     read(input_file);
     lex();
@@ -224,85 +249,22 @@ bool Assembler::end_of_tokens() {
 /*Translate assembly to machine code*/
 
 void Assembler::append_elf_header() {
-    m_buf.push_back(0x7f);
-    m_buf.push_back('E');
-    m_buf.push_back('L');
-    m_buf.push_back('F');
-    m_buf.push_back(1);
-    m_buf.push_back(1);
-    m_buf.push_back(1);
-    m_buf.push_back(0);
+    Elf32ElfHeader eh;
+    m_buf.insert(m_buf.end(), (uint8_t*)&eh, (uint8_t*)&eh + sizeof(Elf32ElfHeader));
 
-    
-    uint8_t zeros[8] = {0};
-    m_buf.insert(m_buf.end(), zeros, zeros + 8);
-    uint16_t file_type = 2;
-    m_buf.insert(m_buf.end(), (uint8_t*)&file_type, (uint8_t*)&file_type + sizeof(file_type));
-    uint16_t arch_type = 3;
-    m_buf.insert(m_buf.end(), (uint8_t*)&arch_type, (uint8_t*)&arch_type + sizeof(arch_type));
-    uint32_t file_version = 1;
-    m_buf.insert(m_buf.end(), (uint8_t*)&file_version, (uint8_t*)&file_version + sizeof(file_version));
+    ((Elf32ElfHeader*)(m_buf.data()))->m_ehsize = m_buf.size();
 
-    m_program_addr_offset = m_buf.size();     //need to add executable offset (0x08048000)
-    m_buf.insert(m_buf.end(), zeros, zeros + 4);
-
-    m_phdr_addr_offset = m_buf.size();
-    m_buf.insert(m_buf.end(), zeros, zeros + 4);
-
-    m_buf.insert(m_buf.end(), zeros, zeros + 8);
-
-    m_ehdr_size_offset = m_buf.size();
-    m_buf.insert(m_buf.end(), zeros, zeros + 2);
-
-    m_phdr_size_offset = m_buf.size();
-    m_buf.insert(m_buf.end(), zeros, zeros + 2);
-
-    uint16_t phdr_entries = 1;
-    m_buf.insert(m_buf.end(), (uint8_t*)&phdr_entries, (uint8_t*)&phdr_entries + sizeof(uint16_t));
-
-    m_buf.insert(m_buf.end(), zeros, zeros + 6);
-
-    uint16_t ehdr_size = m_buf.size();
-    uint16_t *ptr = (uint16_t*)&m_buf[m_ehdr_size_offset];
-    *ptr = ehdr_size;
 }
 
 void Assembler::append_program_header() {
-    uint32_t phdr_start = m_buf.size();
-    uint32_t *ptr = (uint32_t*)&m_buf[m_phdr_addr_offset];
-    *ptr = phdr_start;
+    Elf32ElfHeader *eh = (Elf32ElfHeader*)m_buf.data();
+    ((Elf32ElfHeader*)m_buf.data())->m_phoff = m_buf.size();
 
-    uint32_t type = 1; //load
-    m_buf.insert(m_buf.end(), (uint8_t*)&type, (uint8_t*)&type + 4);
+    Elf32ProgramHeader ph;
+    m_buf.insert(m_buf.end(), (uint8_t*)&ph, (uint8_t*)&ph + sizeof(Elf32ProgramHeader));
 
-    uint32_t offset = 0;
-    m_buf.insert(m_buf.end(), (uint8_t*)&offset, (uint8_t*)&offset + 4);
+    ((Elf32ElfHeader*)m_buf.data())->m_phentsize = m_buf.size() - eh->m_phoff;
 
-    m_vaddr_offset = m_buf.size();
-    uint32_t vaddr = 0;
-    m_buf.insert(m_buf.end(), (uint8_t*)&vaddr, (uint8_t*)&vaddr + 4);
-
-    m_paddr_offset = m_buf.size();
-    uint32_t paddr = 0;
-    m_buf.insert(m_buf.end(), (uint8_t*)&paddr, (uint8_t*)&paddr + 4);
-
-    m_filesz_offset = m_buf.size();
-    uint32_t filesz = 0;
-    m_buf.insert(m_buf.end(), (uint8_t*)&filesz, (uint8_t*)&filesz + 4);
-
-    m_memsz_offset = m_buf.size();
-    uint32_t memsz = 0;
-    m_buf.insert(m_buf.end(), (uint8_t*)&memsz, (uint8_t*)&memsz + 4);
-
-    uint32_t flags = 5;
-    m_buf.insert(m_buf.end(), (uint8_t*)&flags, (uint8_t*)&flags + 4);
-
-    uint32_t align = 0x1000;
-    m_buf.insert(m_buf.end(), (uint8_t*)&align, (uint8_t*)&align + 4);
-
-    uint16_t phdr_size = m_buf.size() - phdr_start;
-    uint16_t *phdrs_ptr = (uint16_t*)&m_buf[m_phdr_size_offset];
-    *phdrs_ptr = phdr_size;
 }
 
 void Assembler::append_program() {
@@ -315,31 +277,24 @@ void Assembler::append_program() {
         if (!it->second.m_defined) {
             ems_add(&ems, it->second.m_t.line, "Assembling Error: Label '%.*s' not defined.", it->second.m_t.len, it->second.m_t.start);
         } else {
-            m_program_start_addr = it->second.m_addr;
+            ((Elf32ElfHeader*)m_buf.data())->m_entry = it->second.m_addr;
         }
     }
 
-    uint32_t filesz = m_buf.size();
-    uint32_t *ptr = (uint32_t*)&m_buf[m_filesz_offset];
-    *ptr = filesz;
 
-    uint32_t memsz = m_buf.size();
-    uint32_t *ptr2 = (uint32_t*)&m_buf[m_memsz_offset];
-    *ptr2 = memsz;
+    Elf32ProgramHeader *ph = (Elf32ProgramHeader*)(m_buf.data() + ((Elf32ElfHeader*)m_buf.data())->m_phoff);
+    ph->m_filesz = m_buf.size();
+    ph->m_memsz = m_buf.size();
 }
 
 void Assembler::patch_addr_offsets() {
-    uint32_t program_start = m_program_start_addr + m_load_addr;
-    uint32_t *ptr = (uint32_t*)&m_buf[m_program_addr_offset];
-    *ptr = program_start;
+    Elf32ElfHeader *eh = (Elf32ElfHeader*)m_buf.data();
 
-    uint32_t vaddr = m_load_addr;
-    uint32_t *ptr2 = (uint32_t*)&m_buf[m_vaddr_offset];
-    *ptr2 = vaddr;
+    eh->m_entry += m_load_addr;
 
-    uint32_t paddr = m_load_addr;
-    uint32_t *ptr3 = (uint32_t*)&m_buf[m_paddr_offset];
-    *ptr3 = paddr;
+    Elf32ProgramHeader *ph = (Elf32ProgramHeader*)(m_buf.data() + eh->m_phoff);
+    ph->m_vaddr = m_load_addr;
+    ph->m_paddr = m_load_addr;
 }
 
 void Assembler::patch_labels() {

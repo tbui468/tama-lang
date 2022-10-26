@@ -13,8 +13,79 @@
 #include "reserved_word.hpp"
 #include "lexer.hpp"
 
+#define OBJ_FILE_RELOC
+#define OBJ_FILE_EXEC
+
 class Assembler {
     public:
+        struct Elf32ElfHeader {
+            uint8_t	 m_ident[16] = {0x7f, 'E', 'L', 'F', 1, 1, 1, 0,
+                                       0,   0,   0,   0, 0, 0, 0, 0}; /* Magic number and other info */
+            uint16_t m_type = 2;        /* Object file type */
+            uint16_t m_machine = 3;     /* Architecture */
+            uint32_t m_version = 1;     /* Object file version */
+            uint32_t m_entry = 0;       /* Entry point virtual address */
+            uint32_t m_phoff = 0;       /* Program header table file offset */
+            uint32_t m_shoff = 0;       /* Section header table file offset */
+            uint32_t m_flags = 0;       /* Processor-specific flags */
+            uint16_t m_ehsize = 0;      /* ELF header size in bytes */
+            uint16_t m_phentsize = 0;   /* Program header table entry size */
+            uint16_t m_phnum = 1;       /* Program header table entry count */
+            uint16_t m_shentsize = 0;   /* Section header table entry size */
+            uint16_t m_shnum = 0;       /* Section header table entry count */
+            uint16_t m_shstrndx = 0;    /* Section header string table index */
+
+            void print() {
+                printf("type: %d\nmachine: %d\nversion: %d\nentry: 0x%x\nphoff: %d\nshoff: %d\nflags: %d\nehsize: %d\nphentsize: %d\nphnum: %d\n",
+                        m_type, m_machine, m_version, m_entry, m_phoff, m_shoff, m_flags, m_ehsize, m_phentsize, m_phnum);
+            }
+
+        };
+
+        struct Elf32ProgramHeader {
+            uint32_t m_type = 1; //load    /* Segment type */
+            uint32_t m_offset = 0;  /* Segment file offset */
+            uint32_t m_vaddr = 0;   /* Segment virtual address */
+            uint32_t m_paddr = 0;   /* Segment physical address */
+            uint32_t m_filesz = 0;  /* Segment size in file */
+            uint32_t m_memsz = 0;   /* Segment size in memory */
+            uint32_t m_flags = 5;   /* Segment flags */
+            uint32_t m_align = 0x1000;   /* Segment alignment */
+
+            void print() {
+                printf("type: %d\noffset: %d\nvaddr: 0x%x\npaddr: 0x%x\nfilesz: %d\nmemsz: %d\nflags: %d\nalign: 0x%x\n", 
+                        m_type, m_offset, m_vaddr, m_paddr, m_filesz, m_memsz, m_flags, m_align);
+            }
+        };
+
+        struct Elf32SectionHeader {
+            uint32_t m_name;        /* Section name (string tbl index) */
+            uint32_t m_type;        /* Section type */
+            uint32_t m_flags;       /* Section flags */
+            uint32_t m_addr;        /* Section virtual addr at execution */
+            uint32_t m_offset;      /* Section file offset */
+            uint32_t m_size;        /* Section size in bytes */
+            uint32_t m_link;        /* Link to another section */
+            uint32_t m_info;        /* Additional section information */
+            uint32_t m_addralign;   /* Section alignment */
+            uint32_t m_entsize;     /* Entry size if section holds table */
+        };
+
+        struct Elf32Symbol {
+            uint32_t m_name;    /* Symbol name (string tbl index) */
+            uint32_t m_value;   /* Symbol value */
+            uint32_t m_size;    /* Symbol size */
+            uint8_t  m_info;    /* Symbol type and binding */
+            uint8_t  m_other;   /* Symbol visibility */
+            uint16_t m_shndx;   /* Section index */
+        };
+
+
+        struct Elf32Relocation {
+            uint32_t m_offset;  /* Address */
+            uint32_t m_info;    /* Relocation type and symbol index */
+        };
+
         inline static std::array<uint8_t, 4> mod_tbl {{
             0x00 << 6,
             0x01 << 6,
@@ -755,18 +826,10 @@ class Assembler {
         std::vector<uint8_t> m_buf = std::vector<uint8_t>();
         std::unordered_map<std::string, Label> m_labels = std::unordered_map<std::string, Label>();
         Lexer m_lexer;
-        uint32_t m_program_addr_offset = 0;
-        uint32_t m_phdr_addr_offset = 0;
-        uint32_t m_ehdr_size_offset = 0;
-        uint32_t m_phdr_size_offset = 0;
-        uint32_t m_vaddr_offset = 0;
-        uint32_t m_paddr_offset = 0;
-        uint32_t m_filesz_offset = 0;
-        uint32_t m_memsz_offset = 0;
-        uint32_t m_program_start_addr = 0;
         uint32_t m_load_addr = 0;
     public:
         void emit_code(const std::string& input_file, const std::string& output_file);
+        void generate_obj(const std::string& input_file, const std::string& output_file);
     private:
         void read(const std::string& input_file);
         void lex();
@@ -783,6 +846,9 @@ class Assembler {
         struct Token next_token();
         struct Token consume_token(enum TokenType tt);
         bool end_of_tokens();
+
+
+        void append_elf_header2();
 
         void assemble();
         void append_elf_header();

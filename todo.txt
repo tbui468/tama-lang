@@ -1,3 +1,4 @@
+
 Read a little more of Ian Lance Taylor's blog or 'Linkers and Loaders'
     to understand differences between ELF relocatable files and ELF executable files
 Read ELF Specification
@@ -51,6 +52,189 @@ Modules after adding in IR:
         link multiple ELF object files to create executable
 
 ******************************************Refactor to C++*********************************
+Redo writing of ELF header (write to struct and then insert into buffer)
+    this will make things a lot easier since we can set default values
+
+    test new format with compiler
+
+Rewrite examples below so that nasm -f bin <filename> will work
+    need two versions of elf header
+    
+    hex dump main.o and test.o (described below)
+    readelf main.o and test.o
+    the final executable can just be a combined version of main.o and test.o
+
+    test.o
+        [ELF header - 64 bytes including padding]
+        [section headers - 40 bytes each * 5 headers + padding]
+            Null
+            text
+            shstrtab
+            symtab
+            strtab
+        [sections]
+            Null
+            text
+            shstrtab
+                null terminated '.text'
+                null terminated '.shstrtab'
+                null terminated '.symbtab'
+                null terminated '.strtab'
+            symtab
+            strtab
+                00
+                null terminated 'test.asm'
+                null terminated 'myadd'
+
+    main.o - why does this have relocation data? - it calls/requires other object files when linking
+        [ELF header - 64 bytes including padding]
+        [section headers - 40 bytes each * 5 headers + padding]
+            Null
+            text
+            shstrtab
+            symtab
+            strtab
+            text.rela
+        [sections]
+            Null
+            text
+            shstrtab
+            symtab
+            strtab
+                00
+                null terminated 'main.asm'
+                null terminated 'myadd'
+                null terminated '_start'
+            text.rela
+
+
+Link test.o with C program, and run executable
+    assemble: nasm -f elf32 <filename>
+    link:     ld -m elf_i386 <object files>
+
+    main.asm
+        global _start
+        extern myadd
+
+        _start:
+            mov     ebp, esp
+            push    40
+            push    2
+            call    myadd
+            add     esp, 8
+
+            mov     ebx, eax   
+            mov     eax, 0x1 
+            int     0x80
+
+    test.asm
+        global myadd
+
+        myadd:
+            push    ebp
+            mov     ebp, esp
+
+            mov     eax, [ebp + 8]
+            mov     ecx, [ebp + 12]
+            add     eax, ecx 
+
+            mov     ebx, eax
+
+            pop     ebp
+            ret     
+
+Strip all unnecessary sections (.comments, .bss) and try to link again into executable
+
+Use the stripped test.o as a reference target for my assembler
+
+Use readelf to analyze .o files
+    Compile to 32-bit elf:
+        gcc -c -mx32 test.c (will output test.o)
+        gcc -c -m elf_i386 main.c (same as -mx32?)
+        use -fno-asynchronous-unwind-tables to get rid of eh_frame (what's the purpose of this?)
+
+    readelf -h test.o (see header)
+
+    readelf -x .text test.o (hexdump text section)
+
+Sections:
+    .text - actual code
+        ???
+    .symtab - symbol info
+        array of Elf32Sym (16 bytes per entry). See struct Elf32Sym below
+        first entry is null
+    .strtab - string table
+        file name, and any global symbols (also starts with 0x00)
+        first byte is null
+    .shstrtab - section head string table
+        null-terminated section names (starts with 0x00 for some reason...for memory alignment?)
+        first byte is null
+
+struct Elf32Sym {
+    uint32_t m_name; //index into .strtab for first character of symbol
+    uint32_t m_value;
+    uint32_t m_size;
+    uint8_t m_info;
+    uint8_t m_other;
+    uint16_t m_shndx;
+};
+
+struct Elf32Rela {
+    uint32_t m_offset; //offset into section where relocation must happen (for relocatable ELF)
+    uint32_t m_info;  //8 least-sig bits are symbol type, next 8 bits are symbol table index (higher 16 bits unused..?)
+};
+
+Have assembler produce object file that has all required data to make an executable
+    Stop setting the offset in files using org directive
+        org     0x08048000
+        Need to only call this when creating executable
+    Linking format:
+        ELF Header
+        Section 1
+        Section 2
+        ...
+        Section Header Table
+
+
+        Things to consider when creating Section Header Table:
+            e_shentsize - section header entry size in bytes
+            e_shnum - section header count
+            e_shstrndx - section head index of strings
+
+            sections:
+                text
+                symbol table
+                string table
+                relocation
+
+    assemble simple C programs to object files and use elfdump to see sections
+        
+        
+
+    Executable Format:
+        ELF Header
+        Program Header Table
+        Segment 1
+        Segment 2
+        ...
+
+Have linker take in an object file that can be turned into an executable by itself
+
+
+Assembler produces only .o files now
+    Doesn't care about whether 'main' exists or if symbols are defined or not
+    Needs a global offset table to track off offset addresses
+    Needs a symbol table to track all symbols/undefined or not
+Linker can only create an executable (.exe) if:
+    linked files have zero undefined symbols
+    one and only one file has a 'main' function
+    a single object file is acceptable
+
+To test:
+    assemble fun.asm into fun.o
+    assemble test.asm into test.o (without any printing functions)
+    invoke linker to combine two object files into an ELF executable
+
 
 Make new C++ class called Linker (links ELF for now)
     prioritize relocation of code for now (dynamic linking and other fancy stuff comes later)

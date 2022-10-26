@@ -1,19 +1,20 @@
+
 fun add(x: int, y: int) -> int {
     return x + y
 }
 
 
 fun main() -> nil {
-    print(42)
+    print(10)
     x: int = 0
     while x < 5 {
         print(x * 2)
         x = x + 1
     }
 
-    z: int = add(24, 2)
+    z: int = add(10, 1)
     print(z)
-    print(add(39, 8))
+    print(add(40, 2))
 
     return nil
 }

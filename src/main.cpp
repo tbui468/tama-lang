@@ -30,6 +30,8 @@ int main (int argc, char **argv) {
 
     Assembler assembler;
     assembler.emit_code("out.asm", "out.bin");
+
+    //assembler.generate_obj("out.asm", "out.obj");
    
     ems_print(&ems);
     
