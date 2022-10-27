@@ -6,29 +6,25 @@
 
 #include "assembler.hpp"
 
-void Assembler::generate_obj(const std::string& input_file, const std::string& output_file) {
-    /*
+/*
+void Assembler::generate_rela_elf(const std::string& input_file, const std::string& output_file) {
     read(input_file);
     lex();
     if (ems.count > 0) return;
     parse();
     if (ems.count > 0) return;
 
-    append_relocatable_elf_header();
+    //make the actual ELF
+    append_elf_header();
+    append_program_header();
     append_program();
-    append_section_header_table();
+    patch_addr_offsets();
+    patch_labels();
+    patch_rel_jumps();
 
     if (ems.count > 0) return;
-    write(output_file);*/
-}
-
-
-void Assembler::append_elf_header2() {
-    Elf32ElfHeader eh;
-    m_buf.insert(m_buf.end(), (uint8_t*)&eh, (uint8_t*)&eh + sizeof(Elf32ElfHeader));
-
-    ((Elf32ElfHeader*)(m_buf.data()))->m_ehsize = m_buf.size();
-}
+    write(output_file);
+}*/
 
 
 void Assembler::emit_code(const std::string& input_file, const std::string& output_file) {
@@ -37,7 +33,11 @@ void Assembler::emit_code(const std::string& input_file, const std::string& outp
     if (ems.count > 0) return;
     parse();
     if (ems.count > 0) return;
+
+
     assemble();
+
+
     if (ems.count > 0) return;
     write(output_file);
 }

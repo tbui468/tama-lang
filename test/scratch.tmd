@@ -14,7 +14,7 @@ fun main() -> nil {
 
     z: int = add(10, 1)
     print(z)
-    print(add(40, 2))
+    print(add(40, 60))
 
     return nil
 }

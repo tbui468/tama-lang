@@ -86,6 +86,12 @@ class Assembler {
             uint32_t m_info;    /* Relocation type and symbol index */
         };
 
+
+        struct Elf32Section {
+            std::string m_name;
+            std::vector<uint8_t> m_buf;
+        }; 
+
         inline static std::array<uint8_t, 4> mod_tbl {{
             0x00 << 6,
             0x01 << 6,
@@ -847,8 +853,6 @@ class Assembler {
         struct Token consume_token(enum TokenType tt);
         bool end_of_tokens();
 
-
-        void append_elf_header2();
 
         void assemble();
         void append_elf_header();

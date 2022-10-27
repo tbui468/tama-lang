@@ -1,7 +1,6 @@
 
 Read a little more of Ian Lance Taylor's blog or 'Linkers and Loaders'
     to understand differences between ELF relocatable files and ELF executable files
-Read ELF Specification
 Watch 'Understanding Compiler Optimization - Chandler Carruth' on youtube
 
 Start writing out README file
@@ -51,11 +50,40 @@ Modules after adding in IR:
     elfLinker.cpp
         link multiple ELF object files to create executable
 
-******************************************Refactor to C++*********************************
-Redo writing of ELF header (write to struct and then insert into buffer)
-    this will make things a lot easier since we can set default values
 
-    test new format with compiler
+**********************Linker*******************************
+Make all symbols global/external for now without requiring explicitly marking them as such
+
+Need to reenable all warnings and fix those
+
+Need to parameterize writing of ELF header:
+    Assembler always creates relocatable ELF
+    Linker will combine relocatable ELF into executable if all symbols defined/_start defined
+
+    Make .strtab section while assembly instructions:
+       
+    struct Elf32Section {
+        std::string m_name;
+        std::vector<uint8_t> m_buf;
+    }; 
+
+    Each assembler should have an unordered_map of <std::string, Elf32Section>
+        while assembling instructions, need to append to correct section
+
+    struct Elf32StrTabSection {
+        filename
+        any global symbols (only functions for now, but maybe global variables later)
+    };
+    struct Elf32TextSection {
+        write instructions here (currently called m_buf in Assembler)
+    };
+    struct Elf32SymTabSection {
+    };
+    struct Elf32SHStrTabSection {
+        section strings
+    };
+    struct Elf32TextRelaSection {
+    };
 
 Rewrite examples below so that nasm -f bin <filename> will work
     need two versions of elf header
