@@ -21,7 +21,7 @@ class Assembler {
         struct Elf32ElfHeader {
             uint8_t	 m_ident[16] = {0x7f, 'E', 'L', 'F', 1, 1, 1, 0,
                                        0,   0,   0,   0, 0, 0, 0, 0}; /* Magic number and other info */
-            uint16_t m_type = 2;        /* Object file type */
+            uint16_t m_type = 1;        /* Object file type */
             uint16_t m_machine = 3;     /* Architecture */
             uint32_t m_version = 1;     /* Object file version */
             uint32_t m_entry = 0;       /* Entry point virtual address */
@@ -30,8 +30,8 @@ class Assembler {
             uint32_t m_flags = 0;       /* Processor-specific flags */
             uint16_t m_ehsize = 0;      /* ELF header size in bytes */
             uint16_t m_phentsize = 0;   /* Program header table entry size */
-            uint16_t m_phnum = 1;       /* Program header table entry count */
-            uint16_t m_shentsize = 0;   /* Section header table entry size */
+            uint16_t m_phnum = 0;       /* Program header table entry count */
+            uint16_t m_shentsize = sizeof(Elf32SectionHeader);   /* Section header table entry size */
             uint16_t m_shnum = 0;       /* Section header table entry count */
             uint16_t m_shstrndx = 0;    /* Section header string table index */
 
@@ -59,16 +59,51 @@ class Assembler {
         };
 
         struct Elf32SectionHeader {
-            uint32_t m_name;        /* Section name (string tbl index) */
-            uint32_t m_type;        /* Section type */
-            uint32_t m_flags;       /* Section flags */
-            uint32_t m_addr;        /* Section virtual addr at execution */
-            uint32_t m_offset;      /* Section file offset */
-            uint32_t m_size;        /* Section size in bytes */
-            uint32_t m_link;        /* Link to another section */
-            uint32_t m_info;        /* Additional section information */
-            uint32_t m_addralign;   /* Section alignment */
-            uint32_t m_entsize;     /* Entry size if section holds table */
+            public:
+                //Type
+                static const int SHT_NULL = 0;
+                static const int SHT_PROGBITS = 1;
+                static const int SHT_SYMTAB = 2;
+                static const int SHT_STRTAB = 3;
+                static const int SHT_RELA = 4;
+                static const int SHT_HASH = 5;
+                static const int SHT_DYNAMIC = 6;
+                static const int SHT_NOTE = 7;
+                static const int SHT_NOBITS = 8;
+                static const int SHT_REL = 9;
+                static const int SHT_SHLIB = 10;
+                static const int SHT_DYNSYM = 11;
+                static const int SHT_LOPROC = 0x70000000;
+                static const int SHT_HIPROC = 0x7fffffff;
+                static const int SHT_LOUSER = 0x80000000;
+                static const int SHT_HIUSER = 0xffffffff;
+
+                //Index
+                static const int SHN_UNDEF = 0;
+                static const int SHN_LORESERVE = 0xff00;
+                static const int SHN_LOPROC = 0xff00;
+                static const int SHN_HIPROC = 0xff1f;
+                static const int SHN_ABS = 0xfff1;      //symbols not affected by relocation
+                static const int SHN_COMMON = 0xfff2;
+                static const int SHN_HIRESERVE = 0xffff;
+
+                //Flags
+                static const int SHF_WRITE = 0x1;
+                static const int SHF_ALLOC = 0x2;
+                static const int SHF_EXECINSTR = 0x4;
+                static const int SHF_MASKPROC = 0xf0000000;
+
+            public:
+                uint32_t m_name;        /* Section name (string tbl index) */
+                uint32_t m_type;        /* Section type */
+                uint32_t m_flags;       /* Section flags */
+                uint32_t m_addr;        /* Section virtual addr at execution */
+                uint32_t m_offset;      /* Section file offset */
+                uint32_t m_size;        /* Section size in bytes */
+                uint32_t m_link;        /* Link to another section */
+                uint32_t m_info;        /* Additional section information */
+                uint32_t m_addralign;   /* Section alignment */
+                uint32_t m_entsize;     /* Entry size if section holds table */
         };
 
         struct Elf32Symbol {
@@ -78,12 +113,58 @@ class Assembler {
             uint8_t  m_info;    /* Symbol type and binding */
             uint8_t  m_other;   /* Symbol visibility */
             uint16_t m_shndx;   /* Section index */
+
+            int get_type() {
+                return m_info & 0xf;
+            }
+
+            int get_binding() {
+                return m_info >> 4;
+            }
+
+            uint8_t to_info(int binding, int type) {
+                return (binding << 4) + (type & 0xf);
+            }
+
+            static const int STT_NOTYPE = 0;
+            static const int STT_OBJECT = 1;
+            static const int STT_FUNC = 2;
+            static const int STT_SECTION = 3;
+            static const int STT_FILE = 4;
+            static const int STT_LOPROC = 13;
+            //14 also reserved for processor-specific semantics
+            static const int STT_HIPROC = 15;
+
+
+            static const int STB_LOCAL = 0;
+            static const int STB_GLOBAL = 1;
+            static const int STB_WEAK = 2;
+            static const int STB_LOPROC = 13;
+            //14 also reserved for processor-specific semantics
+            static const int STB_HIPROC = 15;
+
         };
 
 
         struct Elf32Relocation {
             uint32_t m_offset;  /* Address */
             uint32_t m_info;    /* Relocation type and symbol index */
+
+            static const int R_386_NONE = 0;
+            static const int R_386_32 = 1;
+            static const int R_386_PC32 = 2;
+
+            int get_type() {
+                return (uint8_t)m_info;
+            }
+
+            int get_sym_idx() {
+                return (m_info >> 8);
+            }
+
+            uint32_t to_info(int sym_idx, int rel_type) {
+                return (sym_idx << 8) + (uint8_t)rel_type;
+            }
         };
 
 
@@ -165,10 +246,10 @@ class Assembler {
                     m_t(t), m_addr(addr), m_defined(defined), m_ref_addr(std::vector<uint32_t>()), 
                     m_rjmp_addr(std::vector<uint32_t>()) {}
                 struct Token m_t;
-                uint32_t m_addr;
+                uint32_t m_addr; //TODO: rename to definition_addr???
                 bool m_defined;
-                std::vector<uint32_t> m_ref_addr;
-                std::vector<uint32_t> m_rjmp_addr;
+                std::vector<uint32_t> m_ref_addr; //where it is called (when is this used again?)
+                std::vector<uint32_t> m_rjmp_addr; //pc relative jumps (used in procedure calls)
         };
 
         class Node {
@@ -853,6 +934,7 @@ class Assembler {
         struct Token consume_token(enum TokenType tt);
         bool end_of_tokens();
 
+        void align_boundry_to(int bytes);
 
         void assemble();
         void append_elf_header();

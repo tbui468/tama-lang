@@ -269,12 +269,36 @@ Ast* Semant::TmdParser::parse_stmt() {
         consume_token(T_R_PAREN);
         return new AstPrint(arg);
     } else if (next.type == T_IDENTIFIER && peek_two().type == T_COLON) {
-        struct Token var = consume_token(T_IDENTIFIER);
+        struct Token sym = consume_token(T_IDENTIFIER);
         consume_token(T_COLON);
-        struct Token type = next_token();
-        consume_token(T_EQUAL);
-        Ast *expr = parse_expr();
-        return new AstDeclSym(var, type, expr);
+
+        if (peek_one().type == T_L_PAREN) {
+            consume_token(T_L_PAREN);
+            std::vector<Ast*> params;
+            while (peek_one().type != T_R_PAREN) {
+                struct Token sym = consume_token(T_IDENTIFIER);
+                consume_token(T_COLON);
+                struct Token type = next_token();
+                params.push_back(new AstParam(sym, type));
+                if (peek_one().type == T_COMMA) {
+                    consume_token(T_COMMA);
+                }
+            } 
+            consume_token(T_R_PAREN);
+            consume_token(T_MINUS);
+            consume_token(T_GREATER);
+
+            struct Token ret_type = next_token();
+            if (ret_type.type == T_NIL) ret_type.type = T_NIL_TYPE;
+
+            Ast* body = parse_block();
+            return new AstFunDef(sym, params, ret_type, body);
+        } else {
+            struct Token type = next_token();
+            consume_token(T_EQUAL);
+            Ast *expr = parse_expr();
+            return new AstDeclSym(sym, type, expr);
+        }
     } else if (next.type == T_L_BRACE) {
         return parse_block();
     } else if (next.type == T_IF) {
@@ -292,7 +316,11 @@ Ast* Semant::TmdParser::parse_stmt() {
         Ast* condition = parse_expr();
         Ast* while_block = parse_block();
         return new AstWhile(while_token, condition, while_block);
-    } else if (next.type == T_FUN) {
+    } else if (next.type == T_IMPORT) {
+        struct Token import_token = next_token();
+        struct Token sym = consume_token(T_IDENTIFIER);
+        return new AstImport(sym);
+    /*} else if (next.type == T_FUN) {
         consume_token(T_FUN);
         struct Token symbol = consume_token(T_IDENTIFIER);
         consume_token(T_L_PAREN);
@@ -314,7 +342,7 @@ Ast* Semant::TmdParser::parse_stmt() {
         if (ret_type.type == T_NIL) ret_type.type = T_NIL_TYPE;
 
         Ast* body = parse_block();
-        return new AstFunDef(symbol, params, ret_type, body);
+        return new AstFunDef(symbol, params, ret_type, body);*/
     } else if (next.type == T_RETURN) {
         struct Token ret = next_token();
         Ast* expr = parse_expr();
@@ -322,5 +350,12 @@ Ast* Semant::TmdParser::parse_stmt() {
     } else {
         return new AstExprStmt(parse_expr());
     }
+}
+
+void Semant::extract_global_declarations(const std::string& module_file) {
+    read(module_file);
+    lex();
+    parse();
+    translate();
 }
 

@@ -1,3 +1,3 @@
 #!/bin/bash
 cd build/src
-./tama ./../../test/scratch.tmd
+./tama ./../../test/main.tmd

@@ -64,8 +64,8 @@ enum TokenType {
     T_L_BRACKET,
     T_R_BRACKET,
     T_COMMA,
-    T_FUN,
     T_RETURN,
+    T_IMPORT,
 
     //tokening assembly file
     T_MOV,

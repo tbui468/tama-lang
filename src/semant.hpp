@@ -56,15 +56,15 @@ class Semant {
             {"elif", T_ELIF},
             {"else", T_ELSE},
             {"while", T_WHILE},
-            {"fun", T_FUN},
             {"return", T_RETURN},
-            {"nil", T_NIL}
+            {"nil", T_NIL},
+            {"import", T_IMPORT}
         }};
     public:
         std::string m_code = "";
-        std::vector<struct Token> m_tokens = std::vector<struct Token>();
+        std::vector<struct Token> m_tokens;
         int m_current = 0;
-        std::vector<Ast*> m_nodes = std::vector<Ast*>();
+        std::vector<Ast*> m_nodes;
         Lexer m_lexer;
         TmdParser m_parser;
         std::vector<uint8_t> m_buf;
@@ -72,10 +72,12 @@ class Semant {
         int m_label_id_counter = 0;
         Ast* m_compiling_fun = nullptr;
         Scope m_globals {nullptr};
+        std::vector<Semant*> m_imports;
     public:
         void generate_asm(const std::string& input_file, const std::string& output_file);
         void write_op(const char* format, ...);
         int generate_label_id();
+        void extract_global_declarations(const std::string& module_file);
     private: 
         void read(const std::string& input_file);
         void lex();

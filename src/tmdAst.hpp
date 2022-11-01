@@ -211,6 +211,7 @@ class AstFunDef: public Ast {
                 ems_add(&ems, m_symbol.line, "Syntax Error: Function with name already declared in global scope.");
             }
 
+
             s.write_op("__%.*s:", m_symbol.len, m_symbol.start);
             s.write_op("    push    %s", "ebp");
             s.write_op("    mov     %s, %s", "ebp", "esp");
@@ -488,10 +489,21 @@ class AstCall: public Ast {
 
         Type translate(Semant& s) {
             Symbol *sym = nullptr;
+
+            //type-check if defined in current translation unit
             if (!(sym = s.m_globals.get_symbol(m_symbol))) {
-                ems_add(&ems, m_symbol.line, "Syntax Error: Function not defined.");
-                return Type(T_NIL_TYPE);
+                //check if symbol defined in imports
+                for (Semant* import_s: s.m_imports) {
+                    if ((sym = import_s->m_globals.get_symbol(m_symbol)))
+                        break;
+                }
+
+                if (!sym) {
+                    ems_add(&ems, m_symbol.line, "Syntax Error: Function not defined.");
+                    return Type(T_NIL_TYPE);
+                }
             }
+
             if (m_args.size() != sym->m_type.m_ptypes.size()) {
                 ems_add(&ems, m_symbol.line, "Type Error: Argument count does not match formal parameter count.");
                 return Type(T_NIL_TYPE);
@@ -536,6 +548,23 @@ class AstReturn: public Ast {
             s.write_op("    pop     %s", "eax");
             
             return Type(T_RET_TYPE);
+        }
+};
+
+class AstImport: public Ast {
+    public: 
+        struct Token m_symbol;
+    public:
+        AstImport(struct Token sym): m_symbol(sym) {}
+        std::string to_string() {
+            return "import";
+        }
+
+        Type translate(Semant& s) {
+            Semant *new_s = new Semant();
+            new_s->extract_global_declarations("./../../test/" + std::string(m_symbol.start, m_symbol.len) + ".tmd");
+            s.m_imports.push_back(new_s);
+            return Type(T_NIL_TYPE);
         }
 };
 

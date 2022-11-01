@@ -58,8 +58,8 @@ int main (int argc, char **argv) {
         obj_files.push_back(out);
 
         Assembler a;
-        //a.generate_obj(f, f.substr(0, out));
-        a.emit_code(f, out);
+//        a.generate_obj(f, out);
+        //a.emit_code(f, out);
     }
 
     //Linker l;

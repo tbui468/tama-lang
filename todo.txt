@@ -26,33 +26,89 @@ Reference for x86 machine code
 Look at this stackoverflow post for how machine code is structured: (THIS IS REALLY GOOD!)
     https://stackoverflow.com/questions/45526209/referencing-registers-in-machine-code
 
-New structure:
-    semant.cpp <----
-        lexing, parsing, type-checking, semantic analysis
-    translater.cpp <--this was the old compiler
-        AST to x86 assembly (can add IR modules later)
-    assembler.cpp
-        lex, parse, emit ELF 
-    linker.cpp
-        link multiple ELF object files to create executable
+*********************IR structure***********************
+Translating to IR trees from AST is essentially rewriting the tree to:
+    1. make it front-end independent
+    2. make it easy to convert to assembly instructions for back-end
 
-Modules after adding in IR:
-    tmdSemant.cpp
-        lexing, parsing, type-checking, symbols/environments, semantic analysis
-    tmdTranslater.cpp
-        AST to IR
-    optimizer.cpp (could make this into seperate modules)
-        canonicalize, instruction selection, liveness analysis, register allocation, constant folding, etc
-    x86Emitter.cpp
-        IR to architecture-specific assembly
-    x86ElfAssembler.cpp
-        lex, parse, emit ELF 
-    elfLinker.cpp
-        link multiple ELF object files to create executable
+SSA form is a little more complex, and I don't want to deal with that yet
+
+Note: Need three types of expressions: produce result, produce no result, conditional
+    I think that my version already differentiates between the first two types
+
+struct IRExpr {
+
+};
+
+struct IRStmt {
+
+};
 
 
 **********************Linker*******************************
 Make all symbols global/external for now without requiring explicitly marking them as such
+implement Assembler::generate_obj <--------------------------------
+    need to patch:
+        section header offset
+        section header count
+        section header size
+        section header string table index
+        ...maybe more - use readelf to compare against main.o
+    !!!use readelf to check if sections are correct
+
+    AstCall can't type check external globals now
+        could add 'import' keyword that packages all global function types in a given file
+            and adds them to a list of declared but undefined symbols
+
+            wouldn't that requiring parsing/compiling the entire imported module????
+            and what about circular dependencies???
+                could have assembler do two passes - need to track types of globals
+            or just infer types from usage of function - but would need to change how print works
+                since print can take ints or floats right now
+
+            !!!We need type information for globals (functions and variables)
+                when importing
+
+            Create a preprocessor that just grabs all globals from a file
+                just need to parse global function names and types and variable names and types
+                should be quick - but should reuse lexer/parser of semantic analyzer module
+                    make a new method called parse_global_types()
+                    use a stack to find end of function defintion quickly without parsing
+                    fill in m_globals in semant, then pass this Scope to assembler to type check external symbols
+            right now, assume everything is global
+                add a new preprocessor to semant.hpp/cpp
+                std::unordered_map<std::string , Symbol> globals = extract_globals(input_file);
+
+
+        add 'import' keyword to tamarind language
+        add extract_global_declarations to semant
+        extract globals from imported modules in assembler.hpp/cpp to type-check
+            make a vector of imported symbol maps
+            mainly need to redo type-checking in AstCall
+
+        import math
+
+        main: () -> int {
+            print(math::add(1, 2))
+        }
+
+
+        add: (a: int, b: int) -> int {
+            return a + b
+        }
+
+        arith: (first: (int, int) -> int, second: (int, int) -> int) -> bool {
+
+        }
+
+
+Make class Elf32Linker
+    read relocatable elfs
+    apply relocations
+    output single executable elf (skip sections and section headers; use segments + program header in elf)
+
+!!!What if same symbol is used multiple times?  Will it require multiple relocation entries for same symbol?
+    seems that way
 
 Need to reenable all warnings and fix those
 
