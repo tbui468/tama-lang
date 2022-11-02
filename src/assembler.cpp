@@ -19,95 +19,38 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
     parse();
     if (ems.count > 0) return;
 
-    //Need to change type = relocatable, patch offsets later
     Elf32ElfHeader eh;
     eh.m_shstrndx = 2;
+    eh.m_shentsize = sizeof(Elf32SectionHeader);
     m_buf.insert(m_buf.end(), (uint8_t*)&eh, (uint8_t*)&eh + sizeof(Elf32ElfHeader));
     ((Elf32ElfHeader*)(m_buf.data()))->m_ehsize = m_buf.size();
     ((Elf32ElfHeader*)(m_buf.data()))->m_shoff = m_buf.size();
 
-    Elf32SectionHeader sh_null;
-    sh_null.m_name = 0;
-    sh_null.m_type = Elf32SectionHeader::SHT_NULL;
-    sh_null.m_flags = 0;
-    sh_null.m_addr = 0;
-    sh_null.m_offset = 0;
-    sh_null.m_size = 0;
-    sh_null.m_link = Elf32SectionHeader::SHN_UNDEF;
-    sh_null.m_info = 0;
-    sh_null.m_addralign = 0;
-    sh_null.m_entsize = 0;
-    m_buf.insert(m_buf.end(), (uint8_t*)&sh_null, (uint8_t*)&sh_null + sizeof(Elf32SectionHeader));
 
-    Elf32SectionHeader sh_text;
-    sh_text.m_name = 1;
-    sh_text.m_type = Elf32SectionHeader::SHT_PROGBITS;
-    sh_text.m_flags = Elf32SectionHeader::SHF_ALLOC | Elf32SectionHeader::SHF_EXECINSTR;
-    sh_text.m_addr = 0;
-    sh_text.m_offset = 0; //need to patch this after compiling instructions
-    sh_text.m_size = 0; //need to patch this after compiling instructions
-    sh_text.m_link = Elf32SectionHeader::SHN_UNDEF;
-    sh_text.m_info = 0;
-    sh_text.m_addralign = 16; //what happens if it's not aligned on 16 byte boundry?
-    sh_text.m_entsize = 0;
-    int sh_text_offset = m_buf.size();
-    m_buf.insert(m_buf.end(), (uint8_t*)&sh_text, (uint8_t*)&sh_text + sizeof(Elf32SectionHeader));
+    int sh_null_offset = append_section_header({0, Elf32SectionHeader::SHT_NULL,
+                                                0, 0, 0, 0,
+                                                Elf32SectionHeader::SHN_UNDEF, 0, 0, 0});
 
-    Elf32SectionHeader sh_shstrtab;
-    sh_shstrtab.m_name = 2;
-    sh_shstrtab.m_type = Elf32SectionHeader::SHT_STRTAB;
-    sh_shstrtab.m_flags = 0;
-    sh_shstrtab.m_addr = 0;
-    sh_shstrtab.m_offset = 0; //need to patch this after compiling instructions
-    sh_shstrtab.m_size = 0; //need to patch this after compiling instructions
-    sh_shstrtab.m_link = Elf32SectionHeader::SHN_UNDEF;
-    sh_shstrtab.m_info = 0;
-    sh_shstrtab.m_addralign = 1; //No alignment
-    sh_shstrtab.m_entsize = 0;
-    int sh_shstrtab_offset = m_buf.size();
-    m_buf.insert(m_buf.end(), (uint8_t*)&sh_shstrtab, (uint8_t*)&sh_shstrtab + sizeof(Elf32SectionHeader));
+    int sh_text_offset = append_section_header({1, Elf32SectionHeader::SHT_PROGBITS,
+                                                Elf32SectionHeader::SHF_ALLOC | Elf32SectionHeader::SHF_EXECINSTR, 0, 0, 0,
+                                                Elf32SectionHeader::SHN_UNDEF, 0, 16, 0});
 
-    Elf32SectionHeader sh_symtab;
-    sh_symtab.m_name = 3;
-    sh_symtab.m_type = Elf32SectionHeader::SHT_SYMTAB;
-    sh_symtab.m_flags = 0;
-    sh_symtab.m_addr = 0;
-    sh_symtab.m_offset = 0; //TODO: need to patch this after compiling instructions
-    sh_symtab.m_size = 0; //TODO: need to patch this after compiling instructions
-    sh_symtab.m_link = 4; //strtab index????
-    sh_symtab.m_info = 3; // symtab index (itself)
-    sh_symtab.m_addralign = 4; //what happens if it's not aligned on 4 byte boundry?
-    sh_symtab.m_entsize = sizeof(Elf32Symbol);
-    int sh_symtab_offset = m_buf.size();
-    m_buf.insert(m_buf.end(), (uint8_t*)&sh_symtab, (uint8_t*)&sh_symtab + sizeof(Elf32SectionHeader));
+    int sh_shstrtab_offset = append_section_header({7, Elf32SectionHeader::SHT_STRTAB,
+                                                    0, 0, 0, 0,
+                                                    Elf32SectionHeader::SHN_UNDEF, 0, 1, 0});
 
-    Elf32SectionHeader sh_strtab;
-    sh_strtab.m_name = 4;
-    sh_strtab.m_type = Elf32SectionHeader::SHT_STRTAB;
-    sh_strtab.m_flags = 0;
-    sh_strtab.m_addr = 0;
-    sh_strtab.m_offset = 0; //TODO: need to patch this after compiling instructions
-    sh_strtab.m_size = 0; //TODO: need to patch this after compiling instructions
-    sh_strtab.m_link = 0;
-    sh_strtab.m_info = 0;
-    sh_strtab.m_addralign = 1; //No alignment
-    sh_strtab.m_entsize = 0;
-    int sh_strtab_offset = m_buf.size();
-    m_buf.insert(m_buf.end(), (uint8_t*)&sh_strtab, (uint8_t*)&sh_strtab + sizeof(Elf32SectionHeader));
+    int sh_symtab_offset = append_section_header({17, Elf32SectionHeader::SHT_SYMTAB,
+                                                  0, 0, 0, 0,
+                                                  4, 3, 4, sizeof(Elf32Symbol)});
 
-    Elf32SectionHeader sh_rel;
-    sh_rel.m_name = 5;
-    sh_rel.m_type = Elf32SectionHeader::SHT_REL;
-    sh_rel.m_flags = 0;
-    sh_rel.m_addr = 0;
-    sh_rel.m_offset = 0; //need to patch this after compiling instructions
-    sh_rel.m_size = 0; //need to patch this after compiling instructions
-    sh_rel.m_link = 3;
-    sh_rel.m_info = 1;
-    sh_rel.m_addralign = 4; //4 byte alignment
-    sh_rel.m_entsize = sizeof(Elf32Relocation);
-    int sh_rel_offset = m_buf.size();
-    m_buf.insert(m_buf.end(), (uint8_t*)&sh_rel, (uint8_t*)&sh_rel + sizeof(Elf32SectionHeader));
+    int sh_strtab_offset = append_section_header({25, Elf32SectionHeader::SHT_STRTAB,
+                                                  0, 0, 0, 0,
+                                                  0, 0, 1, 0});
+
+    int sh_rel_offset = append_section_header({33, Elf32SectionHeader::SHT_REL,
+                                               0, 0, 0, 0,
+                                               3, 1, 4, sizeof(Elf32Relocation)});
+
 
 
     //text
@@ -140,17 +83,31 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
     //shstrtab
     align_boundry_to(1); //no alignment
 
+    ((Elf32SectionHeader*)&m_buf[sh_shstrtab_offset])->m_offset = m_buf.size();
+
     m_buf.push_back('\0');
-    std::string text_str = ".text\0";
+
+    std::string text_str = ".text";
     m_buf.insert(m_buf.end(), text_str.data(), text_str.data() + text_str.size());
-    std::string shstrtab_str = ".shstrtab\0";
+    m_buf.push_back('\0');
+
+    std::string shstrtab_str = ".shstrtab";
     m_buf.insert(m_buf.end(), shstrtab_str.data(), shstrtab_str.data() + shstrtab_str.size());
-    std::string symtab_str = ".symtab\0";
+    m_buf.push_back('\0');
+
+    std::string symtab_str = ".symtab";
     m_buf.insert(m_buf.end(), symtab_str.data(), symtab_str.data() + symtab_str.size());
-    std::string strtab_str = ".strtab\0";
+    m_buf.push_back('\0');
+
+    std::string strtab_str = ".strtab";
     m_buf.insert(m_buf.end(), strtab_str.data(), strtab_str.data() + strtab_str.size());
-    std::string rel_str = ".text.rela\0";
+    m_buf.push_back('\0');
+
+    std::string rel_str = ".rel.text";
     m_buf.insert(m_buf.end(), rel_str.data(), rel_str.data() + rel_str.size());
+    m_buf.push_back('\0');
+
+    ((Elf32SectionHeader*)&m_buf[sh_shstrtab_offset])->m_size = m_buf.size() - ((Elf32SectionHeader*)&m_buf[sh_shstrtab_offset])->m_offset;
 
 
     //symtab
@@ -210,6 +167,7 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
     }
 
 
+
     //strtab
     align_boundry_to(1);
     char* strtab = (char*)(m_buf.data() + m_buf.size());
@@ -222,7 +180,6 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
         m_buf.push_back('\0');
     }
     
-
     //rel
     if (undefined_globals) {
         align_boundry_to(4);
@@ -230,7 +187,7 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
         for (const std::pair<std::string, Label>& it: m_labels) {
             const Label* l = &it.second;
             if (!(l->m_defined)) {
-                int sym_count = (((Elf32SectionHeader*)m_buf[sh_symtab_offset])->m_size) / sizeof(Elf32Symbol);
+                int sym_count = (((Elf32SectionHeader*)&m_buf[sh_symtab_offset])->m_size) / sizeof(Elf32Symbol);
                 int sym_idx = -1;
                 for (int i = 0; i < sym_count; i++) {
                     Elf32Symbol* sym = symtab_start + i;
@@ -239,6 +196,7 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
                         break;
                     }
                 }
+
 
                 for (uint32_t addr: l->m_ref_addr) {
                     Elf32Relocation r;
@@ -257,12 +215,16 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
         }
     }
 
-
     if (ems.count > 0) return;
     write(output_file);
 
 
+}
 
+int Assembler::append_section_header(Elf32SectionHeader h) {
+    int offset = m_buf.size();
+    m_buf.insert(m_buf.end(), (uint8_t*)&h, (uint8_t*)&h + sizeof(Elf32SectionHeader));
+    return offset;
 }
 
 

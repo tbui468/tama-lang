@@ -58,7 +58,7 @@ int main (int argc, char **argv) {
         obj_files.push_back(out);
 
         Assembler a;
-//        a.generate_obj(f, out);
+        a.generate_obj(f, out);
         //a.emit_code(f, out);
     }
 

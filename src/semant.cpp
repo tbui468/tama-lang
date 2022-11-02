@@ -38,6 +38,7 @@ void Semant::parse() {
 }
 
 void Semant::translate() {
+    /*
     std::string start = "org     0x08048000\n"
                         "_start:\n"
                         "    mov     ebp, esp\n"
@@ -45,17 +46,18 @@ void Semant::translate() {
                         "    mov     ebx, 0\n"
                         "    mov     eax, 0x01\n"
                         "    int     0x80\n";
-    m_buf.insert(m_buf.end(), (uint8_t*)start.data(), (uint8_t*)start.data() + start.size());
+    m_buf.insert(m_buf.end(), (uint8_t*)start.data(), (uint8_t*)start.data() + start.size());*/
 
     for (Ast* n: m_nodes) {
         n->translate(*this);
     }
 
+    /*
     std::ifstream f("../../assembly_test/fun.asm");
     std::stringstream buffer;
     buffer << f.rdbuf();
     std::string lib = buffer.str();
-    m_buf.insert(m_buf.end(), (uint8_t*)lib.data(), (uint8_t*)lib.data() + lib.size());
+    m_buf.insert(m_buf.end(), (uint8_t*)lib.data(), (uint8_t*)lib.data() + lib.size());*/
 }
 
 void Semant::write_op(const char* format, ...) {
