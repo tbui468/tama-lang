@@ -113,7 +113,8 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
     //symtab
     align_boundry_to(4);
 
-    Elf32Symbol* symtab_start = (Elf32Symbol*)(m_buf.data() + m_buf.size());;
+    Elf32Symbol* symtab_start = (Elf32Symbol*)(m_buf.data() + m_buf.size());; //TODO: this is replaced with the m_offset of the symtab header
+    ((Elf32SectionHeader*)(m_buf.data() + sh_symtab_offset))->m_offset = m_buf.size();
 
     Elf32Symbol sym_null;
     sym_null.m_name = 0;
@@ -166,6 +167,7 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
         name_index += (it.first.size() + 1); //includes null-terminator
     }
 
+    ((Elf32SectionHeader*)(m_buf.data() + sh_symtab_offset))->m_size = m_buf.size() - ((Elf32SectionHeader*)(m_buf.data() + sh_symtab_offset))->m_offset;
 
 
     //strtab

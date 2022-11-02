@@ -53,6 +53,9 @@ Assembler::generate_obj requires massive refactor
     
 
 **********************Linker*******************************
+.symtab offset and size are NOT currently set inside of section header in assembler
+    set this and check size and offset using readelf
+
 Make elf.h
 Write linker that combines .obj into an executable
     Make main.tmd without imports for now

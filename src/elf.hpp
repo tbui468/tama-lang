@@ -27,14 +27,14 @@ struct Elf32ElfHeader {
 };
 
 struct Elf32ProgramHeader {
-    uint32_t m_type = 1; //load    /* Segment type */
-    uint32_t m_offset = 0;  /* Segment file offset */
-    uint32_t m_vaddr = 0;   /* Segment virtual address */
-    uint32_t m_paddr = 0;   /* Segment physical address */
-    uint32_t m_filesz = 0;  /* Segment size in file */
-    uint32_t m_memsz = 0;   /* Segment size in memory */
-    uint32_t m_flags = 5;   /* Segment flags */
-    uint32_t m_align = 0x1000;   /* Segment alignment */
+    uint32_t m_type = 1; //load     /* Segment type */
+    uint32_t m_offset = 0;          /* Segment file offset */
+    uint32_t m_vaddr = 0;           /* Segment virtual address */
+    uint32_t m_paddr = 0;           /* Segment physical address */
+    uint32_t m_filesz = 0;          /* Segment size in file */
+    uint32_t m_memsz = 0;           /* Segment size in memory */
+    uint32_t m_flags = 5;           /* Segment flags */
+    uint32_t m_align = 0x1000;      /* Segment alignment */
 
     void print() {
         printf("type: %d\noffset: %d\nvaddr: 0x%x\npaddr: 0x%x\nfilesz: %d\nmemsz: %d\nflags: %d\nalign: 0x%x\n", 

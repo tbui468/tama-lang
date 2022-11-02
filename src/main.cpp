@@ -9,6 +9,7 @@
 #include "lexer.hpp"
 #include "assembler.hpp"
 #include "semant.hpp"
+#include "linker.hpp"
 
 #define MAX_MSG_LEN 256
 
@@ -62,8 +63,8 @@ int main (int argc, char **argv) {
         //a.emit_code(f, out);
     }
 
-    //Linker l;
-    //l.link(obj_files, "out.exe");
+    Linker l;
+    l.link(obj_files, "out.exe");
    
     ems_print(&ems);
     
