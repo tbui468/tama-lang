@@ -87,12 +87,10 @@ class Assembler {
         class Label {
             public:
                 Label(struct Token t, uint32_t addr, bool defined): 
-                    m_t(t), m_addr(addr), m_defined(defined), m_ref_addr(std::vector<uint32_t>()), 
-                    m_rjmp_addr(std::vector<uint32_t>()) {}
+                    m_t(t), m_addr(addr), m_defined(defined) {}
                 struct Token m_t;
-                uint32_t m_addr; //TODO: rename to definition_addr???
+                uint32_t m_addr;
                 bool m_defined;
-                std::vector<uint32_t> m_ref_addr; //where it is called (when is this used again?)
                 std::vector<uint32_t> m_rjmp_addr; //pc relative jumps (used in procedure calls)
         };
 

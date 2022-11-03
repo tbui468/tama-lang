@@ -128,7 +128,7 @@ void Linker::link(const std::vector<std::string>& obj_files, const std::string& 
     std::cout << "main offset: " << main_offset << std::endl;
     ((Elf32ElfHeader*)m_buf.data())->m_entry = program_offset + main_module_offset + main_offset + 0x08048000;*/
     
-    //TODO: apply relocations
+    //TODO: apply relocations (these are the absolute jumps)
     //  symbol relocations using relocation entries
     //      for each relocation entry
     //          extract symbol index from rel.m_info

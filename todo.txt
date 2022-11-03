@@ -30,9 +30,7 @@ struct IRStmt {
 
 **********************Linker*******************************
 link function needs to:
-    out.exe is segmentation faulting....
-        NOT currently patching relative jumps
-    patch all relocations
+    apply relocations when using more than one file
     try linking math.tmd along with main.tmd
 
 Use readelf to analyze .o files

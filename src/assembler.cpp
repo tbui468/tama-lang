@@ -206,13 +206,13 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
                     }
                 }
 
-
+/*
                 for (uint32_t addr: l->m_ref_addr) {
                     Elf32Relocation r;
                     r.m_offset = addr;
                     r.m_info = r.to_info(sym_idx, Elf32Relocation::R_386_32);
                     m_buf.insert(m_buf.end(), (uint8_t*)&r, (uint8_t*)&r + sizeof(Elf32Relocation));
-                }
+                }*/
 
                 for (uint32_t addr: l->m_rjmp_addr) {
                     Elf32Relocation r;
@@ -485,26 +485,9 @@ void Assembler::append_program() {
     }
 
     patch_rel_jumps();
-
-    std::unordered_map<std::string, Label>::iterator it = m_labels.find("_start");
-    if (it != m_labels.end()) {
-        if (!it->second.m_defined) {
-            ems_add(&ems, it->second.m_t.line, "Assembling Error: Label '%.*s' not defined.", it->second.m_t.len, it->second.m_t.start);
-        } else {
-            //((Elf32ElfHeader*)m_buf.data())->m_entry = it->second.m_addr; //TODO: not needed for relocatables (linker should do this)
-        }
-    }
-
-
-    //TODO: move out of this function - patching program header is NOT part of appending text section
-    /*
-    Elf32ProgramHeader *ph = (Elf32ProgramHeader*)(m_buf.data() + ((Elf32ElfHeader*)m_buf.data())->m_phoff);
-    ph->m_filesz = m_buf.size();
-    ph->m_memsz = m_buf.size();
-    */
-
 }
 
+//TODO: should incorporate this into Linker (hardcoding the load address 0x08048000 right now)
 void Assembler::patch_addr_offsets() {
     Elf32ElfHeader *eh = (Elf32ElfHeader*)m_buf.data();
 
@@ -515,20 +498,6 @@ void Assembler::patch_addr_offsets() {
     ph->m_paddr = m_load_addr;
 }
 
-void Assembler::patch_labels() {
-    for(const std::pair<std::string, Label>& it: m_labels) {
-        const Label* l = &it.second;
-        if (!l->m_defined) {
-            ems_add(&ems, l->m_t.line, "Assembling Error: Label '%.*s' not defined.", l->m_t.len, l->m_t.start);
-        } else {
-            uint32_t final_addr = l->m_addr + m_load_addr;
-            for (uint32_t addr: l->m_ref_addr) {
-                uint32_t *ptr = (uint32_t*)&m_buf[addr];
-                *ptr = final_addr;
-            }
-        }
-    }
-}
 
 void Assembler::patch_rel_jumps() {
     for(const std::pair<std::string, Label>& it: m_labels) {
@@ -550,7 +519,6 @@ void Assembler::assemble() {
     append_program_header();
     append_program();
     patch_addr_offsets();
-    patch_labels();
     patch_rel_jumps();
 }
 
