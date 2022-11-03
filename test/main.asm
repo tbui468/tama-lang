@@ -8,4 +8,6 @@ __main:
     add     esp, 0
 __main_ret:
     pop     ebp
-    ret
+    mov     ebx, eax
+    mov     eax, 1
+    int     0x80

@@ -1,7 +1,51 @@
+****************Refactor**************
+Assembler::generate_obj requires massive refactor
+    too much confusing code/structure - each section appendment should be own function
+    section header m_name index into shstrtab is hardcoded
+    restructure code to make easier to understand/modify in the future
+    
+Need to reenable all warnings and fix those
 
-Read a little more of Ian Lance Taylor's blog or 'Linkers and Loaders'
-    to understand differences between ELF relocatable files and ELF executable files
-Watch 'Understanding Compiler Optimization - Chandler Carruth' on youtube
+**************Automatic testing************
+Automate tests for compiler - refactors are getting dangerous with just hand-written tests
+    have tests test output of programs:
+        print(3)
+        print(4)
+
+        Should print 3 and 4 on separate lines - automate this with bash/python scripts
+
+**************IR Trees*************************
+!Big refactor!
+Have semant.cpp output an intermediate representation
+Make Optimizer that optimizes IR tree
+Make Ir_x86_translator generate x86 from IR
+
+struct IRExpr {
+
+};
+
+struct IRStmt {
+
+};
+
+**********************Linker*******************************
+link function needs to:
+    out.exe is segmentation faulting....
+        NOT currently patching relative jumps
+    patch all relocations
+    try linking math.tmd along with main.tmd
+
+Use readelf to analyze .o files
+    Compile to 32-bit elf:
+        gcc -c -mx32 test.c (will output test.o)
+        gcc -c -m elf_i386 main.c (same as -mx32?)
+        use -fno-asynchronous-unwind-tables to get rid of eh_frame (what's the purpose of this?)
+
+    readelf -h test.o (see header)
+
+    readelf -x .text test.o (hexdump text section)
+
+*********************Documentation****************
 
 Start writing out README file
     can we use that markup language (not html) to format document?
@@ -20,337 +64,10 @@ Start writing out README file
     ELF executables have read-only and read/write sections:
         using a read/write section will require main function/global variables
 
-Reference for x86 machine code
-    http://ref.x86asm.net/coder32.html
 
-Look at this stackoverflow post for how machine code is structured: (THIS IS REALLY GOOD!)
-    https://stackoverflow.com/questions/45526209/referencing-registers-in-machine-code
+********************Resources******************
 
-*********************IR structure***********************
-Translating to IR trees from AST is essentially rewriting the tree to:
-    1. make it front-end independent
-    2. make it easy to convert to assembly instructions for back-end
-
-SSA form is a little more complex, and I don't want to deal with that yet
-
-Note: Need three types of expressions: produce result, produce no result, conditional
-    I think that my version already differentiates between the first two types
-
-struct IRExpr {
-
-};
-
-struct IRStmt {
-
-};
-
-
-****************Refactor**************
-Assembler::generate_obj requires massive refactor
-    too much confusing code/structure - each section appendment should be own function
-    section header m_name index into shstrtab is hardcoded
-    restructure code to make easier to understand/modify in the future
-    
-
-**********************Linker*******************************
-.symtab offset and size are NOT currently set inside of section header in assembler
-    set this and check size and offset using readelf
-
-Make elf.h
-Write linker that combines .obj into an executable
-    Make main.tmd without imports for now
-    will need to put elf headers into new header file since assembler and linker will both need it
-    l.link(main.obj) and check if executable works
-
-
-Make class Elf32Linker
-    read relocatable elfs
-    apply relocations
-    output single executable elf (skip sections and section headers; use segments + program header in elf)
-
-!!!What if same symbol is used multiple times?  Will it require multiple relocation entries for same symbol?
-    seems that way
-
-Need to reenable all warnings and fix those
-
-Need to parameterize writing of ELF header:
-    Assembler always creates relocatable ELF
-    Linker will combine relocatable ELF into executable if all symbols defined/_start defined
-
-    Make .strtab section while assembly instructions:
-       
-    struct Elf32Section {
-        std::string m_name;
-        std::vector<uint8_t> m_buf;
-    }; 
-
-    Each assembler should have an unordered_map of <std::string, Elf32Section>
-        while assembling instructions, need to append to correct section
-
-    struct Elf32StrTabSection {
-        filename
-        any global symbols (only functions for now, but maybe global variables later)
-    };
-    struct Elf32TextSection {
-        write instructions here (currently called m_buf in Assembler)
-    };
-    struct Elf32SymTabSection {
-    };
-    struct Elf32SHStrTabSection {
-        section strings
-    };
-    struct Elf32TextRelaSection {
-    };
-
-Rewrite examples below so that nasm -f bin <filename> will work
-    need two versions of elf header
-    
-    hex dump main.o and test.o (described below)
-    readelf main.o and test.o
-    the final executable can just be a combined version of main.o and test.o
-
-    test.o
-        [ELF header - 64 bytes including padding]
-        [section headers - 40 bytes each * 5 headers + padding]
-            Null
-            text
-            shstrtab
-            symtab
-            strtab
-        [sections]
-            Null
-            text
-            shstrtab
-                null terminated '.text'
-                null terminated '.shstrtab'
-                null terminated '.symbtab'
-                null terminated '.strtab'
-            symtab
-            strtab
-                00
-                null terminated 'test.asm'
-                null terminated 'myadd'
-
-    main.o - why does this have relocation data? - it calls/requires other object files when linking
-        [ELF header - 64 bytes including padding]
-        [section headers - 40 bytes each * 5 headers + padding]
-            Null
-            text
-            shstrtab
-            symtab
-            strtab
-            text.rela
-        [sections]
-            Null
-            text
-            shstrtab
-            symtab
-            strtab
-                00
-                null terminated 'main.asm'
-                null terminated 'myadd'
-                null terminated '_start'
-            text.rela
-
-
-Link test.o with C program, and run executable
-    assemble: nasm -f elf32 <filename>
-    link:     ld -m elf_i386 <object files>
-
-    main.asm
-        global _start
-        extern myadd
-
-        _start:
-            mov     ebp, esp
-            push    40
-            push    2
-            call    myadd
-            add     esp, 8
-
-            mov     ebx, eax   
-            mov     eax, 0x1 
-            int     0x80
-
-    test.asm
-        global myadd
-
-        myadd:
-            push    ebp
-            mov     ebp, esp
-
-            mov     eax, [ebp + 8]
-            mov     ecx, [ebp + 12]
-            add     eax, ecx 
-
-            mov     ebx, eax
-
-            pop     ebp
-            ret     
-
-Strip all unnecessary sections (.comments, .bss) and try to link again into executable
-
-Use the stripped test.o as a reference target for my assembler
-
-Use readelf to analyze .o files
-    Compile to 32-bit elf:
-        gcc -c -mx32 test.c (will output test.o)
-        gcc -c -m elf_i386 main.c (same as -mx32?)
-        use -fno-asynchronous-unwind-tables to get rid of eh_frame (what's the purpose of this?)
-
-    readelf -h test.o (see header)
-
-    readelf -x .text test.o (hexdump text section)
-
-Sections:
-    .text - actual code
-        ???
-    .symtab - symbol info
-        array of Elf32Sym (16 bytes per entry). See struct Elf32Sym below
-        first entry is null
-    .strtab - string table
-        file name, and any global symbols (also starts with 0x00)
-        first byte is null
-    .shstrtab - section head string table
-        null-terminated section names (starts with 0x00 for some reason...for memory alignment?)
-        first byte is null
-
-struct Elf32Sym {
-    uint32_t m_name; //index into .strtab for first character of symbol
-    uint32_t m_value;
-    uint32_t m_size;
-    uint8_t m_info;
-    uint8_t m_other;
-    uint16_t m_shndx;
-};
-
-struct Elf32Rela {
-    uint32_t m_offset; //offset into section where relocation must happen (for relocatable ELF)
-    uint32_t m_info;  //8 least-sig bits are symbol type, next 8 bits are symbol table index (higher 16 bits unused..?)
-};
-
-Have assembler produce object file that has all required data to make an executable
-    Stop setting the offset in files using org directive
-        org     0x08048000
-        Need to only call this when creating executable
-    Linking format:
-        ELF Header
-        Section 1
-        Section 2
-        ...
-        Section Header Table
-
-
-        Things to consider when creating Section Header Table:
-            e_shentsize - section header entry size in bytes
-            e_shnum - section header count
-            e_shstrndx - section head index of strings
-
-            sections:
-                text
-                symbol table
-                string table
-                relocation
-
-    assemble simple C programs to object files and use elfdump to see sections
-        
-        
-
-    Executable Format:
-        ELF Header
-        Program Header Table
-        Segment 1
-        Segment 2
-        ...
-
-Have linker take in an object file that can be turned into an executable by itself
-
-
-Assembler produces only .o files now
-    Doesn't care about whether 'main' exists or if symbols are defined or not
-    Needs a global offset table to track off offset addresses
-    Needs a symbol table to track all symbols/undefined or not
-Linker can only create an executable (.exe) if:
-    linked files have zero undefined symbols
-    one and only one file has a 'main' function
-    a single object file is acceptable
-
-To test:
-    assemble fun.asm into fun.o
-    assemble test.asm into test.o (without any printing functions)
-    invoke linker to combine two object files into an ELF executable
-
-
-Make new C++ class called Linker (links ELF for now)
-    prioritize relocation of code for now (dynamic linking and other fancy stuff comes later)
-    link multiple object files (where one has a 'main' function)
-    have assembler produce executables if _main symbol exists (so we don't need to implement tamarind functions yet)
-        otherwise, produce libraries (just for static linking for now)
-
-    Will need functions to fully test (but do we?  Assembler can produce object files, can't it?)
-    It could but we still need to differentiate between tmd functions and asm functions part of the standard tmd library
-        lib.tmd
-            fun add(x:int, y:int) -> sum: int {
-                sum = x + y
-            }
-
-        test.tmd
-            fun main() {
-                print(add(2, 3))
-                print(add(5, 3))
-            }
-
-        tama lib.tmd test.tmd (produces lib.o, test.o and out.bin)
-
-        Running out.bin should print 5 and 8
-
-    Assemble the printing functions (print_int, print_bool) into a library ELF, and then use that to test the linker
-        print.lib
-        test.tmd
-            extern print
-
-Automate tests for compiler - refactors are getting dangerous with just hand-written tests
-    have tests test output of programs:
-        print(3)
-        print(4)
-
-        Should print 3 and 4 on separate lines - automate this with bash/python scripts
-
-Have Semant Ast translate into IrT instead of x86 assembly
-    Count assembly instructions for a given .tmd program, then implement IR and count instructions again to compare
-        ideally, the number of instructions should be less
-
-    Get something simple working end-to-end (these three Irt nodes should be enough ...?)
-        Expr:
-            call(f, l) - call function f on argument list l
-            const(i) - constant integer i
-        Stmt:
-            exp(e) - expression evaluated and result discarded
-
-    Canonicalize - remove discrepencies between Irt and machine-language programs (linearize)
-    Group into Basic Blocks - group so that blocks contain no internal jumps/labels (group)
-    Order Blocks into Traces - CJMP is immediately followed by false block (traceSchedule)
-
-    Use Tree Patterns to select instructions (algorithms like Maximal Munch)
-        this can produce an assembly language with infinite registers for now
-
-    Analzye control flow of the temp assembly to create control-flow graph
-
-    Analyze liveness of variables in control-flow graph to create interference graph
-
-    Color interference graph, and for each temporary either assign a register or store in memory
-
-    ???PDF268 says registers can be allocated for trees (rather than interference graph).
-        But this causes other problems - so is it worth it? (Hard to say at this point)
-
-Make a new C++ class called Optimizer
-    Have Semant output IR trees (keep it simple for now)
-    Have IRCompiler output assembly for given architecture from optimized IR
-    Have x86Assembler output assembly for given file format (ELF, ECOFF, MACHO)
-
-Switch over to c++ for these reasons:
-    can switch to C if performance is necessary
-    STL (vectors, unordered maps, etc) will simplify code
-    a dedicated string type will simplify things further
-    could use visitor pattern to let compiler catch errors when adding new nodes
-
+Read a little more of Ian Lance Taylor's blog or 'Linkers and Loaders'
+    to understand differences between ELF relocatable files and ELF executable files
+Watch 'Understanding Compiler Optimization - Chandler Carruth' on youtube
+Read more of 'Computer Systems: A Programmer's Perspective'

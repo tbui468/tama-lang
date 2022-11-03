@@ -224,7 +224,13 @@ class AstFunDef: public Ast {
 
             s.write_op("__%.*s_ret:", m_symbol.len, m_symbol.start);
             s.write_op("    pop     %s", "ebp");
-            s.write_op("    ret");
+            if (m_symbol.len == 4 && strncmp(m_symbol.start, "main", m_symbol.len) == 0) {
+                s.write_op("    mov     %s, %s", "ebx", "eax");
+                s.write_op("    mov     %s, %d", "eax", 1);
+                s.write_op("    int     %s", "0x80");
+            } else {
+                s.write_op("    ret");
+            }
             return Type(T_NIL_TYPE);
         }
 };

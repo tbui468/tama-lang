@@ -147,7 +147,7 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
     m_buf.insert(m_buf.end(), (uint8_t*)&sym_file, (uint8_t*)&sym_file + sizeof(Elf32Symbol));
 
 
-    name_index = input_file.size() + 1; //includes null-terminator
+    name_index += input_file.size() + 1; //includes null-terminator
 
     for(const std::pair<std::string, Label>& it: m_labels) {
         const Label* l = &it.second;
@@ -172,6 +172,9 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
 
     //strtab
     align_boundry_to(1);
+
+    ((Elf32SectionHeader*)(m_buf.data() + sh_strtab_offset))->m_offset = m_buf.size();
+
     char* strtab = (char*)(m_buf.data() + m_buf.size());
     m_buf.push_back('\0'); //null string
     m_buf.insert(m_buf.end(), input_file.data(), input_file.data() + input_file.size()); //filename
@@ -181,10 +184,14 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
         m_buf.insert(m_buf.end(), sym.data(), sym.data() + sym.size());
         m_buf.push_back('\0');
     }
+
+    ((Elf32SectionHeader*)(m_buf.data() + sh_strtab_offset))->m_size = m_buf.size() - ((Elf32SectionHeader*)(m_buf.data() + sh_strtab_offset))->m_offset;
     
     //rel
     if (undefined_globals) {
         align_boundry_to(4);
+
+        ((Elf32SectionHeader*)(m_buf.data() + sh_rel_offset))->m_offset = m_buf.size();
 
         for (const std::pair<std::string, Label>& it: m_labels) {
             const Label* l = &it.second;
@@ -215,6 +222,8 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
                 }
             }
         }
+
+        ((Elf32SectionHeader*)(m_buf.data() + sh_rel_offset))->m_size = m_buf.size() - ((Elf32SectionHeader*)(m_buf.data() + sh_rel_offset))->m_offset;
     }
 
     if (ems.count > 0) return;
@@ -474,6 +483,8 @@ void Assembler::append_program() {
     for (Node *n: m_nodes) {
         n->assemble(*this);
     }
+
+    patch_rel_jumps();
 
     std::unordered_map<std::string, Label>::iterator it = m_labels.find("_start");
     if (it != m_labels.end()) {
