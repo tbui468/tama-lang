@@ -1,26 +1,8 @@
-__add:
-    push    ebp
-    mov     ebp, esp
-    mov     eax, [ebp - -8]
-    push    eax
-    mov     eax, [ebp - -12]
-    push    eax
-    pop     ebx
-    pop     eax
-    add     eax, ebx
-    push    eax
-    pop     eax
-    add     esp, 0
-    jmp     __add_ret
-    add     esp, 0
-__add_ret:
-    pop     ebp
-    ret
 __main:
     push    ebp
     mov     ebp, esp
     push    2
-    push    3
+    push    4
     jmp     __while_condition0
 __while_block0:
     mov     eax, [ebp - 4]

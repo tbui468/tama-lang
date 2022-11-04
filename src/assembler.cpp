@@ -158,7 +158,7 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
         sym_l.m_other = 0;
         if (l->m_defined) {
             sym_l.m_value = l->m_addr - ((Elf32SectionHeader*)(m_buf.data() + sh_text_offset))->m_offset;
-            sym_l.m_shndx = 1; //text section index
+            sym_l.m_shndx = 1; //text section index TODO: shouldn't hard-code this
         } else {
             sym_l.m_value = 0;
             sym_l.m_shndx = Elf32SectionHeader::SHN_UNDEF;
@@ -195,7 +195,7 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
 
         for (const std::pair<std::string, Label>& it: m_labels) {
             const Label* l = &it.second;
-            if (!(l->m_defined)) {
+            if (!(l->m_defined)) { //defined symbols have relative jump addresses patched during 'append_program()'
                 int sym_count = (((Elf32SectionHeader*)&m_buf[sh_symtab_offset])->m_size) / sizeof(Elf32Symbol);
                 int sym_idx = -1;
                 for (int i = 0; i < sym_count; i++) {
@@ -206,17 +206,9 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
                     }
                 }
 
-/*
-                for (uint32_t addr: l->m_ref_addr) {
-                    Elf32Relocation r;
-                    r.m_offset = addr;
-                    r.m_info = r.to_info(sym_idx, Elf32Relocation::R_386_32);
-                    m_buf.insert(m_buf.end(), (uint8_t*)&r, (uint8_t*)&r + sizeof(Elf32Relocation));
-                }*/
-
                 for (uint32_t addr: l->m_rjmp_addr) {
                     Elf32Relocation r;
-                    r.m_offset = addr;
+                    r.m_offset = addr - ((Elf32SectionHeader*)(m_buf.data() + sh_text_offset))->m_offset;
                     r.m_info = r.to_info(sym_idx, Elf32Relocation::R_386_PC32);
                     m_buf.insert(m_buf.end(), (uint8_t*)&r, (uint8_t*)&r + sizeof(Elf32Relocation));
                 }
@@ -487,7 +479,6 @@ void Assembler::append_program() {
     patch_rel_jumps();
 }
 
-//TODO: should incorporate this into Linker (hardcoding the load address 0x08048000 right now)
 void Assembler::patch_addr_offsets() {
     Elf32ElfHeader *eh = (Elf32ElfHeader*)m_buf.data();
 
@@ -502,9 +493,7 @@ void Assembler::patch_addr_offsets() {
 void Assembler::patch_rel_jumps() {
     for(const std::pair<std::string, Label>& it: m_labels) {
         const Label* l = &it.second;
-        if (!l->m_defined) {
-            ems_add(&ems, l->m_t.line, "Assembling Error: Label '%.*s' not defined.", l->m_t.len, l->m_t.start);
-        } else {
+        if (l->m_defined) { //undefined symbols must be resolved by linker
             for (uint32_t addr: l->m_rjmp_addr) {
                 uint32_t *ptr = (uint32_t*)&m_buf[addr];
                 uint32_t final_addr = l->m_addr - *ptr;

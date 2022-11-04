@@ -29,9 +29,22 @@ struct IRStmt {
 };
 
 **********************Linker*******************************
+rel->m_offset is WAAAY too big - right now it's the offset from file beginning, NOT from the text section beginning
+    need to offset this when makeing the .obj file in the assembler - but need access to the .text section
 link function needs to:
+    try using new 'get_section_header' function - there are a few places in Linker::link that is can be used besides just relocation <----start here!
+        then use it to apply relocations
+
     apply relocations when using more than one file
+        getting __add undefined when attempting to assemble main.asm into main.obj
+            Solution!!! just remove this from patch_rel_jumps - undefined symbols will be changed into a relocation entry
+            when assembler makes a relocatable ELF
+
+        when applying relocations, if symbol doesn't exist in any module, then report a linking error
+            skip undefined symbol and try linking other symbols so that all linking errors can be reported one time
     try linking math.tmd along with main.tmd
+    refactor Link::link() into a few smaller functions (eg, patch_entry_addr() when finding 'main' function)
+    refactor Link::link() so that load address 0x08048000 is not hard coded in Link::link() a bunch of times
 
 Use readelf to analyze .o files
     Compile to 32-bit elf:

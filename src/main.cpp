@@ -44,7 +44,6 @@ int main (int argc, char **argv) {
     }
 
     for (const std::string& f: tmd_files) {
-        std::cout << f << std::endl;
         std::string out = f.substr(0, f.size() - 4) + ".asm";
         asm_files.push_back(out);
 
@@ -54,7 +53,6 @@ int main (int argc, char **argv) {
 
 
     for (const std::string& f: asm_files) {
-        std::cout << f << std::endl;
         std::string out = f.substr(0, f.size() - 4) + ".obj";
         obj_files.push_back(out);
 
