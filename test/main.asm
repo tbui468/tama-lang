@@ -2,7 +2,7 @@ __main:
     push    ebp
     mov     ebp, esp
     push    2
-    push    4
+    push    5
     jmp     __while_condition0
 __while_block0:
     mov     eax, [ebp - 4]
@@ -58,8 +58,8 @@ __else_block1:
     call    __add
     add     esp, 8
     push    eax
-    push    4
-    push    30
+    push    32
+    push    0
     call    __add
     add     esp, 8
     push    eax

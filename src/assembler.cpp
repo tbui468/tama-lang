@@ -230,7 +230,7 @@ int Assembler::append_section_header(Elf32SectionHeader h) {
     return offset;
 }
 
-
+/*
 void Assembler::emit_code(const std::string& input_file, const std::string& output_file) {
     read(input_file);
     lex();
@@ -244,7 +244,7 @@ void Assembler::emit_code(const std::string& input_file, const std::string& outp
 
     if (ems.count > 0) return;
     write(output_file);
-}
+}*/
 
 void Assembler::read(const std::string& input_file) {
     std::ifstream f(input_file);
@@ -452,24 +452,6 @@ bool Assembler::end_of_tokens() {
 
 /*Translate assembly to machine code*/
 
-void Assembler::append_elf_header() {
-    Elf32ElfHeader eh;
-    m_buf.insert(m_buf.end(), (uint8_t*)&eh, (uint8_t*)&eh + sizeof(Elf32ElfHeader));
-
-    ((Elf32ElfHeader*)(m_buf.data()))->m_ehsize = m_buf.size();
-
-}
-
-void Assembler::append_program_header() {
-    Elf32ElfHeader *eh = (Elf32ElfHeader*)m_buf.data();
-    ((Elf32ElfHeader*)m_buf.data())->m_phoff = m_buf.size();
-
-    Elf32ProgramHeader ph;
-    m_buf.insert(m_buf.end(), (uint8_t*)&ph, (uint8_t*)&ph + sizeof(Elf32ProgramHeader));
-
-    ((Elf32ElfHeader*)m_buf.data())->m_phentsize = m_buf.size() - eh->m_phoff;
-
-}
 
 void Assembler::append_program() {
     for (Node *n: m_nodes) {
@@ -503,13 +485,6 @@ void Assembler::patch_rel_jumps() {
     }
 }
 
-void Assembler::assemble() {
-    append_elf_header();
-    append_program_header();
-    append_program();
-    patch_addr_offsets();
-    patch_rel_jumps();
-}
 
 void Assembler::write(const std::string& output_file) {
     std::ofstream f(output_file, std::ios::out | std::ios::binary);

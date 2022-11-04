@@ -757,7 +757,7 @@ class Assembler {
         Lexer m_lexer;
         uint32_t m_load_addr = 0;
     public:
-        void emit_code(const std::string& input_file, const std::string& output_file);
+//        void emit_code(const std::string& input_file, const std::string& output_file);
         void generate_obj(const std::string& input_file, const std::string& output_file);
     private:
         void read(const std::string& input_file);
@@ -780,9 +780,6 @@ class Assembler {
 
         int append_section_header(Elf32SectionHeader h);
 
-        void assemble();
-        void append_elf_header();
-        void append_program_header();
         void append_program();
         void patch_addr_offsets();
         void patch_labels();

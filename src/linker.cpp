@@ -162,15 +162,12 @@ void Linker::link(const std::vector<std::string>& obj_files, const std::string& 
 
                 Elf32SectionHeader *other_text_sh = get_section_header(other_buf, ".text");
 
-                uint32_t* final_addr = (uint32_t*)(&other_buf[other_text_sh->m_offset + other_sym->m_value]);
-                std::cout << "test: " << other_offset + other_sym->m_value << std::endl;
-                std::cout << "program relocation offset: " << program_offset + total_offset + rel->m_offset << std::endl;
-                std::cout << "total offset: " << total_offset << std::endl;
-                std::cout << "rel->m_offset: " << rel->m_offset << std::endl;
 
                 if (rel->get_type() == Elf32Relocation::R_386_PC32 ) {
                     //Note: relative jumps are based of instruction AFTER current, so we need to relocate based off the instruction after the the address to patch
                     *((uint32_t*)&m_buf[program_offset + total_offset + rel->m_offset]) = other_offset + other_sym->m_value - (total_offset + rel->m_offset + 4);
+                } else {
+                    assert(false && "Assertion Failed: Linker only supports R_386_PC32 relocation types for now.");
                 }
 
 

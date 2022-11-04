@@ -2,7 +2,7 @@ import math
 
 main: () -> int {
     x: int = 2
-    y: int = 4
+    y: int = 5
     
     while x < y {
         x = x + 1
@@ -11,6 +11,6 @@ main: () -> int {
     if x > y {
         return 4
     } else {
-        return add(x, y) + add(30, 4)
+        return add(x, y) + add(0, 32)
     }
 }

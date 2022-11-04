@@ -43,6 +43,7 @@ int main (int argc, char **argv) {
         }
     }
 
+    std::cout << "Compiling .tmd source files to x86..." << std::endl;
     for (const std::string& f: tmd_files) {
         std::string out = f.substr(0, f.size() - 4) + ".asm";
         asm_files.push_back(out);
@@ -51,16 +52,17 @@ int main (int argc, char **argv) {
         s.generate_asm(f, out);
     }
 
-
+    std::cout << "Translating x86 to ELF relocatable objects..." << std::endl;
     for (const std::string& f: asm_files) {
         std::string out = f.substr(0, f.size() - 4) + ".obj";
         obj_files.push_back(out);
 
         Assembler a;
         a.generate_obj(f, out);
-        //a.emit_code(f, out);
     }
 
+
+    std::cout << "Linking ELF relocatable object(s) into ELF executable..." << std::endl;
     Linker l;
     l.link(obj_files, "out.exe");
    
