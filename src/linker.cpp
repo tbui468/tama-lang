@@ -26,7 +26,7 @@ std::vector<uint8_t> Linker::read_binary(const std::string& input_file) {
 }
 
 
-void Linker::write(const std::string& output_file) {
+void Linker::write_elf_executable(const std::string& output_file) {
     std::ofstream f(output_file, std::ios::out | std::ios::binary);
     f.write((const char*)m_buf.data(), m_buf.size());
 }
@@ -61,11 +61,15 @@ Elf32Symbol* Linker::get_symbol(const std::vector<uint8_t>& elf_buf, char* name)
     return nullptr;
 }
 
-void Linker::link(const std::vector<std::string>& obj_files, const std::string& output_file) {
+
+void Linker::read_elf_relocatables(const std::vector<std::string>& obj_files) {
     for (std::string s: obj_files) {
         m_obj_bufs.push_back(read_binary(s));
     }
+}
 
+
+void Linker::append_elf_executable_header() {
     Elf32ElfHeader eh;
     eh.m_type = 2; //executable    
     eh.m_ehsize = sizeof(Elf32ElfHeader);
@@ -73,21 +77,21 @@ void Linker::link(const std::vector<std::string>& obj_files, const std::string& 
     eh.m_phentsize = sizeof(Elf32ProgramHeader);
     eh.m_phnum = 1;
     m_buf.insert(m_buf.end(), (uint8_t*)&eh, (uint8_t*)&eh + sizeof(Elf32ElfHeader));
+}
 
+
+void Linker::append_program_header() {
     Elf32ProgramHeader ph;
     ph.m_type = 1;
-    ph.m_offset = 0;
+    ph.m_offset = 0; //TODO: Understnd why is this 0 and not the program segment offset? It crashes if set to that...
     ph.m_vaddr = Linker::LOAD_ADDR;
     ph.m_paddr = Linker::LOAD_ADDR;
     ph.m_flags = 5;
-    ph.m_align = 0x1000;
-
-    int ph_offset = m_buf.size();
+    ph.m_align = 0x1000; //TODO: Need to figure out what this is for
     m_buf.insert(m_buf.end(), (uint8_t*)&ph, (uint8_t*)&ph + sizeof(Elf32ProgramHeader));
-    int program_offset = m_buf.size();
+}
 
-
-    //append all text sections
+void Linker::append_program() {
     std::vector<int> module_offsets = std::vector<int>();
     for (const std::vector<uint8_t>& rel_buf: m_obj_bufs) {
         module_offsets.push_back(m_buf.size());
@@ -98,10 +102,15 @@ void Linker::link(const std::vector<std::string>& obj_files, const std::string& 
         m_buf.insert(m_buf.end(), rel_buf.data() + text_sh->m_offset, rel_buf.data() + text_sh->m_offset + text_sh->m_size);
     }
 
+    int ph_offset = ((Elf32ElfHeader*)m_buf.data())->m_phoff;
+
     ((Elf32ProgramHeader*)(m_buf.data() + ph_offset))->m_memsz = m_buf.size();
     ((Elf32ProgramHeader*)(m_buf.data() + ph_offset))->m_filesz = m_buf.size();
+}
 
 
+void Linker::patch_program_entry() {
+    int program_offset = sizeof(Elf32ElfHeader) + sizeof(Elf32ProgramHeader);
     int main_module_offset = 0;
 
     for (int i = 0; i < m_obj_bufs.size(); i++) {
@@ -123,8 +132,9 @@ void Linker::link(const std::vector<std::string>& obj_files, const std::string& 
         
         main_module_offset += rel_buf->size();
     }
+}
 
-    //apply relocations to each module
+void Linker::apply_relocations() {
     
     int total_offset = 0;
     for (const std::vector<uint8_t>& rel_buf: m_obj_bufs) {
@@ -144,30 +154,20 @@ void Linker::link(const std::vector<std::string>& obj_files, const std::string& 
 
             int other_offset = 0;
             for (const std::vector<uint8_t>& other_buf: m_obj_bufs) {
-                if (&other_buf == &rel_buf) {
-                    other_offset += get_section_header(other_buf, ".text")->m_size;
-                    continue;
-                }
 
                 Elf32Symbol* other_sym = get_symbol(other_buf, sym_name);
-                if (!other_sym) {
-                    other_offset += get_section_header(other_buf, ".text")->m_size;
-                    continue;
-                }
+                if (&other_buf != &rel_buf && other_sym && other_sym->m_shndx != Elf32SectionHeader::SHN_UNDEF) {
 
-                if (other_sym->m_shndx == Elf32SectionHeader::SHN_UNDEF) {
-                    other_offset += get_section_header(other_buf, ".text")->m_size;
-                    continue;
-                }
+                    Elf32SectionHeader *other_text_sh = get_section_header(other_buf, ".text");
 
-                Elf32SectionHeader *other_text_sh = get_section_header(other_buf, ".text");
+                    if (rel->get_type() == Elf32Relocation::R_386_PC32 ) {
+                        //Note: relative jumps are based of instruction AFTER current, so we need to relocate based off the instruction after the the address to patch
+                        int program_offset = sizeof(Elf32ElfHeader) + sizeof(Elf32ProgramHeader);
+                        *((uint32_t*)&m_buf[program_offset + total_offset + rel->m_offset]) = other_offset + other_sym->m_value - (total_offset + rel->m_offset + 4);
+                    } else {
+                        assert(false && "Assertion Failed: Linker only supports R_386_PC32 relocation types for now.");
+                    }
 
-
-                if (rel->get_type() == Elf32Relocation::R_386_PC32 ) {
-                    //Note: relative jumps are based of instruction AFTER current, so we need to relocate based off the instruction after the the address to patch
-                    *((uint32_t*)&m_buf[program_offset + total_offset + rel->m_offset]) = other_offset + other_sym->m_value - (total_offset + rel->m_offset + 4);
-                } else {
-                    assert(false && "Assertion Failed: Linker only supports R_386_PC32 relocation types for now.");
                 }
 
 
@@ -178,6 +178,14 @@ void Linker::link(const std::vector<std::string>& obj_files, const std::string& 
 
         total_offset += get_section_header(rel_buf, ".text")->m_size;
     }
+}
 
-    write(output_file);
+void Linker::link(const std::vector<std::string>& obj_files, const std::string& output_file) {
+    read_elf_relocatables(obj_files);
+    append_elf_executable_header();
+    append_program_header();
+    append_program();
+    patch_program_entry();
+    apply_relocations();
+    write_elf_executable(output_file);
 }

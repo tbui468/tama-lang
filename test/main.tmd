@@ -1,7 +1,7 @@
 import math
 
 main: () -> int {
-    x: int = 3
+    x: int = 2
     y: int = 5
     
     z: int = sub(x, y)

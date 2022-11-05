@@ -35,14 +35,15 @@ Test using three or more files with more complex dependencies
     main -> math
     main -> other_lib
 
-refactor Link::link() so that load address 0x08048000 is not hard coded in Link::link() a bunch of times
-    should remove patch_addr_offsets in assembler.cpp and ORG keyword in assembler.hpp - not using this now since linker will 
-        take care of load address offset now
-
 How should print be part of linking process?
     Could have library written in assembly and compiled to .obj file
     Have function declarations inside of compiler already to type check
     Link library at link time - link standard library
+
+What if two modules have the same dependency?  Should not have duplicates of math in the following link:
+    main -> math
+    main -> other_lib
+    other_lib -> math
 *********************Documentation****************
 
 Start writing out README file
