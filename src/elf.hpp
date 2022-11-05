@@ -110,6 +110,15 @@ struct Elf32Symbol {
         return (binding << 4) + (type & 0xf);
     }
 
+    void to_string() {
+        std::cout << "Name: " << m_name << std::endl;
+        std::cout << "Value: " << m_value << std::endl;
+        std::cout << "Size: " << m_size << std::endl;
+        std::cout << "Info: " << m_info << std::endl;
+        std::cout << "Other: " << m_other << std::endl;
+        std::cout << "Shndex: " << m_shndx << std::endl;
+    }
+
     static const int STT_NOTYPE = 0;
     static const int STT_OBJECT = 1;
     static const int STT_FUNC = 2;

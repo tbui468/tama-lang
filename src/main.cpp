@@ -43,24 +43,23 @@ int main (int argc, char **argv) {
         }
     }
 
-    std::cout << "Compiling .tmd source files to x86..." << std::endl;
     for (const std::string& f: tmd_files) {
         std::string out = f.substr(0, f.size() - 4) + ".asm";
         asm_files.push_back(out);
 
+        std::cout << "Compiling " << f << " to IA32..." << std::endl;
         Semant s;
         s.generate_asm(f, out);
     }
 
-    std::cout << "Translating x86 to ELF relocatable objects..." << std::endl;
     for (const std::string& f: asm_files) {
         std::string out = f.substr(0, f.size() - 4) + ".obj";
         obj_files.push_back(out);
 
+        std::cout << "Assembling " << f << " to ELF relocatable objects..." << std::endl;
         Assembler a;
         a.generate_obj(f, out);
     }
-
 
     std::cout << "Linking ELF relocatable object(s) into ELF executable..." << std::endl;
     Linker l;
@@ -69,9 +68,9 @@ int main (int argc, char **argv) {
     ems_print(&ems);
     
     //cleanup
-    printf("Memory allocated: %ld\n", allocated);
+//    printf("Memory allocated: %ld\n", allocated);
     ems_free(&ems);
-    printf("Allocated memory remaining: %ld\n", allocated);
+//    printf("Allocated memory remaining: %ld\n", allocated);
 
     return 0;
 }

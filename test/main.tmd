@@ -4,13 +4,15 @@ main: () -> int {
     x: int = 2
     y: int = 5
     
+    z: int = sub(x, y)
     while x < y {
         x = x + 1
     }
 
+
     if x > y {
         return 4
     } else {
-        return add(x, y) + add(0, 32)
+        return add(x, y) + add(0, 32) + z
     }
 }

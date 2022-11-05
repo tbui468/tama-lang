@@ -19,6 +19,7 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
     parse();
     if (ems.count > 0) return;
 
+
     Elf32ElfHeader eh;
     eh.m_shstrndx = 2;
     eh.m_shentsize = sizeof(Elf32SectionHeader);
@@ -52,6 +53,7 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
                                                3, 1, 4, sizeof(Elf32Relocation)});
 
 
+    std::cout << "Appending text section" << std::endl;
 
     //text
     align_boundry_to(16);
@@ -77,8 +79,7 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
         ((Elf32ElfHeader*)m_buf.data())->m_shnum = 5;
     }
 
-
-
+    std::cout << "Appending shstrtab section" << std::endl;
 
     //shstrtab
     align_boundry_to(1); //no alignment
@@ -109,11 +110,11 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
 
     ((Elf32SectionHeader*)&m_buf[sh_shstrtab_offset])->m_size = m_buf.size() - ((Elf32SectionHeader*)&m_buf[sh_shstrtab_offset])->m_offset;
 
+    std::cout << "Appending symtab section" << std::endl;
 
     //symtab
     align_boundry_to(4);
 
-    Elf32Symbol* symtab_start = (Elf32Symbol*)(m_buf.data() + m_buf.size());; //TODO: this is replaced with the m_offset of the symtab header
     ((Elf32SectionHeader*)(m_buf.data() + sh_symtab_offset))->m_offset = m_buf.size();
 
     Elf32Symbol sym_null;
@@ -167,7 +168,11 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
         name_index += (it.first.size() + 1); //includes null-terminator
     }
 
+
+
     ((Elf32SectionHeader*)(m_buf.data() + sh_symtab_offset))->m_size = m_buf.size() - ((Elf32SectionHeader*)(m_buf.data() + sh_symtab_offset))->m_offset;
+
+    std::cout << "Appending strtab section" << std::endl;
 
 
     //strtab
@@ -186,7 +191,11 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
     }
 
     ((Elf32SectionHeader*)(m_buf.data() + sh_strtab_offset))->m_size = m_buf.size() - ((Elf32SectionHeader*)(m_buf.data() + sh_strtab_offset))->m_offset;
-    
+
+
+    std::cout << "Appending rel.text section" << std::endl;
+
+
     //rel
     if (undefined_globals) {
         align_boundry_to(4);
@@ -199,8 +208,8 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
                 int sym_count = (((Elf32SectionHeader*)&m_buf[sh_symtab_offset])->m_size) / sizeof(Elf32Symbol);
                 int sym_idx = -1;
                 for (int i = 0; i < sym_count; i++) {
-                    Elf32Symbol* sym = symtab_start + i;
-                    if (strncmp(&strtab[sym->m_name], it.first.c_str(), it.first.size()) == 0) {
+                    Elf32Symbol * sym = (Elf32Symbol*)(m_buf.data() + ((Elf32SectionHeader*)(m_buf.data() + sh_symtab_offset))->m_offset + i * sizeof(Elf32Symbol));
+                    if (strlen(&strtab[sym->m_name]) == it.first.size() && strncmp(&strtab[sym->m_name], it.first.c_str(), it.first.size()) == 0) {
                         sym_idx = i;
                         break;
                     }

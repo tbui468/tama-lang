@@ -3,6 +3,13 @@ __main:
     mov     ebp, esp
     push    2
     push    5
+    mov     eax, [ebp - 8]
+    push    eax
+    mov     eax, [ebp - 4]
+    push    eax
+    call    __sub
+    add     esp, 8
+    push    eax
     jmp     __while_condition0
 __while_block0:
     mov     eax, [ebp - 4]
@@ -46,7 +53,7 @@ __while_condition0:
     je      __else_block1
     push    4
     pop     eax
-    add     esp, 8
+    add     esp, 12
     jmp     __main_ret
     add     esp, 0
     jmp     __if_end1
@@ -67,12 +74,18 @@ __else_block1:
     pop     eax
     add     eax, ebx
     push    eax
+    mov     eax, [ebp - 12]
+    push    eax
+    pop     ebx
     pop     eax
-    add     esp, 8
+    add     eax, ebx
+    push    eax
+    pop     eax
+    add     esp, 12
     jmp     __main_ret
     add     esp, 0
 __if_end1:
-    add     esp, 8
+    add     esp, 12
 __main_ret:
     pop     ebp
     mov     ebx, eax
