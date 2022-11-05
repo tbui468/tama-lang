@@ -10,6 +10,7 @@ class Linker {
     private:
         std::vector<uint8_t> m_buf;
         std::vector<std::vector<uint8_t>> m_obj_bufs;
+        static const uint32_t LOAD_ADDR = 0x08048000;
     private:
         std::vector<uint8_t> read_binary(const std::string& input_file);
         void write(const std::string& output_file);

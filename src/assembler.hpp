@@ -59,7 +59,6 @@ class Assembler {
             {"bh", T_BH},
             {"int", T_INTR},
             {"equ", T_EQU},
-            {"org", T_ORG},
             {"cdq", T_CDQ},
             {"xor", T_XOR},
             {"call", T_CALL},
@@ -368,14 +367,6 @@ class Assembler {
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | reg->bit_pattern() << 3 | mem->bit_pattern());
                             } else {
                                 ems_add(&ems, m_t.line, "Assembler Error: and doesn't work with those operand types");
-                            }
-                            break;
-                        }
-                        case T_ORG: {
-                            if (!is_expr(m_left)) {
-                                ems_add(&ems, m_t.line, "Assembler Error: org operator must be followed by imm32.");
-                            } else {
-                                a.m_load_addr = m_left->eval();
                             }
                             break;
                         }
@@ -755,9 +746,7 @@ class Assembler {
         std::vector<uint8_t> m_buf = std::vector<uint8_t>();
         std::unordered_map<std::string, Label> m_labels = std::unordered_map<std::string, Label>();
         Lexer m_lexer;
-        uint32_t m_load_addr = 0;
     public:
-//        void emit_code(const std::string& input_file, const std::string& output_file);
         void generate_obj(const std::string& input_file, const std::string& output_file);
     private:
         void read(const std::string& input_file);
@@ -781,8 +770,6 @@ class Assembler {
         int append_section_header(Elf32SectionHeader h);
 
         void append_program();
-        void patch_addr_offsets();
-        void patch_labels();
         void patch_rel_jumps();
         void write(const std::string& output_file);
 

@@ -383,7 +383,6 @@ Assembler::Node *Assembler::parse_stmt() {
             case T_POP:
             case T_PUSH:
             case T_INTR:
-            case T_ORG:
             case T_IDIV:
             case T_DIV:
             case T_CALL:
@@ -468,16 +467,6 @@ void Assembler::append_program() {
     }
 
     patch_rel_jumps();
-}
-
-void Assembler::patch_addr_offsets() {
-    Elf32ElfHeader *eh = (Elf32ElfHeader*)m_buf.data();
-
-    eh->m_entry += m_load_addr;
-
-    Elf32ProgramHeader *ph = (Elf32ProgramHeader*)(m_buf.data() + eh->m_phoff);
-    ph->m_vaddr = m_load_addr;
-    ph->m_paddr = m_load_addr;
 }
 
 

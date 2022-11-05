@@ -29,25 +29,20 @@ struct IRStmt {
 };
 
 **********************Linker*******************************
-Segmentation fault when linking with math.tmd with two functions (add and sub)
-    Assembler::generate_obj() is segmentation faulting only when both functions are used!!!! (if only add/sub is used it works fine)
-        good chance to refactor function while finding the bug
+Test using three or more files with more complex dependencies
+    main -> complex_math -> math
 
-    refactor Link::link() so that load address 0x08048000 is not hard coded in Link::link() a bunch of times
-        should remove patch_addr_offsets in assembler.cpp and ORG keyword in assembler.hpp - not using this now since linker will 
-            take care of load address offset now
-    still not happy with the +4 with PC relocations in Linker - why don't we have this when patch relative jumps in assembler?
+    main -> math
+    main -> other_lib
 
-Use readelf to analyze .o files
-    Compile to 32-bit elf:
-        gcc -c -mx32 test.c (will output test.o)
-        gcc -c -m elf_i386 main.c (same as -mx32?)
-        use -fno-asynchronous-unwind-tables to get rid of eh_frame (what's the purpose of this?)
+refactor Link::link() so that load address 0x08048000 is not hard coded in Link::link() a bunch of times
+    should remove patch_addr_offsets in assembler.cpp and ORG keyword in assembler.hpp - not using this now since linker will 
+        take care of load address offset now
 
-    readelf -h test.o (see header)
-
-    readelf -x .text test.o (hexdump text section)
-
+How should print be part of linking process?
+    Could have library written in assembly and compiled to .obj file
+    Have function declarations inside of compiler already to type check
+    Link library at link time - link standard library
 *********************Documentation****************
 
 Start writing out README file

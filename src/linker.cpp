@@ -77,8 +77,8 @@ void Linker::link(const std::vector<std::string>& obj_files, const std::string& 
     Elf32ProgramHeader ph;
     ph.m_type = 1;
     ph.m_offset = 0;
-    ph.m_vaddr = 0x08048000;
-    ph.m_paddr = 0x08048000;
+    ph.m_vaddr = Linker::LOAD_ADDR;
+    ph.m_paddr = Linker::LOAD_ADDR;
     ph.m_flags = 5;
     ph.m_align = 0x1000;
 
@@ -117,7 +117,7 @@ void Linker::link(const std::vector<std::string>& obj_files, const std::string& 
             Elf32Symbol* sym = (Elf32Symbol*)(rel_buf->data() + symtab_sh->m_offset + j * sizeof(Elf32Symbol));
             char* sym_name = (char*)(rel_buf->data() + strtab_sh->m_offset + sym->m_name);
             if (strlen(sym_name) == 6 && strncmp(sym_name, "__main", 6) == 0) {
-                ((Elf32ElfHeader*)m_buf.data())->m_entry = program_offset + main_module_offset + sym->m_value + 0x08048000;
+                ((Elf32ElfHeader*)m_buf.data())->m_entry = program_offset + main_module_offset + sym->m_value + Linker::LOAD_ADDR;
             }
         }
         
