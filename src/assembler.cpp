@@ -191,9 +191,9 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
     ((Elf32ElfHeader*)(m_buf.data()))->m_shoff = m_buf.size();
 
 
-    int sh_null_offset = append_section_header({0, Elf32SectionHeader::SHT_NULL,
-                                                0, 0, 0, 0,
-                                                Elf32SectionHeader::SHN_UNDEF, 0, 0, 0});
+    append_section_header({0, Elf32SectionHeader::SHT_NULL,
+                            0, 0, 0, 0,
+                            Elf32SectionHeader::SHN_UNDEF, 0, 0, 0});
 
     int sh_text_offset = append_section_header({1, Elf32SectionHeader::SHT_PROGBITS,
                                                 Elf32SectionHeader::SHF_ALLOC | Elf32SectionHeader::SHF_EXECINSTR, 0, 0, 0,
@@ -256,9 +256,10 @@ void Assembler::read(const std::string& input_file) {
 
 void Assembler::lex() {
     m_tokens = m_lexer.lex(m_assembly, m_reserved_words);
+    /*
     for (struct Token t: m_tokens) {
-//        printf("%.*s\n", t.len, t.start);
-    }
+        printf("%.*s\n", t.len, t.start);
+    }*/
 }
 
 Assembler::Node *Assembler::parse_unit() {
@@ -305,6 +306,8 @@ Assembler::Node *Assembler::parse_unit() {
                 consume_token(T_R_BRACKET);
                 return new NodeMem(reg, displacement);
             }
+            ems_add(&ems, next.line, "Parse Error: Unrecognized token in memory access!");
+            return NULL;
         }
         default:
             ems_add(&ems, next.line, "Parse Error: Unrecognized token!");
@@ -410,27 +413,28 @@ void Assembler::parse() {
         m_nodes.push_back(parse_stmt());
     }
 
+    /*
     for (Node* n: m_nodes) {
-//        std::cout << "instruction: " << n->to_string() << '\n';
-    }
+        std::cout << "instruction: " << n->to_string() << '\n';
+    }*/
 }
 
 struct Token Assembler::peek_one() {
-    int next = m_current;
+    uint32_t next = m_current;
     if (next >= m_tokens.size())
         next = m_tokens.size() - 1;
     return m_tokens[next];
 }
 
 struct Token Assembler::peek_two() {
-    int next = m_current + 1;
+    uint32_t next = m_current + 1;
     if (next >= m_tokens.size())
         next = m_tokens.size() - 1;
     return m_tokens[next];
 }
 
 struct Token Assembler::next_token() {
-    int next = m_current;
+    uint32_t next = m_current;
     if (next >= m_tokens.size())
         next = m_tokens.size() - 1;
     struct Token ret = m_tokens[next];

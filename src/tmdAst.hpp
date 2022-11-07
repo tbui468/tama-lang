@@ -245,11 +245,7 @@ class AstParam: public Ast {
         std::string to_string() {
             return "param";
         }
-        Type translate(Semant& s) {
-            //TODO: how do I want to do this?
-            //Maybe nothing...
-            //Really only need to restrict function body from declaring variable with same symbol as formal parameter
-            //and check parameters before environment symbols when referencing/reassigning 
+        Type translate([[maybe_unused]] Semant& s) {
             return Type(m_dtype.type);
         }
 };
@@ -300,7 +296,7 @@ class AstGetSym: public Ast {
         Type translate(Semant& s) {
             int arg_offset = -1;
             AstFunDef *f = dynamic_cast<AstFunDef*>(s.m_compiling_fun);
-            for (int i = 0; i < f->m_params.size(); i++) {
+            for (int i = 0; i < int(f->m_params.size()); i++) {
                 Ast* n = f->m_params[i];
                 AstParam* p = dynamic_cast<AstParam*>(n);
                 if (strncmp(p->m_symbol.start, m_symbol.start, m_symbol.len) == 0) {
@@ -346,7 +342,7 @@ class AstSetSym: public Ast {
 
             int arg_offset = -1;
             AstFunDef *f = dynamic_cast<AstFunDef*>(s.m_compiling_fun);
-            for (int i = 0; i < f->m_params.size(); i++) {
+            for (int i = 0; i < int(f->m_params.size()); i++) {
                 Ast* n = f->m_params[i];
                 AstParam* p = dynamic_cast<AstParam*>(n);
                 if (strncmp(p->m_symbol.start, m_symbol.start, m_symbol.len) == 0) {

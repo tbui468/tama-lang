@@ -19,7 +19,7 @@ extern struct ErrorMsgs ems;
 
 void ems_init(struct ErrorMsgs *ems);
 void ems_free(struct ErrorMsgs *ems);
-void ems_add(struct ErrorMsgs *ems, int line, char* format, ...);
+void ems_add(struct ErrorMsgs *ems, int line, const char* format, ...);
 void ems_sort(struct ErrorMsgs *ems); //this can be static
 void ems_print(struct ErrorMsgs *ems);
 

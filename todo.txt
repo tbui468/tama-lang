@@ -1,9 +1,4 @@
 ****************Refactor**************
-Assembler::generate_obj requires massive refactor
-    too much confusing code/structure - each section appendment should be own function
-    section header m_name index into shstrtab is hardcoded
-    restructure code to make easier to understand/modify in the future
-    
 Need to reenable all warnings and fix those - quite a few I think
 
 **************Automatic testing************

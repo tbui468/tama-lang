@@ -1,4 +1,3 @@
-
 #include <fstream>
 #include <iterator>
 #include <cstring>
@@ -51,7 +50,7 @@ Elf32Symbol* Linker::get_symbol(const std::vector<uint8_t>& elf_buf, char* name)
     Elf32SectionHeader* symtab_sh = get_section_header(elf_buf, ".symtab");    
     Elf32SectionHeader* strtab_sh = get_section_header(elf_buf, ".strtab");
 
-    for (int i = 0; i < symtab_sh->m_size / symtab_sh->m_entsize; i++) {
+    for (int i = 0; i < int(symtab_sh->m_size / symtab_sh->m_entsize); i++) {
         Elf32Symbol* sym = (Elf32Symbol*)(elf_buf.data() + symtab_sh->m_offset) + i;
         char* sym_name = (char*)&elf_buf[strtab_sh->m_offset + sym->m_name];
         if (strlen(name) == strlen(sym_name) && strncmp(name, sym_name, strlen(name)) == 0) {
@@ -123,7 +122,7 @@ void Linker::patch_program_entry() {
         assert(strtab_sh && "Assertion Failed: strtab section header not found.");
         assert(symtab_sh && "Assertion Failed: symtab section header not found.");
 
-        for (int j = 0; j < symtab_sh->m_size / symtab_sh->m_entsize; j++) {
+        for (int j = 0; j < int(symtab_sh->m_size / symtab_sh->m_entsize); j++) {
             Elf32Symbol* sym = (Elf32Symbol*)(rel_buf->data() + symtab_sh->m_offset + j * sizeof(Elf32Symbol));
             char* sym_name = (char*)(rel_buf->data() + strtab_sh->m_offset + sym->m_name);
             if (strlen(sym_name) == 6 && strncmp(sym_name, "__main", 6) == 0) {
@@ -145,7 +144,7 @@ void Linker::apply_relocations() {
         Elf32SectionHeader *symtab_sh = get_section_header(rel_buf, ".symtab");
         Elf32SectionHeader *strtab_sh = get_section_header(rel_buf, ".strtab");
 
-        for (int i = 0; i < rel_sh->m_size / rel_sh->m_entsize; i++) {
+        for (int i = 0; i < int(rel_sh->m_size / rel_sh->m_entsize); i++) {
             Elf32Relocation *rel = (Elf32Relocation*)(rel_buf.data() + rel_sh->m_offset + i * sizeof(Elf32Relocation));
             Elf32Symbol *sym = (Elf32Symbol*)(rel_buf.data() + symtab_sh->m_offset + rel->get_sym_idx() * sizeof(Elf32Symbol));
             char* sym_name = (char*)(rel_buf.data() + strtab_sh->m_offset + sym->m_name);
@@ -158,7 +157,6 @@ void Linker::apply_relocations() {
                 Elf32Symbol* defined_sym = get_symbol(other_buf, sym_name);
                 if (&other_buf != &rel_buf && defined_sym && defined_sym->m_shndx != Elf32SectionHeader::SHN_UNDEF) {
                     found_def = true;
-                    Elf32SectionHeader *other_text_sh = get_section_header(other_buf, ".text");
 
                     if (rel->get_type() == Elf32Relocation::R_386_PC32 ) {
                         //Note: relative jumps are based of instruction AFTER current, so we need to relocate based off the instruction after the the address to patch

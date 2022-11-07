@@ -544,7 +544,7 @@ class Assembler {
                 int32_t eval() {
                     assert(false && "NodeReg32 cannot call eval");
                 }
-                void assemble(Assembler& a) override {
+                void assemble([[maybe_unused]] Assembler& a) override {
                     //TODO
                 }
                 std::string to_string() {
@@ -575,7 +575,7 @@ class Assembler {
                 int32_t eval() {
                     assert(false && "NodeReg8 cannot call eval");
                 }
-                void assemble(Assembler& a) override {
+                void assemble([[maybe_unused]] Assembler& a) override {
                     //TODO
                 }
                 std::string to_string() {
@@ -731,7 +731,8 @@ class Assembler {
                 int32_t eval() {
                     assert(false && "NodeLabelDef cannot be evaluated");
                 }
-                void assemble(Assembler& a) override {
+                void assemble([[maybe_unused]] Assembler& a) override {
+
                     //TODO
                 }
                 std::string to_string() {
@@ -741,7 +742,7 @@ class Assembler {
     public:
         std::string m_assembly = "";
         std::vector<struct Token> m_tokens = std::vector<struct Token>();
-        int m_current = 0;
+        uint32_t m_current = 0;
         std::vector<Node*> m_nodes = std::vector<Node*>();
         std::vector<uint8_t> m_buf = std::vector<uint8_t>();
         std::unordered_map<std::string, Label> m_labels = std::unordered_map<std::string, Label>();

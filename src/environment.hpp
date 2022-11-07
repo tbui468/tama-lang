@@ -17,7 +17,7 @@ class Type {
             if (m_ptypes.size() != other.m_ptypes.size()) return false;
 
             if (m_dtype == T_FUN_TYPE) {
-                for (int i = 0; i < m_ptypes.size(); i++) {
+                for (int i = 0; i < int(m_ptypes.size()); i++) {
                     if (!m_ptypes.at(i).is_of_type(other.m_ptypes.at(i))) return false;
                 }
             }

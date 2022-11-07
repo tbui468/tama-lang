@@ -21,7 +21,7 @@ void ems_free(struct ErrorMsgs *ems) {
     free_arr(ems->errors, sizeof(struct Error), ems->max_count);
 }
 
-void ems_add(struct ErrorMsgs *ems, int line, char* format, ...) {
+void ems_add(struct ErrorMsgs *ems, int line, const char* format, ...) {
     if (ems->count + 1 > ems->max_count) {
         int old_max = ems->max_count;
         if (ems->max_count == 0) {
