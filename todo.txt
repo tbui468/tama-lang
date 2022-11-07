@@ -1,13 +1,12 @@
-****************Refactor**************
-Need to reenable all warnings and fix those - quite a few I think
-
 **************Automatic testing************
-Automate tests for compiler - refactors are getting dangerous with just hand-written tests
-    have tests test output of programs:
-        print(3)
-        print(4)
+Bug:
+    class AstImport needs correct path for .tmd files
+        it works differently for bash scripts and python scripts
+        the bash script needs to prefix from /build/src
+        but python script doesn't since inside /test already
 
-        Should print 3 and 4 on separate lines - automate this with bash/python scripts
+Add tests for functions
+Add tests for importing modules
 
 **************IR Trees*************************
 !Big refactor!

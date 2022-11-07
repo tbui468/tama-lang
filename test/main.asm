@@ -1,26 +1,7 @@
 __main:
     push    ebp
     mov     ebp, esp
-    push    1
-    push    0
-    pop     ebx
-    pop     eax
-    and     eax, ebx
-    push    eax
-    call    _print_bool
-    add     esp, 4
-    push    0xa
-    call    _print_char
-    add     esp, 4
-    push    0
-    push    5
-    mov     eax, [ebp - 8]
-    push    eax
-    mov     eax, [ebp - 4]
-    push    eax
-    call    __sub
-    add     esp, 8
-    push    eax
+    push    9
     jmp     __while_condition0
 __while_block0:
     mov     eax, [ebp - 4]
@@ -28,7 +9,7 @@ __while_block0:
     push    1
     pop     ebx
     pop     eax
-    add     eax, ebx
+    sub     eax, ebx
     push    eax
     pop     eax
     mov     [ebp - 4], eax
@@ -38,21 +19,7 @@ __while_block0:
 __while_condition0:
     mov     eax, [ebp - 4]
     push    eax
-    mov     eax, [ebp - 8]
-    push    eax
-    pop     ebx
-    pop     eax
-    cmp     eax, ebx
-    setl    al
-    movzx   eax, al
-    push    eax
-    pop     eax
-    cmp     eax, 1
-    je      __while_block0
-    mov     eax, [ebp - 4]
-    push    eax
-    mov     eax, [ebp - 8]
-    push    eax
+    push    0
     pop     ebx
     pop     eax
     cmp     eax, ebx
@@ -60,37 +27,14 @@ __while_condition0:
     movzx   eax, al
     push    eax
     pop     eax
-    cmp     eax, 0
-    je      __else_block1
-    push    0
-    call    _print_int
-    add     esp, 4
-    push    0xa
-    call    _print_char
-    add     esp, 4
-    add     esp, 0
-    jmp     __if_end1
-__else_block1:
-    call    __add_complex
-    add     esp, 0
+    cmp     eax, 1
+    je      __while_block0
+    mov     eax, [ebp - 4]
     push    eax
-    push    100
-    pop     ebx
     pop     eax
-    add     eax, ebx
-    push    eax
-    call    _print_int
     add     esp, 4
-    push    0xa
-    call    _print_char
-    add     esp, 4
-    add     esp, 0
-__if_end1:
-    push    0
-    pop     eax
-    add     esp, 12
     jmp     __main_ret
-    add     esp, 12
+    add     esp, 4
 __main_ret:
     pop     ebp
     mov     ebx, eax

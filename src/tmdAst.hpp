@@ -501,7 +501,7 @@ class AstCall: public Ast {
                 }
 
                 if (!sym) {
-                    ems_add(&ems, m_symbol.line, "Syntax Error: Function not defined.");
+                    ems_add(&ems, m_symbol.line, "Syntax Error: Function '%.*s' not defined.", m_symbol.len, m_symbol.start);
                     return Type(T_NIL_TYPE);
                 }
             }
@@ -564,7 +564,8 @@ class AstImport: public Ast {
 
         Type translate(Semant& s) {
             Semant *new_s = new Semant();
-            new_s->extract_global_declarations("./../../test/" + std::string(m_symbol.start, m_symbol.len) + ".tmd");
+            //TODO: Need to make this path more generalized - only works with python scripts in /test right now
+            new_s->extract_global_declarations(std::string(m_symbol.start, m_symbol.len) + ".tmd");
             s.m_imports.push_back(new_s);
             return Type(T_NIL_TYPE);
         }

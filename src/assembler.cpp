@@ -177,11 +177,16 @@ void Assembler::append_rel_section(int sh_rel_offset, int sh_text_offset, int sh
 }
 
 void Assembler::generate_obj(const std::string& input_file, const std::string& output_file) {
+    std::cout << "Reading x86 assembly from " << input_file << std::endl;
     read(input_file);
+    std::cout << "Lexing x86 assembly..." << std::endl;
     lex();
     if (ems.count > 0) return;
+    std::cout << "Parsing x86 assembly..." << std::endl;
     parse();
     if (ems.count > 0) return;
+
+    std::cout << "Appending elf headers..." << std::endl;
 
     Elf32ElfHeader eh;
     eh.m_shstrndx = 2;
@@ -256,7 +261,8 @@ void Assembler::read(const std::string& input_file) {
 
 void Assembler::lex() {
     m_tokens = m_lexer.lex(m_assembly, m_reserved_words);
-    /*
+ 
+    /* 
     for (struct Token t: m_tokens) {
         printf("%.*s\n", t.len, t.start);
     }*/

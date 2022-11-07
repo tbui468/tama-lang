@@ -1,9 +1,6 @@
 __add:
     push    ebp
     mov     ebp, esp
-    call    __add_complex
-    add     esp, 0
-    push    eax
     mov     eax, [ebp - -8]
     push    eax
     mov     eax, [ebp - -12]
@@ -22,9 +19,6 @@ __add_ret:
 __sub:
     push    ebp
     mov     ebp, esp
-    call    __add_complex
-    add     esp, 0
-    push    eax
     mov     eax, [ebp - -8]
     push    eax
     mov     eax, [ebp - -12]
