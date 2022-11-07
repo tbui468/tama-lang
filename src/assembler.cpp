@@ -193,11 +193,11 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
     ((Elf32SectionHeader*)(m_buf.data() + sh_strtab_offset))->m_size = m_buf.size() - ((Elf32SectionHeader*)(m_buf.data() + sh_strtab_offset))->m_offset;
 
 
-    std::cout << "Appending rel.text section" << std::endl;
 
 
     //rel
     if (undefined_globals) {
+        std::cout << "Appending rel.text section" << std::endl;
         align_boundry_to(4);
 
         ((Elf32SectionHeader*)(m_buf.data() + sh_rel_offset))->m_offset = m_buf.size();

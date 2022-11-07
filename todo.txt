@@ -4,7 +4,7 @@ Assembler::generate_obj requires massive refactor
     section header m_name index into shstrtab is hardcoded
     restructure code to make easier to understand/modify in the future
     
-Need to reenable all warnings and fix those
+Need to reenable all warnings and fix those - quite a few I think
 
 **************Automatic testing************
 Automate tests for compiler - refactors are getting dangerous with just hand-written tests
@@ -30,20 +30,30 @@ struct IRStmt {
 
 **********************Linker*******************************
 Test using three or more files with more complex dependencies
-    main -> complex_math -> math
-
     main -> math
     main -> other_lib
+
+    math -> other_lib
+
+    Prevent duplicate code:
+        When adding a relocatable code, add that filename to a a unordered_map
+        check that map before adding code from different relocatable file 
+        unordered_map<std::string, int> m_code_offsets; //use the offsets to do relocations instead of summing offsets each time
 
 How should print be part of linking process?
     Could have library written in assembly and compiled to .obj file
+        Rather than parsing function declarations, importing 'basic'
+        will type check against built-in function types in compiler
     Have function declarations inside of compiler already to type check
     Link library at link time - link standard library
 
-What if two modules have the same dependency?  Should not have duplicates of math in the following link:
-    main -> math
-    main -> other_lib
-    other_lib -> math
+        import basic
+
+        main: () -> int {
+            print(42)
+
+            return 0
+        }
 *********************Documentation****************
 
 Start writing out README file

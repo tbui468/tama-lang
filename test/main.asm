@@ -1,7 +1,7 @@
 __main:
     push    ebp
     mov     ebp, esp
-    push    2
+    push    0
     push    5
     mov     eax, [ebp - 8]
     push    eax

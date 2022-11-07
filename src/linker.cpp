@@ -64,7 +64,8 @@ Elf32Symbol* Linker::get_symbol(const std::vector<uint8_t>& elf_buf, char* name)
 
 void Linker::read_elf_relocatables(const std::vector<std::string>& obj_files) {
     for (std::string s: obj_files) {
-        m_obj_bufs.push_back(read_binary(s));
+        //m_obj_bufs.push_back(read_binary(s));
+        m_obj_bufs.insert({s, read_binary(s)});
     }
 }
 
@@ -92,14 +93,13 @@ void Linker::append_program_header() {
 }
 
 void Linker::append_program() {
-    std::vector<int> module_offsets = std::vector<int>();
-    for (const std::vector<uint8_t>& rel_buf: m_obj_bufs) {
-        module_offsets.push_back(m_buf.size());
+    for (const std::pair<std::string, std::vector<uint8_t>>& p: m_obj_bufs) {
+        m_code_offsets.insert({p.first, m_buf.size() - sizeof(Elf32ElfHeader) - sizeof(Elf32ProgramHeader)});
 
-        Elf32SectionHeader* text_sh = get_section_header(rel_buf, ".text");
+        Elf32SectionHeader* text_sh = get_section_header(p.second, ".text");
         assert(text_sh && "Assertion Failed: text section header not found.");
 
-        m_buf.insert(m_buf.end(), rel_buf.data() + text_sh->m_offset, rel_buf.data() + text_sh->m_offset + text_sh->m_size);
+        m_buf.insert(m_buf.end(), p.second.data() + text_sh->m_offset, p.second.data() + text_sh->m_offset + text_sh->m_size);
     }
 
     int ph_offset = ((Elf32ElfHeader*)m_buf.data())->m_phoff;
@@ -111,10 +111,10 @@ void Linker::append_program() {
 
 void Linker::patch_program_entry() {
     int program_offset = sizeof(Elf32ElfHeader) + sizeof(Elf32ProgramHeader);
-    int main_module_offset = 0;
 
-    for (int i = 0; i < m_obj_bufs.size(); i++) {
-        const std::vector<uint8_t>* rel_buf = &m_obj_bufs.at(i);
+    for (const std::pair<std::string, std::vector<uint8_t>>& p: m_obj_bufs) {
+        const std::vector<uint8_t>* rel_buf = &p.second;
+        int code_offset = m_code_offsets.find(p.first)->second;
 
         Elf32SectionHeader *strtab_sh = get_section_header(*rel_buf, ".strtab");
         Elf32SectionHeader *symtab_sh = get_section_header(*rel_buf, ".symtab");
@@ -126,23 +126,20 @@ void Linker::patch_program_entry() {
             Elf32Symbol* sym = (Elf32Symbol*)(rel_buf->data() + symtab_sh->m_offset + j * sizeof(Elf32Symbol));
             char* sym_name = (char*)(rel_buf->data() + strtab_sh->m_offset + sym->m_name);
             if (strlen(sym_name) == 6 && strncmp(sym_name, "__main", 6) == 0) {
-                ((Elf32ElfHeader*)m_buf.data())->m_entry = program_offset + main_module_offset + sym->m_value + Linker::LOAD_ADDR;
+                ((Elf32ElfHeader*)m_buf.data())->m_entry = program_offset + code_offset + sym->m_value + Linker::LOAD_ADDR;
             }
         }
-        
-        main_module_offset += rel_buf->size();
     }
 }
 
 void Linker::apply_relocations() {
-    
-    int total_offset = 0;
-    for (const std::vector<uint8_t>& rel_buf: m_obj_bufs) {
+
+    for (const std::pair<std::string, std::vector<uint8_t>>& p: m_obj_bufs) {
+        const std::vector<uint8_t> rel_buf = p.second;
+        int rel_code_offset = m_code_offsets.find(p.first)->second;
         Elf32SectionHeader *rel_sh = get_section_header(rel_buf, ".rel.text");
-        if (!rel_sh) {
-            total_offset += get_section_header(rel_buf, ".text")->m_size;
-            continue;
-        }
+
+        if (!rel_sh) continue;
 
         Elf32SectionHeader *symtab_sh = get_section_header(rel_buf, ".symtab");
         Elf32SectionHeader *strtab_sh = get_section_header(rel_buf, ".strtab");
@@ -152,31 +149,28 @@ void Linker::apply_relocations() {
             Elf32Symbol *sym = (Elf32Symbol*)(rel_buf.data() + symtab_sh->m_offset + rel->get_sym_idx() * sizeof(Elf32Symbol));
             char* sym_name = (char*)(rel_buf.data() + strtab_sh->m_offset + sym->m_name);
 
-            int other_offset = 0;
-            for (const std::vector<uint8_t>& other_buf: m_obj_bufs) {
+            for (const std::pair<std::string, std::vector<uint8_t>>& p: m_obj_bufs) {
+                const std::vector<uint8_t> other_buf = p.second;
+                int defined_sym_code_offset = m_code_offsets.find(p.first)->second;
 
-                Elf32Symbol* other_sym = get_symbol(other_buf, sym_name);
-                if (&other_buf != &rel_buf && other_sym && other_sym->m_shndx != Elf32SectionHeader::SHN_UNDEF) {
+                Elf32Symbol* defined_sym = get_symbol(other_buf, sym_name);
+                if (&other_buf != &rel_buf && defined_sym && defined_sym->m_shndx != Elf32SectionHeader::SHN_UNDEF) {
 
                     Elf32SectionHeader *other_text_sh = get_section_header(other_buf, ".text");
 
                     if (rel->get_type() == Elf32Relocation::R_386_PC32 ) {
                         //Note: relative jumps are based of instruction AFTER current, so we need to relocate based off the instruction after the the address to patch
-                        int program_offset = sizeof(Elf32ElfHeader) + sizeof(Elf32ProgramHeader);
-                        *((uint32_t*)&m_buf[program_offset + total_offset + rel->m_offset]) = other_offset + other_sym->m_value - (total_offset + rel->m_offset + 4);
+                        int addr_to_patch = sizeof(Elf32ElfHeader) + sizeof(Elf32ProgramHeader) + rel_code_offset + rel->m_offset;
+                        *((uint32_t*)&m_buf[addr_to_patch]) = defined_sym_code_offset + defined_sym->m_value - (rel_code_offset + rel->m_offset + 4);
                     } else {
                         assert(false && "Assertion Failed: Linker only supports R_386_PC32 relocation types for now.");
                     }
 
                 }
-
-
-                other_offset += get_section_header(other_buf, ".text")->m_size;
             }
 
         }
 
-        total_offset += get_section_header(rel_buf, ".text")->m_size;
     }
 }
 

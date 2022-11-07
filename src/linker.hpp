@@ -2,6 +2,7 @@
 #define LINKER_HPP
 
 #include <vector>
+#include <unordered_map>
 #include <string>
 
 #include "elf.hpp"
@@ -9,7 +10,9 @@
 class Linker {
     private:
         std::vector<uint8_t> m_buf;
-        std::vector<std::vector<uint8_t>> m_obj_bufs;
+        //std::vector<std::vector<uint8_t>> m_obj_bufs;
+        std::unordered_map<std::string, std::vector<uint8_t>> m_obj_bufs;
+        std::unordered_map<std::string, int> m_code_offsets;
         static const uint32_t LOAD_ADDR = 0x08048000;
     private:
         std::vector<uint8_t> read_binary(const std::string& input_file);
