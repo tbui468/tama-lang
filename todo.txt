@@ -28,32 +28,11 @@ struct IRStmt {
 
 };
 
-**********************Linker*******************************
-Test using three or more files with more complex dependencies
-    main -> math
-    main -> other_lib
-
-    math -> other_lib
-
-    Prevent duplicate code:
-        When adding a relocatable code, add that filename to a a unordered_map
-        check that map before adding code from different relocatable file 
-        unordered_map<std::string, int> m_code_offsets; //use the offsets to do relocations instead of summing offsets each time
-
-How should print be part of linking process?
-    Could have library written in assembly and compiled to .obj file
-        Rather than parsing function declarations, importing 'basic'
-        will type check against built-in function types in compiler
-    Have function declarations inside of compiler already to type check
-    Link library at link time - link standard library
-
-        import basic
-
-        main: () -> int {
-            print(42)
-
-            return 0
-        }
+**********************Basic Library*******************************
+Basic library can be an .asm file for system calls
+Make a file basic.tmd with empty bodies just for type checking during import of 'basic'
+How to deal with overloading functions (eg, print(5) vs print(true))
+    just using AST to deal with this currently
 *********************Documentation****************
 
 Start writing out README file

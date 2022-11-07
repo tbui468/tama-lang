@@ -7,6 +7,7 @@
 
 #include "linker.hpp"
 #include "elf.hpp"
+#include "error.hpp"
 
 std::vector<uint8_t> Linker::read_binary(const std::string& input_file) {
     std::ifstream f(input_file, std::ios::binary);
@@ -64,7 +65,6 @@ Elf32Symbol* Linker::get_symbol(const std::vector<uint8_t>& elf_buf, char* name)
 
 void Linker::read_elf_relocatables(const std::vector<std::string>& obj_files) {
     for (std::string s: obj_files) {
-        //m_obj_bufs.push_back(read_binary(s));
         m_obj_bufs.insert({s, read_binary(s)});
     }
 }
@@ -94,6 +94,7 @@ void Linker::append_program_header() {
 
 void Linker::append_program() {
     for (const std::pair<std::string, std::vector<uint8_t>>& p: m_obj_bufs) {
+
         m_code_offsets.insert({p.first, m_buf.size() - sizeof(Elf32ElfHeader) - sizeof(Elf32ProgramHeader)});
 
         Elf32SectionHeader* text_sh = get_section_header(p.second, ".text");
@@ -149,13 +150,14 @@ void Linker::apply_relocations() {
             Elf32Symbol *sym = (Elf32Symbol*)(rel_buf.data() + symtab_sh->m_offset + rel->get_sym_idx() * sizeof(Elf32Symbol));
             char* sym_name = (char*)(rel_buf.data() + strtab_sh->m_offset + sym->m_name);
 
+            bool found_def = false;
             for (const std::pair<std::string, std::vector<uint8_t>>& p: m_obj_bufs) {
                 const std::vector<uint8_t> other_buf = p.second;
                 int defined_sym_code_offset = m_code_offsets.find(p.first)->second;
 
                 Elf32Symbol* defined_sym = get_symbol(other_buf, sym_name);
                 if (&other_buf != &rel_buf && defined_sym && defined_sym->m_shndx != Elf32SectionHeader::SHN_UNDEF) {
-
+                    found_def = true;
                     Elf32SectionHeader *other_text_sh = get_section_header(other_buf, ".text");
 
                     if (rel->get_type() == Elf32Relocation::R_386_PC32 ) {
@@ -167,6 +169,10 @@ void Linker::apply_relocations() {
                     }
 
                 }
+            }
+
+            if (!found_def) {
+                ems_add(&ems, 0, "Linker Error: Symbol '%s' not defined in any translation units.", sym_name);
             }
 
         }

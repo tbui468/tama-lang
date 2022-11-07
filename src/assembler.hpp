@@ -768,6 +768,11 @@ class Assembler {
         void align_boundry_to(int bytes);
 
         int append_section_header(Elf32SectionHeader h);
+        void append_text_section(int sh_text_offset, bool* undefined_globals);
+        void append_shstrtab_section(int sh_shstrtab_offset);
+        void append_symtab_section(int sh_symtab_offset, int sh_text_offset, const std::string& input_file);
+        void append_strtab_section(int sh_strtab_offset, const std::string& input_file);
+        void append_rel_section(int sh_rel_offset, int sh_text_offset, int sh_symtab_offset, int sh_strtab_offset);
 
         void append_program();
         void patch_rel_jumps();

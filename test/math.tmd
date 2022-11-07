@@ -1,7 +1,11 @@
+import complex
+
 add: (a: int, b: int) -> int {
+    z: int = add_complex()
     return a + b
 }
 
 sub: (a: int, b: int) -> int {
+    z: int = add_complex()
     return a - b
 }
