@@ -1,4 +1,0 @@
-import math
-                        main: () -> int {
-                            return add(-10, 10)
-                        }

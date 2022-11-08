@@ -5,8 +5,7 @@ Bug:
         the bash script needs to prefix from /build/src
         but python script doesn't since inside /test already
 
-Add tests for importing modules - src should be a list of source files
-Delete temporary files after testing to keep /test clean
+IDV and CDQ not implemented in assembler
 
 **************IR Trees*************************
 !Big refactor!
