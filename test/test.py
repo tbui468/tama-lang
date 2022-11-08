@@ -47,6 +47,19 @@ tests = [
                     )
                 ]
             ),
+            ("sign integer arithmetic", 0, 
+                [
+                    ("main.tmd",
+                         """
+                         main: () -> int {
+                            x: int = 10
+                            y: int = 10
+                            return -100 + x * y - x + y - y / x + x / y
+                         }
+                         """
+                    )
+                ]
+            ),
             ("conditionals", 0,
                 [
                     ("main.tmd",
@@ -128,19 +141,6 @@ tests = [
 
 
 
-failed_test = ("sign integer arithmetic", 0, 
-                [
-                    ("main.tmd",
-                         """
-                         main: () -> int {
-                            x: int = 10
-                            y: int = 10
-                            return -100 + x * y - x + y - y / x + x / y
-                         }
-                         """
-                    )
-                ]
-            )
 
 for data in tests:
     test(data)

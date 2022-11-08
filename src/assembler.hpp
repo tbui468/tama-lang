@@ -154,6 +154,11 @@ class Assembler {
                             }
                             break;
                         }
+                        case T_CDQ: {
+                            //99 CDQ - EDX:EAX := sign-extend of EAX
+                            a.m_buf.push_back(0x99);
+                            break;
+                        }
                         case T_CMP: {
                             if (dynamic_cast<NodeReg32*>(m_left) && is_expr(m_right)) {
                                 //3d id <----cmp    eax, imm32
@@ -196,6 +201,17 @@ class Assembler {
                                 a.m_buf.push_back(0xf7);
                                 NodeReg32 *reg = dynamic_cast<NodeReg32*>(m_left);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x06 << 3 | reg->bit_pattern());
+                            } else {
+                                ems_add(&ems, m_t.line, "Assembler Error: div only works with register");
+                            }
+                            break;
+                        }
+                        case T_IDIV: {
+                            //F7 /7 - IDIV EDX:EAX by rm/32 with EAX := quotient and EDX := remainder
+                            if (dynamic_cast<NodeReg32*>(m_left)) {
+                                a.m_buf.push_back(0xf7);
+                                NodeReg32 *reg = dynamic_cast<NodeReg32*>(m_left);
+                                a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x07 << 3 | reg->bit_pattern());
                             } else {
                                 ems_add(&ems, m_t.line, "Assembler Error: div only works with register");
                             }
