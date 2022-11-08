@@ -212,7 +212,7 @@ class AstFunDef: public Ast {
             }
 
 
-            s.write_op("__%.*s:", m_symbol.len, m_symbol.start);
+            s.write_op("_%.*s:", m_symbol.len, m_symbol.start);
             s.write_op("    push    %s", "ebp");
             s.write_op("    mov     %s, %s", "ebp", "esp");
 
@@ -518,7 +518,7 @@ class AstCall: public Ast {
                 }
             }
 
-            s.write_op("    call    __%.*s", m_symbol.len, m_symbol.start);
+            s.write_op("    call    _%.*s", m_symbol.len, m_symbol.start);
             s.write_op("    add     %s, %d", "esp", m_args.size() * 4);
             s.write_op("    push    %s", "eax");
 

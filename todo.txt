@@ -1,12 +1,3 @@
-**************Automatic testing************
-Bug:
-    class AstImport needs correct path for .tmd files
-        it works differently for bash scripts and python scripts
-        the bash script needs to prefix from /build/src
-        but python script doesn't since inside /test already
-
-IDV and CDQ not implemented in assembler
-
 **************IR Trees*************************
 !Big refactor!
 Have semant.cpp output an intermediate representation
@@ -21,11 +12,6 @@ struct IRStmt {
 
 };
 
-**********************Basic Library*******************************
-Basic library can be an .asm file for system calls
-Make a file basic.tmd with empty bodies just for type checking during import of 'basic'
-How to deal with overloading functions (eg, print(5) vs print(true))
-    just using AST to deal with this currently
 *********************Documentation****************
 
 Start writing out README file

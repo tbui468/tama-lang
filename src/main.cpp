@@ -66,6 +66,8 @@ int main (int argc, char **argv) {
     l.link(obj_files, "out.exe");
    
     ems_print(&ems);
+
+    if (ems.count > 0) return 1;
     
     //cleanup
 //    printf("Memory allocated: %ld\n", allocated);

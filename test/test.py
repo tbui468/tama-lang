@@ -13,13 +13,13 @@ def test(data):
         cmd += " " + src[0]
     cmd += " > /dev/null"
 
-    subprocess.call(cmd, shell=True)
+    cp = subprocess.call(cmd, shell=True)
     subprocess.call("chmod +x out.exe", shell=True)
     p = subprocess.call("./out.exe", shell=True)
 
     name = "[" + data[0] + "]"
     result = "Failed"
-    if p == data[1]:
+    if p == data[1] and cp == 0:
         result = "Passed"
         global correct
         correct += 1
