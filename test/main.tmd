@@ -1,7 +1,4 @@
-main: () -> int {
-                    x: int = 9
-                    while x > 0 {
-                        x = x - 1
-                    }
-                    return x
-                }
+import math
+                        main: () -> int {
+                            return add(-10, 10)
+                        }
