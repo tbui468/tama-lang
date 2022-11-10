@@ -1,16 +1,68 @@
-**************IR Trees*************************
-!Big refactor!
-Have semant.cpp output an intermediate representation
-Make Optimizer that optimizes IR tree
-Make Ir_x86_translator generate x86 from IR
+**************IR*************************
+Read Slides13
+Read lecture 14, lecture 15, lecture 16
+Read 240 TAC examples
 
-struct IRExpr {
 
-};
+<---------------get this working--------------->
+_start:
+    t0 = call main
+    push_arg 0
+    call _exit
 
-struct IRStmt {
+<---------------implement these--------------->
+Return
+    * return an int
+    return t0
 
-};
+    * return void
+    return
+
+Call
+    * function call with void return
+    push_arg
+    call    label
+    pop_args
+
+    * for function calls with non-void return
+    t0 = call label
+If
+While
+
+Will need to deal with scope/locals/type-checking/etc when emitting ir
+    currently just assuming everything is declared/correct type, etc
+
+***************************Reorganize Quads basic-blocks*********************
+    Each instruction after label is start of block - the leader (this takes care of function definitions)
+    Start at each leader and move down quads until we find next leader - previous is end of block (also takes care of functions)
+    Need to create CFG during this time (nodes are blocks, and edges (jumps) connect blocks)
+
+    class TacBlock {
+        public:
+            TacLabel* m_label;
+            TacQuad* m_begin;
+            TacQuad* m_end; //one after end of block
+    };
+
+    std::vector<TacBloc> m_blocks;
+    
+    struct TacEdge {
+        int m_from;
+        int m_to;
+        TacEdge(int from, int to): m_from(from), m_to(to) {}
+    };
+
+
+****************Control-Flow Graph**********************
+What about trace scheduling? (Mentioned in Modern Compiler Implementation in C book, but not in standford lectures)
+
+***************Optimization********************
+just do constant folding or something simple for now
+
+***************Allocate registers*********************
+
+******************Emit x86 from TAC***********************
+Use assembler and linker to check if final output works
 
 *********************Documentation****************
 

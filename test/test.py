@@ -36,7 +36,7 @@ def test(data):
 
 
 tests = [
-            ("main function return code", 0,
+            ("return code", 0,
                 [
                     ("main.tmd",
                         """

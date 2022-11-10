@@ -13,6 +13,7 @@
 #include "parser.hpp"
 #include "error.hpp"
 #include "environment.hpp"
+#include "tac.hpp"
 
 class Semant {
 
@@ -68,6 +69,10 @@ class Semant {
         Lexer m_lexer;
         TmdParser m_parser;
         std::vector<uint8_t> m_buf;
+        std::vector<uint8_t> m_irbuf;
+        std::vector<TacQuad> m_quads;
+        std::vector<std::string> m_tac_labels;
+
         Environment m_env;
         int m_label_id_counter = 0;
         Ast* m_compiling_fun = nullptr;
@@ -75,14 +80,18 @@ class Semant {
         std::vector<Semant*> m_imports;
     public:
         void generate_asm(const std::string& input_file, const std::string& output_file);
+        void generate_ir(const std::string& input_file, const std::string& output_file);
         void write_op(const char* format, ...);
         int generate_label_id();
         void extract_global_declarations(const std::string& module_file);
+        void write_ir(const char* format, ...);
+        void add_tac_label(const std::string& label);
     private: 
         void read(const std::string& input_file);
         void lex();
         void parse();
         void translate();
+        void translate_to_ir();
         void write(const std::string& output_file);
 };
 

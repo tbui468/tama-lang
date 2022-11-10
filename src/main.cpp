@@ -43,6 +43,17 @@ int main (int argc, char **argv) {
         }
     }
 
+
+    for (const std::string& f: tmd_files) {
+        std::string out = f.substr(0, f.size() - 4) + ".tac";
+
+        std::cout << "Compiling " << f << " to IA32..." << std::endl;
+        Semant s;
+        s.generate_ir(f, out);
+    }
+
+    /*
+
     for (const std::string& f: tmd_files) {
         std::string out = f.substr(0, f.size() - 4) + ".asm";
         asm_files.push_back(out);
@@ -63,7 +74,7 @@ int main (int argc, char **argv) {
 
     std::cout << "Linking ELF relocatable object(s) into ELF executable..." << std::endl;
     Linker l;
-    l.link(obj_files, "out.exe");
+    l.link(obj_files, "out.exe");*/
    
     ems_print(&ems);
 

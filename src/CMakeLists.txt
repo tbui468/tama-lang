@@ -8,6 +8,7 @@ set(Sources
     parser.cpp
     semant.cpp
     linker.cpp
+    tac.cpp
     )
 
 set(Headers
@@ -25,6 +26,7 @@ set(Headers
     tmdAst.hpp
     linker.hpp
     elf.hpp
+    tac.hpp
     )
 
 add_executable(

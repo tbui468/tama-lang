@@ -89,6 +89,13 @@ class AstBinary: public Ast {
             s.write_op("    push    %s", "eax");
             return ret_type;
         }
+        std::string emit_ir(Semant& s) {
+            std::string lt = m_left->emit_ir(s);
+            std::string rt = m_right->emit_ir(s);
+            std::string t = TacQuad::new_temp();
+            s.m_quads.push_back(TacQuad(t, lt, rt, m_op.type));
+            return t;
+        }
 };
 
 class AstUnary: public Ast {
@@ -114,6 +121,9 @@ class AstUnary: public Ast {
 
             s.write_op("    push    %s", "eax");
             return ret_type;
+        }
+        std::string emit_ir(Semant& s) {
+            return "";
         }
 };
 
@@ -147,6 +157,10 @@ class AstLiteral: public Ast {
                     return Type(T_NIL_TYPE);
             }
         }
+
+        std::string emit_ir(Semant& s) {
+            return std::string(m_lexeme.start, m_lexeme.len);
+        }
 };
 
 class AstPrint: public Ast {
@@ -171,6 +185,10 @@ class AstPrint: public Ast {
             s.write_op("    add     %s, %d", "esp", 4);
             return Type(T_NIL_TYPE);
         }
+
+        std::string emit_ir(Semant& s) {
+            return "";
+        }
 };
 
 class AstExprStmt: public Ast {
@@ -185,6 +203,9 @@ class AstExprStmt: public Ast {
 
             s.write_op("    pop     %s", "ebx");
             return Type(T_NIL_TYPE);
+        }
+        std::string emit_ir(Semant& s) {
+            return m_expr->emit_ir(s);
         }
 };
 
@@ -233,6 +254,20 @@ class AstFunDef: public Ast {
             }
             return Type(T_NIL_TYPE);
         }
+        std::string emit_ir(Semant& s) {
+            s.add_tac_label(std::string(m_symbol.start, m_symbol.len));
+            int offset = s.m_quads.size(); //TODO: need to patch this
+            s.m_quads.push_back(TacQuad("begin_fun", "reserve_stack", "", T_NIL));
+            int start_temps = TacQuad::s_temp_counter;
+            m_body->emit_ir(s);
+            //NOTE: shouldn't need to count locals since a temp is currently
+            //  created for each declared local - will have more than enough stack space
+            //  and optmizing will reduce this
+            int added_temps = TacQuad::s_temp_counter - start_temps;
+            s.m_quads[offset].m_opd1 = std::to_string(added_temps * 4);
+            s.m_quads.push_back(TacQuad("end_fun", "", "", T_NIL));
+            return "";
+        }
 };
 
 
@@ -247,6 +282,9 @@ class AstParam: public Ast {
         }
         Type translate([[maybe_unused]] Semant& s) {
             return Type(m_dtype.type);
+        }
+        std::string emit_ir(Semant& s) {
+            return "";
         }
 };
 
@@ -283,6 +321,10 @@ class AstDeclSym: public Ast {
 
             //local variable is on stack at this point
             return right_type;
+        }
+        std::string emit_ir(Semant& s) {
+            s.m_quads.push_back(TacQuad(std::string(m_symbol.start, m_symbol.len), m_value->emit_ir(s), "", T_EQUAL));
+            return "";
         }
 };
 
@@ -327,6 +369,9 @@ class AstGetSym: public Ast {
                 return type;
             }
 
+        }
+        std::string emit_ir(Semant& s) {
+            return std::string(m_symbol.start, m_symbol.len);
         }
 };
 
@@ -386,6 +431,12 @@ class AstSetSym: public Ast {
                 return type;
             }
         }
+        std::string emit_ir(Semant& s) {
+            std::string sym = std::string(m_symbol.start, m_symbol.len);
+            std::string t = m_value->emit_ir(s);
+            s.m_quads.push_back(TacQuad(sym, t, "", T_EQUAL));
+            return sym;
+        }
 };
 
 class AstBlock: public Ast {
@@ -410,6 +461,14 @@ class AstBlock: public Ast {
             int pop_count = s.m_env.end_scope();
             s.write_op("    add     %s, %d", "esp", 4 * pop_count);
             return Type(T_NIL_TYPE);
+        }
+
+
+        std::string emit_ir(Semant& s) {
+            for (Ast* n: m_stmts) {
+                n->emit_ir(s);
+            }
+            return "";
         }
 };
 
@@ -447,6 +506,9 @@ class AstIf: public Ast {
 
             return Type(T_NIL_TYPE);
         }
+        std::string emit_ir(Semant& s) {
+            return "";
+        }
 };
 
 class AstWhile: public Ast {
@@ -475,6 +537,9 @@ class AstWhile: public Ast {
             s.write_op("    je      __while_block%d", id);
 
             return Type(T_NIL_TYPE);
+        }
+        std::string emit_ir(Semant& s) {
+            return "";
         }
 };
 
@@ -524,6 +589,9 @@ class AstCall: public Ast {
 
             return sym->m_type.m_rtype;
         }
+        std::string emit_ir(Semant& s) {
+            return "";
+        }
 };
 
 class AstReturn: public Ast {
@@ -551,6 +619,9 @@ class AstReturn: public Ast {
             
             return Type(T_RET_TYPE);
         }
+        std::string emit_ir(Semant& s) {
+            return "";
+        }
 };
 
 class AstImport: public Ast {
@@ -568,6 +639,9 @@ class AstImport: public Ast {
             new_s->extract_global_declarations(std::string(m_symbol.start, m_symbol.len) + ".tmd");
             s.m_imports.push_back(new_s);
             return Type(T_NIL_TYPE);
+        }
+        std::string emit_ir(Semant& s) {
+            return "";
         }
 };
 

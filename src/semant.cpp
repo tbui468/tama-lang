@@ -1,10 +1,17 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <algorithm>
 
 #include "semant.hpp"
 #include "tmdAst.hpp"
 #include "error.hpp"
+
+
+void Semant::add_tac_label(const std::string& label) {
+    m_tac_labels.resize(m_quads.size(), "");
+    m_tac_labels.push_back(label);
+}
 
 void Semant::generate_asm(const std::string& input_file, const std::string& output_file) {
     read(input_file);
@@ -20,6 +27,26 @@ void Semant::generate_asm(const std::string& input_file, const std::string& outp
     }*/
     translate();
     write(output_file);
+}
+
+void Semant::generate_ir(const std::string& input_file, const std::string& output_file) {
+    read(input_file);
+    lex();
+    parse();
+    translate_to_ir();
+
+    m_tac_labels.resize(m_quads.size(), "");
+
+    for (int i = 0; i < m_quads.size(); i++) {
+        const TacQuad& q = m_quads[i];
+        const std::string& s = m_tac_labels[i];
+        if (s != "") {
+            write_ir("%s:", s.c_str());
+        }
+        write_ir("    %s", q.to_string().c_str()); 
+    }
+    std::ofstream f(output_file, std::ios::out | std::ios::binary);
+    f.write((const char*)m_irbuf.data(), m_irbuf.size());
 }
 
 void Semant::read(const std::string& input_file) {
@@ -38,9 +65,14 @@ void Semant::parse() {
 }
 
 void Semant::translate() {
-
     for (Ast* n: m_nodes) {
         n->translate(*this);
+    }
+}
+
+void Semant::translate_to_ir() {
+    for (Ast* n: m_nodes) {
+        n->emit_ir(*this);
     }
 }
 
@@ -54,6 +86,18 @@ void Semant::write_op(const char* format, ...) {
     s[n + 1] = '\0';
     std::string str(s);
     m_buf.insert(m_buf.end(), (uint8_t*)str.data(), (uint8_t*)str.data() + str.size());
+}
+
+void Semant::write_ir(const char* format, ...) {
+    va_list ap;
+    va_start(ap, format);
+    char s[256];
+    int n = vsprintf(s, format, ap);
+    va_end(ap);
+    s[n] = '\n';
+    s[n + 1] = '\0';
+    std::string str(s);
+    m_irbuf.insert(m_irbuf.end(), (uint8_t*)str.data(), (uint8_t*)str.data() + str.size());
 }
 
 int Semant::generate_label_id() {

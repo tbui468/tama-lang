@@ -12,6 +12,7 @@ class Ast {
     public:
         virtual std::string to_string() = 0;
         virtual Type translate(Semant& s) = 0;
+        virtual std::string emit_ir(Semant& s) = 0;
 };
 
 
