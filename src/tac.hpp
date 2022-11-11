@@ -28,6 +28,7 @@ class TacQuad {
         }
         TacQuad(const std::string& target, const std::string& opd1, const std::string& opd2, enum TokenType op):
             m_target(target), m_opd1(opd1), m_opd2(opd2), m_op(op) {}
+
         std::string to_string() const {
 
             if (m_target == "" || m_op == T_NIL) {

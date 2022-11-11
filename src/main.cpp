@@ -11,6 +11,7 @@
 #include "semant.hpp"
 #include "linker.hpp"
 #include "x86_frame.hpp"
+#include "optimizer.hpp"
 
 #define MAX_MSG_LEN 256
 
@@ -53,16 +54,30 @@ int main (int argc, char **argv) {
         Semant s = Semant(&frames);
         s.generate_ir(f, out);
 
+        /*
         for (const std::pair<std::string, X86Frame>& p: frames) {
             std::cout << p.first << std::endl;
             for (const std::pair<std::string, int>& q: p.second.m_fp_offsets) {
                 std::cout << q.first << ": " << q.second << std::endl;
             }
-        }
+        }*/
 
         //optimize
+        Optimizer opt;
+        opt.constant_folding(&s.m_quads);
 
-        //generate code here
+        for (int i = 0; i < s.m_quads.size(); i++) {
+            const TacQuad& q = s.m_quads[i];
+            const std::string& str = s.m_tac_labels[i];
+            if (str != "") {
+                std::cout << str << ":" << std::endl;
+            }
+            std::cout << "    " << q.to_string() << std::endl;
+        }
+
+        //allocate registers here
+
+        //generate x86 code here
     }
 
     /*

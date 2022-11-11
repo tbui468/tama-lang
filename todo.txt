@@ -14,11 +14,6 @@ Read Slides13
 Read lecture 14, lecture 15, lecture 16
 Read 240 TAC examples
 
-****************Fill in X86Frames during compilation**********************
-Formal parameters can be added to Frame in FunDef node
-Locals can be added to Frame while compiling a function
-    do this inside of DeclSym
-
 ***************Optimization********************
 Constant folding
     Check all quads for +*/- operators

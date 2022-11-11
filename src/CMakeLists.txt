@@ -9,6 +9,7 @@ set(Sources
     semant.cpp
     linker.cpp
     tac.cpp
+    optimizer.cpp
     )
 
 set(Headers
@@ -28,6 +29,7 @@ set(Headers
     tac.hpp
     type.hpp
     x86_frame.hpp
+    optimizer.hpp
     )
 
 add_executable(
