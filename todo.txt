@@ -3,34 +3,22 @@ Read Slides13
 Read lecture 14, lecture 15, lecture 16
 Read 240 TAC examples
 
+****************Implement emit_ir*****************************
+Can use similar algorithm as in translate(Semant& s);
 
-<---------------get this working--------------->
-_start:
-    t0 = call main
-    push_arg 0
-    call _exit
+Finish emit_ir for all tmdAst nodes
+    Block
+    If
+    While
+    Call
+    Return
+    Import
 
-<---------------implement these--------------->
-Return
-    * return an int
-    return t0
+Integrate X86Frames (eg, allocate formal parameters and locals - all temps now)
+    Need to add formal parameters in FunDef node - set m_tac_symbol to empty string
+    Need to add locals in DeclSym - m_tac_symbol needs to be unique
 
-    * return void
-    return
-
-Call
-    * function call with void return
-    push_arg
-    call    label
-    pop_args
-
-    * for function calls with non-void return
-    t0 = call label
-If
-While
-
-Will need to deal with scope/locals/type-checking/etc when emitting ir
-    currently just assuming everything is declared/correct type, etc
+*************************Optimizer**********************************
 
 ***************************Reorganize Quads basic-blocks*********************
     Each instruction after label is start of block - the leader (this takes care of function definitions)
@@ -44,13 +32,15 @@ Will need to deal with scope/locals/type-checking/etc when emitting ir
             TacQuad* m_end; //one after end of block
     };
 
-    std::vector<TacBloc> m_blocks;
+    std::vector<TacBlock> m_blocks;
     
     struct TacEdge {
         int m_from;
         int m_to;
         TacEdge(int from, int to): m_from(from), m_to(to) {}
     };
+
+    std::vector<TacEdge> m_edges;
 
 
 ****************Control-Flow Graph**********************
@@ -59,7 +49,11 @@ What about trace scheduling? (Mentioned in Modern Compiler Implementation in C b
 ***************Optimization********************
 just do constant folding or something simple for now
 
+***************SSA******************************
+Could transform to SSA IR and do more optimizations
+
 ***************Allocate registers*********************
+K-coloring to fit 3 (or 6 registers).
 
 ******************Emit x86 from TAC***********************
 Use assembler and linker to check if final output works

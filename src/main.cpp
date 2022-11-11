@@ -10,6 +10,7 @@
 #include "assembler.hpp"
 #include "semant.hpp"
 #include "linker.hpp"
+#include "x86_frame.hpp"
 
 #define MAX_MSG_LEN 256
 

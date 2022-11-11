@@ -3,6 +3,12 @@
 
 #include <string>
 #include "token.hpp"
+#include "type.hpp"
+
+struct EmitTacResult {
+    std::string m_temp;
+    Type m_type;
+};
 
 class TacQuad {
     public:
@@ -18,36 +24,23 @@ class TacQuad {
         TacQuad(const std::string& target, const std::string& opd1, const std::string& opd2, enum TokenType op):
             m_target(target), m_opd1(opd1), m_opd2(opd2), m_op(op) {}
         std::string to_string() const {
-            std::string ret = m_target;
-            switch (m_op) {
-                case T_EQUAL: {
-                    ret += " = " + m_opd1;
-                    return ret;
+
+            if (m_target == "") {
+                return m_opd1 + " " + m_opd2; 
+            } else {
+                std::string ret = m_target + " = " + m_opd1;
+                switch (m_op) {
+                    case T_PLUS:        ret += " + ";   break; 
+                    case T_MINUS:       ret += " - ";   break; 
+                    case T_STAR:        ret += " * ";   break; 
+                    case T_SLASH:       ret += " / ";   break; 
+                    case T_EQUAL_EQUAL: ret += " == ";  break; 
+                    case T_LESS:        ret += " < ";   break; 
+                    case T_OR:          ret += " || ";  break; 
+                    case T_AND:         ret += " && ";  break; 
+                    default:            ret += " "; break;
                 }
-                case T_PLUS: {
-                    ret += " = " + m_opd1 + " + " + m_opd2;
-                    return ret;
-                }
-                case T_MINUS: {
-                    ret += " = " + m_opd1 + " - " + m_opd2;
-                    return ret;
-                }
-                case T_STAR: {
-                    ret += " = " + m_opd1 + " * " + m_opd2;
-                    return ret;
-                }
-                case T_SLASH: {
-                    ret += " = " + m_opd1 + " / " + m_opd2;
-                    return ret;
-                }
-                case T_NIL: {
-                    if (m_target == "begin_fun") {
-                        ret += " " + m_opd1;
-                    }
-                    return ret;
-                }
-                default:
-                    return ret;
+                return ret += m_opd2;
             }
         }
 };

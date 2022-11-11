@@ -33,6 +33,13 @@ void Semant::generate_ir(const std::string& input_file, const std::string& outpu
     read(input_file);
     lex();
     parse();
+
+    add_tac_label("_start");
+    std::string t = TacQuad::new_temp();
+    m_quads.push_back(TacQuad(t, "call", "main", T_EQUAL));
+    m_quads.push_back(TacQuad("", "push_arg", t, T_NIL));
+    m_quads.push_back(TacQuad("", "call", "_exit", T_NIL));
+
     translate_to_ir();
 
     m_tac_labels.resize(m_quads.size(), "");

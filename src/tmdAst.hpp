@@ -5,7 +5,7 @@
 
 #include "ast.hpp"
 #include "semant.hpp"
-
+#include "x86_frame.hpp"
 
 class AstBinary: public Ast {
     public:
@@ -89,12 +89,66 @@ class AstBinary: public Ast {
             s.write_op("    push    %s", "eax");
             return ret_type;
         }
-        std::string emit_ir(Semant& s) {
-            std::string lt = m_left->emit_ir(s);
-            std::string rt = m_right->emit_ir(s);
+        EmitTacResult emit_ir(Semant& s) {
+            Type ret_type = Type(T_NIL_TYPE);
+            EmitTacResult left_result = m_left->emit_ir(s);
+            EmitTacResult right_result = m_right->emit_ir(s);
+
+            if (!left_result.m_type.is_of_type(right_result.m_type)) {
+                ems_add(&ems, m_op.line, "Type Error: Left and right types don't match!");
+            } else if (m_op.type == T_PLUS || m_op.type == T_MINUS || m_op.type == T_SLASH || m_op.type == T_STAR) {
+                ret_type = Type(T_INT_TYPE);
+            } else {
+                ret_type = Type(T_BOOL_TYPE);
+            }
+
             std::string t = TacQuad::new_temp();
-            s.m_quads.push_back(TacQuad(t, lt, rt, m_op.type));
-            return t;
+            switch (m_op.type) {
+                case T_PLUS:
+                case T_MINUS:
+                case T_STAR:
+                case T_SLASH:
+                case T_LESS:
+                case T_EQUAL_EQUAL:
+                case T_AND:
+                case T_OR:
+                    s.m_quads.push_back(TacQuad(t, left_result.m_temp, right_result.m_temp, m_op.type));
+                    break;
+                //synthesize these other operators
+                case T_GREATER: {
+                    s.m_quads.push_back(TacQuad(t, right_result.m_temp, left_result.m_temp, T_LESS));
+                    break;
+                }
+                case T_LESS_EQUAL: {
+                    std::string tl = TacQuad::new_temp();
+                    s.m_quads.push_back(TacQuad(tl, left_result.m_temp, right_result.m_temp, T_LESS));
+                    std::string te = TacQuad::new_temp();
+                    s.m_quads.push_back(TacQuad(te, left_result.m_temp, right_result.m_temp, T_EQUAL_EQUAL));
+                    s.m_quads.push_back(TacQuad(t, tl, te, T_OR));
+                    break;
+                }
+                case T_GREATER_EQUAL: {
+                    std::string tg = TacQuad::new_temp();
+                    s.m_quads.push_back(TacQuad(tg, right_result.m_temp, left_result.m_temp, T_LESS));
+                    std::string te = TacQuad::new_temp();
+                    s.m_quads.push_back(TacQuad(te, left_result.m_temp, right_result.m_temp, T_EQUAL_EQUAL));
+                    s.m_quads.push_back(TacQuad(t, tg, te, T_OR));
+                    break;
+                }
+                case T_NOT_EQUAL: {
+                    std::string tl = TacQuad::new_temp();
+                    s.m_quads.push_back(TacQuad(tl, left_result.m_temp, right_result.m_temp, T_LESS));
+                    std::string tg = TacQuad::new_temp();
+                    s.m_quads.push_back(TacQuad(tg, right_result.m_temp, left_result.m_temp, T_LESS));
+                    s.m_quads.push_back(TacQuad(t, tl, tg, T_OR));
+                    break;
+                }
+                default:
+                    ems_add(&ems, m_op.line, "Translate Error: Binary operator not recognized.");
+                    break;
+            }
+
+            return {t, ret_type};
         }
 };
 
@@ -122,8 +176,22 @@ class AstUnary: public Ast {
             s.write_op("    push    %s", "eax");
             return ret_type;
         }
-        std::string emit_ir(Semant& s) {
-            return "";
+        EmitTacResult emit_ir(Semant& s) {
+            EmitTacResult r = m_right->emit_ir(s);
+
+            std::string t = TacQuad::new_temp();
+            if (r.m_type.m_dtype == T_INT_TYPE) {
+                s.m_quads.push_back(TacQuad(t, "0", r.m_temp, T_MINUS));
+            } else if (r.m_type.m_dtype == T_BOOL_TYPE) {
+                std::string tl = TacQuad::new_temp();
+                s.m_quads.push_back(TacQuad(tl, r.m_temp, "1", T_LESS));
+                std::string tg = TacQuad::new_temp();
+                s.m_quads.push_back(TacQuad(tg, "1", r.m_temp, T_LESS));
+                s.m_quads.push_back(TacQuad(t, tl, tg, T_OR));
+            } else {
+                ems_add(&ems, m_op.line, "Unary expression does not support that operator.");
+            }
+            return {t, r.m_type};
         }
 };
 
@@ -158,11 +226,39 @@ class AstLiteral: public Ast {
             }
         }
 
-        std::string emit_ir(Semant& s) {
-            return std::string(m_lexeme.start, m_lexeme.len);
+        EmitTacResult emit_ir(Semant& s) {
+            std::string t;
+            if (m_lexeme.type == T_INT) {
+                t = std::string(m_lexeme.start, m_lexeme.len);
+            } else if (m_lexeme.type == T_TRUE) {
+                t = "1";
+            } else if (m_lexeme.type == T_FALSE) {
+                t = "0";
+            } else if (m_lexeme.type == T_NIL) {
+                t = "0";
+            } else {
+                ems_add(&ems, m_lexeme.line, "Synax Error: Invalid literal");
+            }
+
+            Type type = Type(T_NIL_TYPE);
+            switch (m_lexeme.type) {
+                case T_INT:
+                    type =  Type(T_INT_TYPE);
+                    break;
+                case T_TRUE:
+                case T_FALSE:
+                    type = Type(T_BOOL_TYPE);
+                    break;
+                default:
+                    break;
+            }
+
+            return {t, type};
         }
 };
 
+//TODO: Need line info for AstPrint (need the token)
+//TODO: should generalize to use AstCall
 class AstPrint: public Ast {
     public:
         Ast* m_arg;
@@ -186,8 +282,20 @@ class AstPrint: public Ast {
             return Type(T_NIL_TYPE);
         }
 
-        std::string emit_ir(Semant& s) {
-            return "";
+        EmitTacResult emit_ir(Semant& s) {
+            EmitTacResult r = m_arg->emit_ir(s);
+
+            s.m_quads.push_back(TacQuad("", "push_arg", r.m_temp, T_NIL)); 
+            if (r.m_type.m_dtype == T_INT_TYPE) {
+                s.m_quads.push_back(TacQuad("", "call", "_print_int", T_NIL)); 
+            } else if (r.m_type.m_dtype == T_BOOL_TYPE) {
+                s.m_quads.push_back(TacQuad("", "call", "_print_bool", T_NIL)); 
+            } else {
+                //TODO: error message with line info goes here
+            }
+            s.m_quads.push_back(TacQuad("", "pop_args", std::to_string(4), T_NIL)); 
+
+            return {"", Type(T_NIL_TYPE)};
         }
 };
 
@@ -204,8 +312,9 @@ class AstExprStmt: public Ast {
             s.write_op("    pop     %s", "ebx");
             return Type(T_NIL_TYPE);
         }
-        std::string emit_ir(Semant& s) {
-            return m_expr->emit_ir(s);
+        EmitTacResult emit_ir(Semant& s) {
+            EmitTacResult r = m_expr->emit_ir(s);
+            return {"", Type(T_NIL_TYPE)};
         }
 };
 
@@ -228,7 +337,7 @@ class AstFunDef: public Ast {
                 ptypes.push_back(n->translate(s)); //TODO: this may cause side-effects later...
             }
 
-            if (!s.m_globals.add_symbol(m_symbol, Type(T_FUN_TYPE, m_ret_type.type, ptypes))) {
+            if (!s.m_globals.add_symbol(m_symbol, "", Type(T_FUN_TYPE, m_ret_type.type, ptypes))) { //NOTE: tac_temp (2nd arg) not used in translate
                 ems_add(&ems, m_symbol.line, "Syntax Error: Function with name already declared in global scope.");
             }
 
@@ -254,19 +363,33 @@ class AstFunDef: public Ast {
             }
             return Type(T_NIL_TYPE);
         }
-        std::string emit_ir(Semant& s) {
+        EmitTacResult emit_ir(Semant& s) {
+            std::vector<Type> ptypes = std::vector<Type>();
+            for (Ast* n: m_params) {
+                ptypes.push_back(n->emit_ir(s).m_type); //NOTE: parameters should NOT emit any code
+            }
+
+            if (!s.m_globals.add_symbol(m_symbol, "", Type(T_FUN_TYPE, m_ret_type.type, ptypes))) { //NOTE: functions can't shadow, so 2nd arg not used
+                ems_add(&ems, m_symbol.line, "Syntax Error: Function with name already declared in global scope.");
+            }
+
+
             s.add_tac_label(std::string(m_symbol.start, m_symbol.len));
-            int offset = s.m_quads.size(); //TODO: need to patch this
-            s.m_quads.push_back(TacQuad("begin_fun", "reserve_stack", "", T_NIL));
+            int offset = s.m_quads.size();
+            s.m_quads.push_back(TacQuad("", "begin_fun", "", T_NIL));
             int start_temps = TacQuad::s_temp_counter;
+
+            s.m_compiling_fun = this;
             m_body->emit_ir(s);
+            s.m_compiling_fun = nullptr;
+
             //NOTE: shouldn't need to count locals since a temp is currently
             //  created for each declared local - will have more than enough stack space
             //  and optmizing will reduce this
             int added_temps = TacQuad::s_temp_counter - start_temps;
-            s.m_quads[offset].m_opd1 = std::to_string(added_temps * 4);
-            s.m_quads.push_back(TacQuad("end_fun", "", "", T_NIL));
-            return "";
+            s.m_quads[offset].m_opd2 = std::to_string(added_temps * 4);
+            s.m_quads.push_back(TacQuad("", "end_fun", "", T_NIL));
+            return {"", Type(T_NIL_TYPE)};
         }
 };
 
@@ -283,8 +406,8 @@ class AstParam: public Ast {
         Type translate([[maybe_unused]] Semant& s) {
             return Type(m_dtype.type);
         }
-        std::string emit_ir(Semant& s) {
-            return "";
+        EmitTacResult emit_ir(Semant& s) {
+            return {"", Type(m_dtype.type)};
         }
 };
 
@@ -317,14 +440,40 @@ class AstDeclSym: public Ast {
                 ems_add(&ems, m_symbol.line, "Syntax Error: Local symbol already declared in this scope!");
             }
 
-            s.m_env.add_symbol(m_symbol, Type(m_type.type));
+            s.m_env.add_symbol(m_symbol, "", Type(m_type.type)); //Note: tac_temp (2nd argument) not used in translate
 
             //local variable is on stack at this point
             return right_type;
         }
-        std::string emit_ir(Semant& s) {
-            s.m_quads.push_back(TacQuad(std::string(m_symbol.start, m_symbol.len), m_value->emit_ir(s), "", T_EQUAL));
-            return "";
+
+        //TODO: need to allocate offset for locals for X86Frame here
+        EmitTacResult emit_ir(Semant& s) {
+            AstFunDef *f = dynamic_cast<AstFunDef*>(s.m_compiling_fun);
+            for (Ast* n: f->m_params) {
+                AstParam* p = dynamic_cast<AstParam*>(n);
+                if (strncmp(p->m_symbol.start, m_symbol.start, m_symbol.len) == 0) {
+                    ems_add(&ems, m_symbol.line, "Syntax Error: Formal parameter already declared using symbol");
+                    break;
+                }
+            }
+
+            EmitTacResult r = m_value->emit_ir(s);
+
+            if (r.m_type.m_dtype != m_type.type) {
+                ems_add(&ems, m_symbol.line, "Type Error: Declaration type and assigned value type don't match!");
+            }
+
+            if (s.m_env.declared_in_scope(m_symbol)) {
+                ems_add(&ems, m_symbol.line, "Syntax Error: Local symbol already declared in this scope!");
+            }
+
+            std::string local_temp = TacQuad::new_temp() + std::string(m_symbol.start, m_symbol.len);
+
+            s.m_env.add_symbol(m_symbol, local_temp, Type(m_type.type));
+
+            s.m_quads.push_back(TacQuad(local_temp, r.m_temp, "", T_EQUAL));
+
+            return {"", Type(T_NIL_TYPE)};
         }
 };
 
@@ -370,8 +519,32 @@ class AstGetSym: public Ast {
             }
 
         }
-        std::string emit_ir(Semant& s) {
-            return std::string(m_symbol.start, m_symbol.len);
+        EmitTacResult emit_ir(Semant& s) {
+            int arg_offset = -1;
+            AstFunDef *f = dynamic_cast<AstFunDef*>(s.m_compiling_fun);
+            for (int i = 0; i < int(f->m_params.size()); i++) {
+                Ast* n = f->m_params[i];
+                AstParam* p = dynamic_cast<AstParam*>(n);
+                if (strncmp(p->m_symbol.start, m_symbol.start, m_symbol.len) == 0) {
+                    arg_offset = i;
+                    break;
+                }
+            }
+
+            if (arg_offset == -1) { //symbol is local
+                Symbol* sym = s.m_env.get_symbol(m_symbol);
+                if (!sym) {
+                    ems_add(&ems, m_symbol.line, "Syntax Error: Variable not declared!");
+                    return {"", Type(T_NIL_TYPE)};
+                }
+                
+                return {sym->m_tac_symbol, sym->m_type};
+            } else { //symbol is formal parameter
+                Symbol *sym = s.m_globals.get_symbol(f->m_symbol);
+                Type type = sym->m_type.m_ptypes[arg_offset];
+                
+                return {sym->m_symbol, type};
+            }
         }
 };
 
@@ -431,11 +604,47 @@ class AstSetSym: public Ast {
                 return type;
             }
         }
-        std::string emit_ir(Semant& s) {
-            std::string sym = std::string(m_symbol.start, m_symbol.len);
-            std::string t = m_value->emit_ir(s);
-            s.m_quads.push_back(TacQuad(sym, t, "", T_EQUAL));
-            return sym;
+        EmitTacResult emit_ir(Semant& s) {
+            int arg_offset = -1;
+            AstFunDef *f = dynamic_cast<AstFunDef*>(s.m_compiling_fun);
+            for (int i = 0; i < int(f->m_params.size()); i++) {
+                Ast* n = f->m_params[i];
+                AstParam* p = dynamic_cast<AstParam*>(n);
+                if (strncmp(p->m_symbol.start, m_symbol.start, m_symbol.len) == 0) {
+                    arg_offset = i;
+                    break;
+                }
+            }
+
+            if (arg_offset == -1) { //symbol is a local
+                Symbol *sym = s.m_env.get_symbol(m_symbol);
+
+                if (!sym) {
+                    ems_add(&ems, m_symbol.line, "Syntax Error: Variable not declared!");
+                    return {"", Type(T_NIL_TYPE)};
+                }
+
+                EmitTacResult r = m_value->emit_ir(s);
+                if (!sym->m_type.is_of_type(r.m_type)) {
+                    ems_add(&ems, m_symbol.line, "Type Error: Declaration type and assigned value type don't match!");
+                    return {"", Type(T_NIL_TYPE)};
+                }
+
+                s.m_quads.push_back(TacQuad(sym->m_tac_symbol, r.m_temp, "", T_EQUAL));
+
+                return {sym->m_tac_symbol, r.m_type};
+            } else { //symbol is a formal parameter
+                EmitTacResult r = m_value->emit_ir(s);
+                Symbol *sym = s.m_globals.get_symbol(f->m_symbol);
+                Type type = sym->m_type.m_ptypes[arg_offset];
+                if (!type.is_of_type(r.m_type)) {
+                    ems_add(&ems, m_symbol.line, "Type Error: Formal parameter type and assigned value type don't match!");
+                    return {"", Type(T_NIL_TYPE)};
+                }
+
+                s.m_quads.push_back(TacQuad(sym->m_symbol, r.m_temp, "", T_EQUAL));
+                return {sym->m_symbol, r.m_type};
+            }
         }
 };
 
@@ -464,11 +673,15 @@ class AstBlock: public Ast {
         }
 
 
-        std::string emit_ir(Semant& s) {
+        EmitTacResult emit_ir(Semant& s) {
+            s.m_env.begin_scope();
+
             for (Ast* n: m_stmts) {
-                n->emit_ir(s);
+                EmitTacResult r = n->emit_ir(s);
             }
-            return "";
+
+            s.m_env.end_scope();
+            return {"", Type(T_NIL_TYPE)};
         }
 };
 
@@ -506,8 +719,9 @@ class AstIf: public Ast {
 
             return Type(T_NIL_TYPE);
         }
-        std::string emit_ir(Semant& s) {
-            return "";
+        EmitTacResult emit_ir(Semant& s) {
+            //return "";
+            return {"", Type(T_NIL_TYPE)};
         }
 };
 
@@ -538,8 +752,9 @@ class AstWhile: public Ast {
 
             return Type(T_NIL_TYPE);
         }
-        std::string emit_ir(Semant& s) {
-            return "";
+        EmitTacResult emit_ir(Semant& s) {
+            //return "";
+            return {"", Type(T_NIL_TYPE)};
         }
 };
 
@@ -589,8 +804,29 @@ class AstCall: public Ast {
 
             return sym->m_type.m_rtype;
         }
-        std::string emit_ir(Semant& s) {
-            return "";
+        EmitTacResult emit_ir(Semant& s) {
+            //check if function has return type
+            /*
+            for (Ast* arg: m_args) {
+                std::string t = arg->emit_ir(s);
+                s.m_quads.push_back(TacQuad("push_arg", t, "", T_NIL));
+            }
+
+            std::string ret;
+            if (non_nil_return) {
+                std::string t = TacQuad::new_temp();
+                s.m_quads.push_back(TacQuad(t, "call", std::string(m_symbol.start, m_symbol.len), T_EQUAL));
+                ret = t;
+            } else {
+                s.m_quads.push_back(TacQuad("call", std::string(m_symbol.start, m_symbol.len), "", T_NIL));
+                ret = "";
+            }
+
+            s.m_quads.push_back(TacQuad("pop_args", std::to_string(m_args.size()), "", T_NIL));
+
+            return ret;*/
+            //return "";
+            return {"", Type(T_NIL_TYPE)};
         }
 };
 
@@ -619,8 +855,10 @@ class AstReturn: public Ast {
             
             return Type(T_RET_TYPE);
         }
-        std::string emit_ir(Semant& s) {
-            return "";
+        EmitTacResult emit_ir(Semant& s) {
+            std::string t = m_expr->emit_ir(s).m_temp;
+            s.m_quads.push_back(TacQuad("", "return", t, T_NIL));
+            return {"", Type(T_NIL_TYPE)};
         }
 };
 
@@ -640,8 +878,9 @@ class AstImport: public Ast {
             s.m_imports.push_back(new_s);
             return Type(T_NIL_TYPE);
         }
-        std::string emit_ir(Semant& s) {
-            return "";
+        EmitTacResult emit_ir(Semant& s) {
+            //return "";
+            return {"", Type(T_NIL_TYPE)};
         }
 };
 

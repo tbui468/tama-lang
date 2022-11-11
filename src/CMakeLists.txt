@@ -27,6 +27,8 @@ set(Headers
     linker.hpp
     elf.hpp
     tac.hpp
+    type.hpp
+    x86_frame.hpp
     )
 
 add_executable(

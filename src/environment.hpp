@@ -1,39 +1,17 @@
 #ifndef ENVIRONMENT_HPP
 #define ENVIRONMENT_HPP
 
-
-class Type {
-    public:
-        //if m_dtype == T_FUN_TYPE, then m_rtype and m_params can be used to find function type
-        enum TokenType m_dtype;
-        enum TokenType m_rtype;
-        std::vector<Type> m_ptypes;
-    public:
-        Type(enum TokenType dtype, enum TokenType rtype, std::vector<Type> params):
-            m_dtype(dtype), m_rtype(rtype), m_ptypes(params) {}
-        Type(enum TokenType dtype): m_dtype(dtype), m_rtype(T_NIL_TYPE), m_ptypes(std::vector<Type>()) {}
-        bool is_of_type(const Type& other) {
-            if (m_dtype != other.m_dtype) return false;
-            if (m_ptypes.size() != other.m_ptypes.size()) return false;
-
-            if (m_dtype == T_FUN_TYPE) {
-                for (int i = 0; i < int(m_ptypes.size()); i++) {
-                    if (!m_ptypes.at(i).is_of_type(other.m_ptypes.at(i))) return false;
-                }
-            }
-
-            return true;
-        }
-};
+#include "type.hpp"
 
 class Symbol {
     public:
         std::string m_symbol;
+        std::string m_tac_symbol;
         Type m_type;
         int m_bp_offset;
     public:
-        Symbol(struct Token symbol, Type type, int bp_offset):
-            m_symbol(std::string(symbol.start, symbol.len)), m_type(type), m_bp_offset(bp_offset) {}
+        Symbol(struct Token symbol, const std::string& tac_symbol, Type type, int bp_offset):
+            m_symbol(std::string(symbol.start, symbol.len)), m_tac_symbol(tac_symbol), m_type(type), m_bp_offset(bp_offset) {}
 };
 
 class Scope {
@@ -51,13 +29,13 @@ class Scope {
             return nullptr;
         }
 
-        bool add_symbol(struct Token symbol, Type type) {
+        bool add_symbol(struct Token symbol, const std::string& tac_symbol, Type type) {
             if (get_symbol(symbol)) {
                 return false; 
             }
 
             int offset = 0;
-            m_symbols.insert({std::string(symbol.start, symbol.len), Symbol(symbol, type, offset)});
+            m_symbols.insert({std::string(symbol.start, symbol.len), Symbol(symbol, tac_symbol, type, offset)});
 
             return true;
         }
@@ -104,7 +82,7 @@ class Environment {
             return false;
         }
         //TODO: refactor to add_local
-        bool add_symbol(struct Token symbol, Type type) {
+        bool add_symbol(struct Token symbol, const std::string& tac_symbol, Type type) {
             if (declared_in_scope(symbol)) {
                 return false; 
             }
@@ -116,7 +94,7 @@ class Environment {
                 current = current->m_next;
             }
 
-            m_head->m_symbols.insert({std::string(symbol.start, symbol.len), Symbol(symbol, type, offset)});
+            m_head->m_symbols.insert({std::string(symbol.start, symbol.len), Symbol(symbol, tac_symbol, type, offset)});
             return true;
         }
         void begin_scope() {
