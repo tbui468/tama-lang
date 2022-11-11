@@ -318,6 +318,23 @@ class AstExprStmt: public Ast {
         }
 };
 
+class AstParam: public Ast {
+    public:
+        struct Token m_symbol;
+        struct Token m_dtype;
+    public:
+        AstParam(struct Token symbol, struct Token dtype): m_symbol(symbol), m_dtype(dtype) {}
+        std::string to_string() {
+            return "param";
+        }
+        Type translate([[maybe_unused]] Semant& s) {
+            return Type(m_dtype.type);
+        }
+        EmitTacResult emit_ir(Semant& s) {
+            return {"", Type(m_dtype.type)};
+        }
+};
+
 
 class AstFunDef: public Ast {
     public:
@@ -363,10 +380,19 @@ class AstFunDef: public Ast {
             }
             return Type(T_NIL_TYPE);
         }
+
         EmitTacResult emit_ir(Semant& s) {
+            std::string fun_name = std::string(m_symbol.start, m_symbol.len);
+            s.m_frames->insert({fun_name, X86Frame()});
+
+            std::unordered_map<std::string, X86Frame>::iterator it = s.m_frames->find(fun_name);
             std::vector<Type> ptypes = std::vector<Type>();
+            int fp_offset = 8;
             for (Ast* n: m_params) {
                 ptypes.push_back(n->emit_ir(s).m_type); //NOTE: parameters should NOT emit any code
+                AstParam* param = (AstParam*)n;
+                it->second.m_fp_offsets.insert({std::string(param->m_symbol.start, param->m_symbol.len), fp_offset});
+                fp_offset += 4;
             }
 
             if (!s.m_globals.add_symbol(m_symbol, "", Type(T_FUN_TYPE, m_ret_type.type, ptypes))) { //NOTE: functions can't shadow, so 2nd arg not used
@@ -374,8 +400,7 @@ class AstFunDef: public Ast {
             }
 
 
-            s.m_frames->insert({std::string(m_symbol.start, m_symbol.len), X86Frame()});
-            s.add_tac_label(std::string(m_symbol.start, m_symbol.len));
+            s.add_tac_label(fun_name);
             int offset = s.m_quads.size();
             s.m_quads.push_back(TacQuad("", "begin_fun", "", T_NIL));
             int start_temps = TacQuad::s_temp_counter;
@@ -391,24 +416,6 @@ class AstFunDef: public Ast {
 
 
             return {"", Type(T_NIL_TYPE)};
-        }
-};
-
-
-class AstParam: public Ast {
-    public:
-        struct Token m_symbol;
-        struct Token m_dtype;
-    public:
-        AstParam(struct Token symbol, struct Token dtype): m_symbol(symbol), m_dtype(dtype) {}
-        std::string to_string() {
-            return "param";
-        }
-        Type translate([[maybe_unused]] Semant& s) {
-            return Type(m_dtype.type);
-        }
-        EmitTacResult emit_ir(Semant& s) {
-            return {"", Type(m_dtype.type)};
         }
 };
 
@@ -469,6 +476,10 @@ class AstDeclSym: public Ast {
             }
 
             std::string local_temp = TacQuad::new_temp() + std::string(m_symbol.start, m_symbol.len);
+
+            std::string fun_name = std::string(f->m_symbol.start, f->m_symbol.len);
+            std::unordered_map<std::string, X86Frame>::iterator it = s.m_frames->find(fun_name);
+            it->second.m_fp_offsets.insert({local_temp, -4 * (s.m_env.symbol_count() + 1)});
 
             s.m_env.add_symbol(m_symbol, local_temp, Type(m_type.type));
 

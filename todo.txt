@@ -3,25 +3,18 @@ Scope/Environment/Symbol and Frames are all mixed up
 Also, Environment and Scope have a lot of repeated functions/unused functions (I think?)
     Environment::add_symbol(...) is not calling Scope::add_symbol(...) - should it?
 
+Need a Frame interface
+    right now, x86Frame format is mixed inside with TmdAst code
+    interface should be:
+        append_parameter(....)
+        add_local(...)
+
 **************IR*************************
 Read Slides13
 Read lecture 14, lecture 15, lecture 16
 Read 240 TAC examples
 
 ****************Fill in X86Frames during compilation**********************
-Semant has access to frames now, m_frames (pointer)
-    fill this in during FunDef and DeclSym
-
-Integrate X86Frames (eg, allocate formal parameters and locals - all temps now)
-    Need to add formal parameters in FunDef node - set m_tac_symbol to empty string
-    Need to add locals in DeclSym - m_tac_symbol needs to be unique
-
-Frames for each function needs to be saved in main.cpp, and then
-used again during the code generation module (along with TAC)
-to create x86 assembly
-
-frames = std::unordered_map<std::string, Frame>();
-
 Formal parameters can be added to Frame in FunDef node
 Locals can be added to Frame while compiling a function
     do this inside of DeclSym

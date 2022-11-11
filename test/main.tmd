@@ -7,5 +7,6 @@ double: (a: int, b: int) -> int {
                             return x + b
                         }
                         main: () -> int {
+                            z: int = 232
                             return double(0, 21)
                         }

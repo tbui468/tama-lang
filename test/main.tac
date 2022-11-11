@@ -17,10 +17,11 @@ _L1:
     return _t5
     end_fun 
 main:
-    begin_fun 4
+    begin_fun 8
+    _t6z = 232 
     push_arg 21
     push_arg 0
-    _t6 = call double
+    _t7 = call double
     pop_args 8
-    return _t6
+    return _t7
     end_fun 

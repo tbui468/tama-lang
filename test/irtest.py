@@ -30,6 +30,7 @@ tests = [
                             return x + b
                         }
                         main: () -> int {
+                            z: int = 232
                             return double(0, 21)
                         }
                         """

@@ -44,14 +44,25 @@ int main (int argc, char **argv) {
         }
     }
 
-    std::unordered_map<std::string, X86Frame> frames = std::unordered_map<std::string, X86Frame>();
 
     for (const std::string& f: tmd_files) {
         std::string out = f.substr(0, f.size() - 4) + ".tac";
 
         std::cout << "Compiling " << f << " to IA32..." << std::endl;
+        std::unordered_map<std::string, X86Frame> frames = std::unordered_map<std::string, X86Frame>();
         Semant s = Semant(&frames);
         s.generate_ir(f, out);
+
+        for (const std::pair<std::string, X86Frame>& p: frames) {
+            std::cout << p.first << std::endl;
+            for (const std::pair<std::string, int>& q: p.second.m_fp_offsets) {
+                std::cout << q.first << ": " << q.second << std::endl;
+            }
+        }
+
+        //optimize
+
+        //generate code here
     }
 
     /*
