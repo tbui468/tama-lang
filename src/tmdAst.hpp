@@ -540,10 +540,11 @@ class AstGetSym: public Ast {
                 
                 return {sym->m_tac_symbol, sym->m_type};
             } else { //symbol is formal parameter
-                Symbol *sym = s.m_globals.get_symbol(f->m_symbol);
-                Type type = sym->m_type.m_ptypes[arg_offset];
+
+                Ast* n = f->m_params[arg_offset];
+                AstParam* p = dynamic_cast<AstParam*>(n);
                 
-                return {sym->m_symbol, type};
+                return {std::string(p->m_symbol.start, p->m_symbol.len), p->m_dtype.type};
             }
         }
 };
@@ -720,7 +721,24 @@ class AstIf: public Ast {
             return Type(T_NIL_TYPE);
         }
         EmitTacResult emit_ir(Semant& s) {
-            //return "";
+            EmitTacResult cond_r = m_condition->emit_ir(s);
+            if (cond_r.m_type.m_dtype != T_BOOL_TYPE) {
+                ems_add(&ems, m_t.line, "Syntax Error: 'if' keyword must be followed by boolean expression.");
+            }
+
+            std::string false_label = TacQuad::new_label();
+            s.m_quads.push_back(TacQuad("if_z_goto", cond_r.m_temp, false_label, T_NIL));
+
+            EmitTacResult then_r = m_then_block->emit_ir(s);
+            std::string end_label = TacQuad::new_label();
+            s.m_quads.push_back(TacQuad("", "goto", end_label, T_NIL));
+            s.add_tac_label(false_label);
+
+            if (m_else_block) {
+                EmitTacResult then_r = m_else_block->emit_ir(s);
+            }
+            s.add_tac_label(end_label);
+
             return {"", Type(T_NIL_TYPE)};
         }
 };
@@ -753,7 +771,22 @@ class AstWhile: public Ast {
             return Type(T_NIL_TYPE);
         }
         EmitTacResult emit_ir(Semant& s) {
-            //return "";
+            std::string cond_l = TacQuad::new_label();
+            s.add_tac_label(cond_l);
+
+            EmitTacResult cond_r = m_condition->emit_ir(s);
+            if (cond_r.m_type.m_dtype != T_BOOL_TYPE) {
+                ems_add(&ems, m_t.line, "Type Error: 'while' keyword must be followed by boolean expression.");
+            }
+
+            std::string end_l = TacQuad::new_label();
+            s.m_quads.push_back(TacQuad("if_z_goto", cond_r.m_temp, end_l, T_NIL));
+
+            EmitTacResult while_r = m_while_block->emit_ir(s);
+
+            s.m_quads.push_back(TacQuad("", "goto", cond_l, T_NIL));
+            s.add_tac_label(end_l);
+
             return {"", Type(T_NIL_TYPE)};
         }
 };
@@ -805,28 +838,48 @@ class AstCall: public Ast {
             return sym->m_type.m_rtype;
         }
         EmitTacResult emit_ir(Semant& s) {
-            //check if function has return type
-            /*
-            for (Ast* arg: m_args) {
-                std::string t = arg->emit_ir(s);
-                s.m_quads.push_back(TacQuad("push_arg", t, "", T_NIL));
+            Symbol *sym = nullptr;
+
+            //type-check if defined in current translation unit
+            if (!(sym = s.m_globals.get_symbol(m_symbol))) {
+                //check if symbol defined in imports
+                for (Semant* import_s: s.m_imports) {
+                    if ((sym = import_s->m_globals.get_symbol(m_symbol)))
+                        break;
+                }
+
+                if (!sym) {
+                    ems_add(&ems, m_symbol.line, "Syntax Error: Function '%.*s' not defined.", m_symbol.len, m_symbol.start);
+                    return {"", Type(T_NIL_TYPE)};
+                }
             }
 
-            std::string ret;
-            if (non_nil_return) {
-                std::string t = TacQuad::new_temp();
+            if (m_args.size() != sym->m_type.m_ptypes.size()) {
+                ems_add(&ems, m_symbol.line, "Type Error: Argument count does not match formal parameter count.");
+                return {"", Type(T_NIL_TYPE)};
+            }
+
+            for (int i = m_args.size() - 1; i >= 0; i--) {
+                EmitTacResult r = m_args[i]->emit_ir(s);
+                if (!r.m_type.is_of_type(sym->m_type.m_ptypes[i])) {
+                    ems_add(&ems, m_symbol.line, "Type Error: Argument type doesn't match formal parameter type.");
+                }
+                s.m_quads.push_back(TacQuad("", "push_arg", r.m_temp, T_NIL));
+            }
+
+            std::string t;
+            if (sym->m_type.m_rtype != T_NIL_TYPE) {
+                t = TacQuad::new_temp();
                 s.m_quads.push_back(TacQuad(t, "call", std::string(m_symbol.start, m_symbol.len), T_EQUAL));
-                ret = t;
             } else {
-                s.m_quads.push_back(TacQuad("call", std::string(m_symbol.start, m_symbol.len), "", T_NIL));
-                ret = "";
+                t = "";
+                s.m_quads.push_back(TacQuad(t, "call", std::string(m_symbol.start, m_symbol.len), T_NIL));
             }
 
-            s.m_quads.push_back(TacQuad("pop_args", std::to_string(m_args.size()), "", T_NIL));
+            s.m_quads.push_back(TacQuad("", "pop_args", std::to_string(m_args.size() * 4), T_NIL));
 
-            return ret;*/
-            //return "";
-            return {"", Type(T_NIL_TYPE)};
+            return {t, Type(sym->m_type.m_rtype)};
+
         }
 };
 
@@ -856,8 +909,18 @@ class AstReturn: public Ast {
             return Type(T_RET_TYPE);
         }
         EmitTacResult emit_ir(Semant& s) {
-            std::string t = m_expr->emit_ir(s).m_temp;
-            s.m_quads.push_back(TacQuad("", "return", t, T_NIL));
+            if (!s.m_compiling_fun) {
+                ems_add(&ems, m_return.line, "Synax Error: 'return' can only be used inside a function definition.");
+                return {"", Type(T_NIL_TYPE)};
+            }
+
+            EmitTacResult r = m_expr->emit_ir(s);
+            AstFunDef* n = dynamic_cast<AstFunDef*>(s.m_compiling_fun);
+            if (r.m_type.m_dtype != n->m_ret_type.type) {
+                ems_add(&ems, m_return.line, "Synax Error: return data type does not match function return type.");
+            }
+
+            s.m_quads.push_back(TacQuad("", "return", r.m_temp, T_NIL));
             return {"", Type(T_NIL_TYPE)};
         }
 };
@@ -879,7 +942,10 @@ class AstImport: public Ast {
             return Type(T_NIL_TYPE);
         }
         EmitTacResult emit_ir(Semant& s) {
-            //return "";
+            Semant *new_s = new Semant();
+            //TODO: Need to make this path more generalized - only works with python scripts in /test right now
+            new_s->extract_global_declarations(std::string(m_symbol.start, m_symbol.len) + ".tmd");
+            s.m_imports.push_back(new_s);
             return {"", Type(T_NIL_TYPE)};
         }
 };

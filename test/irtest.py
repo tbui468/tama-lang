@@ -21,16 +21,15 @@ tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
-                            x: int = 1
-                            {
-                                x = 2
-                                print(x)
-                                x: int = 3
-                                x = 4
+                        double: (a: int, b: int) -> int {
+                            x: int = 0
+                            while x < a {
+                                x = x + 1 
                             }
-                            x = 5
-                            return 0
+                            return x + b
+                        }
+                        main: () -> int {
+                            return double(0, 21)
                         }
                         """
                     )

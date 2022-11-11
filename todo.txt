@@ -1,26 +1,41 @@
+**************Refactor************************
+Scope/Environment/Symbol and Frames are all mixed up
+Also, Environment and Scope have a lot of repeated functions/unused functions (I think?)
+    Environment::add_symbol(...) is not calling Scope::add_symbol(...) - should it?
+
 **************IR*************************
 Read Slides13
 Read lecture 14, lecture 15, lecture 16
 Read 240 TAC examples
 
-****************Implement emit_ir*****************************
-Can use similar algorithm as in translate(Semant& s);
-
-Finish emit_ir for all tmdAst nodes
-    Block
-    If
-    While
-    Call
-    Return
-    Import
-
+****************Fill in X86Frames during compilation**********************
 Integrate X86Frames (eg, allocate formal parameters and locals - all temps now)
     Need to add formal parameters in FunDef node - set m_tac_symbol to empty string
     Need to add locals in DeclSym - m_tac_symbol needs to be unique
 
-*************************Optimizer**********************************
+Frames for each function needs to be saved in main.cpp, and then
+used again during the code generation module (along with TAC)
+to create x86 assembly
 
-***************************Reorganize Quads basic-blocks*********************
+***************Optimization********************
+Constant folding
+    Check all quads for +*/- operators
+        check if both operands can be change from strings to integers
+        if so, replace quad with a TacQuad(t, result, "", T_EQUAL)
+
+Dead code elimination
+    check target of each quad
+    if that target is not used in operand1 or oprand2 of any other quad, delete that quad
+    emit warning telling use code is unused
+
+***************Allocate registers*********************
+K-coloring to fit 3 (or 6 registers).
+
+******************Emit x86 from TAC***********************
+Use assembler and linker to check if final output works
+
+********************More Optimization********************
+***************************Reorganize Quads basic-blocks*******************
     Each instruction after label is start of block - the leader (this takes care of function definitions)
     Start at each leader and move down quads until we find next leader - previous is end of block (also takes care of functions)
     Need to create CFG during this time (nodes are blocks, and edges (jumps) connect blocks)
@@ -46,17 +61,8 @@ Integrate X86Frames (eg, allocate formal parameters and locals - all temps now)
 ****************Control-Flow Graph**********************
 What about trace scheduling? (Mentioned in Modern Compiler Implementation in C book, but not in standford lectures)
 
-***************Optimization********************
-just do constant folding or something simple for now
-
-***************SSA******************************
+***************SSA*************************
 Could transform to SSA IR and do more optimizations
-
-***************Allocate registers*********************
-K-coloring to fit 3 (or 6 registers).
-
-******************Emit x86 from TAC***********************
-Use assembler and linker to check if final output works
 
 *********************Documentation****************
 
