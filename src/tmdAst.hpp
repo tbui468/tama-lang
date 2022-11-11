@@ -374,21 +374,22 @@ class AstFunDef: public Ast {
             }
 
 
+            s.m_frames->insert({std::string(m_symbol.start, m_symbol.len), X86Frame()});
             s.add_tac_label(std::string(m_symbol.start, m_symbol.len));
             int offset = s.m_quads.size();
             s.m_quads.push_back(TacQuad("", "begin_fun", "", T_NIL));
             int start_temps = TacQuad::s_temp_counter;
 
             s.m_compiling_fun = this;
+            s.m_compiling_fun_max_locals = 0;
             m_body->emit_ir(s);
             s.m_compiling_fun = nullptr;
 
-            //NOTE: shouldn't need to count locals since a temp is currently
-            //  created for each declared local - will have more than enough stack space
-            //  and optmizing will reduce this
             int added_temps = TacQuad::s_temp_counter - start_temps;
-            s.m_quads[offset].m_opd2 = std::to_string(added_temps * 4);
+            s.m_quads[offset].m_opd2 = std::to_string((s.m_compiling_fun_max_locals + added_temps) * 4);
             s.m_quads.push_back(TacQuad("", "end_fun", "", T_NIL));
+
+
             return {"", Type(T_NIL_TYPE)};
         }
 };
@@ -656,6 +657,7 @@ class AstBlock: public Ast {
         std::string to_string() {
             return "block";
         }
+
         Type translate(Semant& s) {
             s.m_env.begin_scope();
             for (Ast* n: m_stmts) {
@@ -668,11 +670,16 @@ class AstBlock: public Ast {
                     break;
                 }
             }
+
+            int current_max = s.m_env.symbol_count();
+            if (s.m_compiling_fun_max_locals < current_max) {
+                s.m_compiling_fun_max_locals = current_max;
+            }
+
             int pop_count = s.m_env.end_scope();
             s.write_op("    add     %s, %d", "esp", 4 * pop_count);
             return Type(T_NIL_TYPE);
         }
-
 
         EmitTacResult emit_ir(Semant& s) {
             s.m_env.begin_scope();
@@ -935,14 +942,14 @@ class AstImport: public Ast {
         }
 
         Type translate(Semant& s) {
-            Semant *new_s = new Semant();
+            Semant *new_s = new Semant(nullptr);
             //TODO: Need to make this path more generalized - only works with python scripts in /test right now
             new_s->extract_global_declarations(std::string(m_symbol.start, m_symbol.len) + ".tmd");
             s.m_imports.push_back(new_s);
             return Type(T_NIL_TYPE);
         }
         EmitTacResult emit_ir(Semant& s) {
-            Semant *new_s = new Semant();
+            Semant *new_s = new Semant(nullptr);
             //TODO: Need to make this path more generalized - only works with python scripts in /test right now
             new_s->extract_global_declarations(std::string(m_symbol.start, m_symbol.len) + ".tmd");
             s.m_imports.push_back(new_s);

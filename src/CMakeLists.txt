@@ -22,7 +22,6 @@ set(Headers
     semant.hpp
     reserved_word.hpp
     environment.hpp
-    frame.hpp
     tmdAst.hpp
     linker.hpp
     elf.hpp

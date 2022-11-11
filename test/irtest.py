@@ -23,6 +23,7 @@ tests = [
                         """
                         double: (a: int, b: int) -> int {
                             x: int = 0
+                            y: int = 0
                             while x < a {
                                 x = x + 1 
                             }

@@ -14,6 +14,7 @@
 #include "error.hpp"
 #include "environment.hpp"
 #include "tac.hpp"
+#include "x86_frame.hpp"
 
 class Semant {
 
@@ -72,13 +73,16 @@ class Semant {
         std::vector<uint8_t> m_irbuf;
         std::vector<TacQuad> m_quads;
         std::vector<std::string> m_tac_labels;
+        std::unordered_map<std::string, X86Frame>* m_frames;
 
         Environment m_env;
         int m_label_id_counter = 0;
         Ast* m_compiling_fun = nullptr;
+        int m_compiling_fun_max_locals = 0;
         Scope m_globals {nullptr};
         std::vector<Semant*> m_imports;
     public:
+        Semant(std::unordered_map<std::string, X86Frame>* frames): m_frames(frames) {}
         void generate_asm(const std::string& input_file, const std::string& output_file);
         void generate_ir(const std::string& input_file, const std::string& output_file);
         void write_op(const char* format, ...);

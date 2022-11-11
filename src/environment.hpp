@@ -59,6 +59,7 @@ class Environment {
 
             return nullptr;
         }
+
         //TODO: refactor to local_count
         int symbol_count() {
             int count = 0;
@@ -70,6 +71,7 @@ class Environment {
 
             return count;
         }
+
         //TODO: refactor to local_decl_in_current_scope
         bool declared_in_scope(struct Token symbol) {
             if (m_head) {
@@ -81,6 +83,7 @@ class Environment {
 
             return false;
         }
+
         //TODO: refactor to add_local
         bool add_symbol(struct Token symbol, const std::string& tac_symbol, Type type) {
             if (declared_in_scope(symbol)) {
@@ -97,6 +100,7 @@ class Environment {
             m_head->m_symbols.insert({std::string(symbol.start, symbol.len), Symbol(symbol, tac_symbol, type, offset)});
             return true;
         }
+
         void begin_scope() {
             Scope* s = new Scope(m_head);
             m_head = s;
