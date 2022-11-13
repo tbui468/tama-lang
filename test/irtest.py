@@ -22,15 +22,20 @@ tests = [
                     ("main.tmd",
                         """
                         double: (a: int, b: int) -> int {
-                            x: int = 224
-                            y: int = 2 + 4
-                            while x < a {
-                                x = x + 1 
+                            x: int = 4 + 38
+                            while x < 10 {
+                                x = x + 1
                             }
                             return x + b
                         }
                         main: () -> int {
-                            z: int = 10-2
+                            y: int = 0
+                            if y < 10 {
+                                y = 1
+                            } else {
+                                y = 42
+                            }
+                            double(1, y)
                             return double(0, 21)
                         }
                         """

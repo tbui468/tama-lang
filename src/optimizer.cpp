@@ -1,16 +1,19 @@
 #include "optimizer.hpp"
 #include "token.hpp"
+#include "utility.hpp"
 #include <iostream>
 
 void Optimizer::constant_folding(std::vector<TacQuad>* quads) {
     for (int i = 0; i < quads->size(); i++) {
         TacQuad q = (*quads)[i];
         if (q.m_opd1 == "" || q.m_opd2 == "") continue;
-        char* p1;
-        char* p2;
-        int left = (int)strtol(q.m_opd1.c_str(), &p1, 10);
-        int right = (int)strtol(q.m_opd2.c_str(), &p2, 10);
-        if (p1 && p2) {
+
+
+        if (is_int(q.m_opd1) && is_int(q.m_opd2)) {
+            char* p1;
+            char* p2;
+            int left = (int)strtol(q.m_opd1.c_str(), &p1, 10);
+            int right = (int)strtol(q.m_opd2.c_str(), &p2, 10);
             int result;
             switch (q.m_op) {
                 case T_PLUS:

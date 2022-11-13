@@ -11,6 +11,7 @@
 #include "semant.hpp"
 #include "linker.hpp"
 #include "x86_frame.hpp"
+#include "x86_generator.hpp"
 #include "optimizer.hpp"
 
 #define MAX_MSG_LEN 256
@@ -77,19 +78,11 @@ int main (int argc, char **argv) {
 
         //allocate registers here
 
-        //generate x86 code here
+        X86Generator gen;
+        gen.generate_asm(&s.m_quads, &s.m_tac_labels, &frames, f.substr(0, f.size() - 4) + ".asm");
     }
 
     /*
-
-    for (const std::string& f: tmd_files) {
-        std::string out = f.substr(0, f.size() - 4) + ".asm";
-        asm_files.push_back(out);
-
-        std::cout << "Compiling " << f << " to IA32..." << std::endl;
-        Semant s;
-        s.generate_asm(f, out);
-    }
 
     for (const std::string& f: asm_files) {
         std::string out = f.substr(0, f.size() - 4) + ".obj";

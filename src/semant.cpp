@@ -13,21 +13,6 @@ void Semant::add_tac_label(const std::string& label) {
     m_tac_labels.push_back(label);
 }
 
-void Semant::generate_asm(const std::string& input_file, const std::string& output_file) {
-    read(input_file);
-    lex();
-    /*
-    for (struct Token t: m_tokens) {
-        printf("%.*s\n", t.len, t.start);
-    }*/
-    parse();
-    /*
-    for (Ast* n: m_nodes) {
-        std::cout << n->to_string() << std::endl;
-    }*/
-    translate();
-    write(output_file);
-}
 
 void Semant::generate_ir(const std::string& input_file, const std::string& output_file) {
     read(input_file);
@@ -71,28 +56,10 @@ void Semant::parse() {
     m_nodes = m_parser.parse_tokens(m_tokens);
 }
 
-void Semant::translate() {
-    for (Ast* n: m_nodes) {
-        n->translate(*this);
-    }
-}
-
 void Semant::translate_to_ir() {
     for (Ast* n: m_nodes) {
         n->emit_ir(*this);
     }
-}
-
-void Semant::write_op(const char* format, ...) {
-    va_list ap;
-    va_start(ap, format);
-    char s[256];
-    int n = vsprintf(s, format, ap);
-    va_end(ap);
-    s[n] = '\n';
-    s[n + 1] = '\0';
-    std::string str(s);
-    m_buf.insert(m_buf.end(), (uint8_t*)str.data(), (uint8_t*)str.data() + str.size());
 }
 
 void Semant::write_ir(const char* format, ...) {
@@ -370,6 +337,6 @@ void Semant::extract_global_declarations(const std::string& module_file) {
     read(module_file);
     lex();
     parse();
-    translate();
+    translate_to_ir();
 }
 

@@ -10,6 +10,9 @@ set(Sources
     linker.cpp
     tac.cpp
     optimizer.cpp
+    x86_generator.cpp
+    x86_frame.cpp
+    utility.cpp
     )
 
 set(Headers
@@ -30,6 +33,8 @@ set(Headers
     type.hpp
     x86_frame.hpp
     optimizer.hpp
+    x86_generator.hpp
+    utility.hpp
     )
 
 add_executable(
