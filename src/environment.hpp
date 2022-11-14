@@ -2,6 +2,7 @@
 #define ENVIRONMENT_HPP
 
 #include "type.hpp"
+/*
 
 class Symbol {
     public:
@@ -113,6 +114,6 @@ class Environment {
             delete old;
             return count;
         }
-};
+};*/
 
 #endif //ENVIRONMENT_HPP

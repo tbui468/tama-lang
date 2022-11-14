@@ -31,9 +31,10 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
         }
     }*/
 
-    const X86Frame* current_frame = nullptr;
+    std::string current_frame_name = "";
     int i = 0;
     for (const TacQuad& q: *quads) {
+        std::cout << q.m_target << " " << q.m_opd1 << " " << q.m_opd2 << " \n";
         if ((*labels)[i] != "") {
             write_op("%s:", (*labels)[i].c_str());
         }
@@ -41,14 +42,16 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
 
         if (q.m_target == "") {
             if (q.m_opd1 == "begin_fun") {
-                current_frame = &(frames->find((*labels)[i])->second);
+                current_frame_name = (*labels)[i];
                 write_op("    %s    %s", "push", "ebp");
                 write_op("    %s     %s, %s", "sub", "esp", q.m_opd2.c_str());
             } else if (q.m_opd1 == "push_arg") {
                 if (is_int(q.m_opd2)) {
                     write_op("    %s    %s", "push", q.m_opd2.c_str());
                 } else {
-                    write_op("    %s    [%s + %d]", "push", "ebp", current_frame->m_fp_offsets.find(q.m_opd2)->second);
+                    X86Frame current_frame = frames->find(current_frame_name)->second;
+                    Symbol* sym = current_frame.get_symbol_from_frame(q.m_opd2);
+                    write_op("    %s    [%s + %d]", "push", "ebp", sym->m_fp_offset);
                 }
             } else if (q.m_opd1 == "pop_args") {
                 write_op("    %s     %s, %s", "add", "esp", q.m_opd2.c_str());
@@ -58,7 +61,7 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
             } else if (q.m_opd1 == "end_fun") {
                 //clean the stack of locals
                 //pop old base pointer back into ebp
-                current_frame = nullptr;
+                current_frame_name = "";
             } else if (q.m_opd1 == "call") {
 
             } else if (q.m_opd1 == "goto") {

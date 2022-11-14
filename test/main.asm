@@ -1,4 +1,3 @@
-_start:
 double:
     push    ebp
     sub     esp, 20
@@ -11,6 +10,7 @@ main:
     jmp     _L3
 _L2:
 _L3:
+    push    [ebp + 4]
     push    1
     add     esp, 8
     push    21

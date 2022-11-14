@@ -35,6 +35,7 @@ set(Headers
     optimizer.hpp
     x86_generator.hpp
     utility.hpp
+    symbol.hpp
     )
 
 add_executable(

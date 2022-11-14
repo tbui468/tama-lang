@@ -50,23 +50,17 @@ int main (int argc, char **argv) {
     for (const std::string& f: tmd_files) {
         std::string out = f.substr(0, f.size() - 4) + ".tac";
 
-        std::cout << "Compiling " << f << " to IA32..." << std::endl;
+        std::cout << "Compiling " << f << " to IR..." << std::endl;
         std::unordered_map<std::string, X86Frame> frames = std::unordered_map<std::string, X86Frame>();
         Semant s = Semant(&frames);
         s.generate_ir(f, out);
 
-        /*
-        for (const std::pair<std::string, X86Frame>& p: frames) {
-            std::cout << p.first << std::endl;
-            for (const std::pair<std::string, int>& q: p.second.m_fp_offsets) {
-                std::cout << q.first << ": " << q.second << std::endl;
-            }
-        }*/
-
         //optimize
+        std::cout << "Optimizing IR..." << std::endl;
         Optimizer opt;
         opt.constant_folding(&s.m_quads);
 
+        /*
         for (int i = 0; i < s.m_quads.size(); i++) {
             const TacQuad& q = s.m_quads[i];
             const std::string& str = s.m_tac_labels[i];
@@ -74,10 +68,11 @@ int main (int argc, char **argv) {
                 std::cout << str << ":" << std::endl;
             }
             std::cout << "    " << q.to_string() << std::endl;
-        }
+        }*/
 
         //allocate registers here
 
+        std::cout << "Generating x86 assembly..." << std::endl;
         X86Generator gen;
         gen.generate_asm(&s.m_quads, &s.m_tac_labels, &frames, f.substr(0, f.size() - 4) + ".asm");
     }

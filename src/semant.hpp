@@ -75,10 +75,10 @@ class Semant {
         std::vector<std::string> m_tac_labels;
         std::unordered_map<std::string, X86Frame>* m_frames;
 
-        Environment m_env;
+//        Environment m_env;
         int m_label_id_counter = 0;
         Ast* m_compiling_fun = nullptr;
-        Scope m_globals {nullptr};
+        Scope m_globals;
         std::vector<Semant*> m_imports;
     public:
         Semant(std::unordered_map<std::string, X86Frame>* frames): m_frames(frames) {}

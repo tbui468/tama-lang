@@ -6,6 +6,7 @@
 #include "ast.hpp"
 #include "semant.hpp"
 #include "x86_frame.hpp"
+#include "symbol.hpp"
 
 class AstBinary: public Ast {
     public:
@@ -216,17 +217,28 @@ class AstFunDef: public Ast {
 
             std::unordered_map<std::string, X86Frame>::iterator it = s.m_frames->find(fun_name);
             std::vector<Type> ptypes = std::vector<Type>();
-            int fp_offset = 8;
+            int ord_num = 0;
+
             for (Ast* n: m_params) {
-                ptypes.push_back(n->emit_ir(s).m_type); //NOTE: parameters should NOT emit any code
+                EmitTacResult r = n->emit_ir(s);
+                ptypes.push_back(r.m_type); //NOTE: parameters should NOT emit any code
                 AstParam* param = (AstParam*)n;
-                it->second.m_fp_offsets.insert({std::string(param->m_symbol.start, param->m_symbol.len), fp_offset});
-                fp_offset += 4;
+                it->second.add_parameter_to_frame(std::string(param->m_symbol.start, param->m_symbol.len), r.m_type, ord_num);
+                ord_num++;
+                //it->second.m_fp_offsets.insert({std::string(param->m_symbol.start, param->m_symbol.len), fp_offset});
+                //fp_offset += 4;
+            }
+            
+            if (s.m_globals.m_symbols.find(fun_name) != s.m_globals.m_symbols.end()) {
+                ems_add(&ems, m_symbol.line, "Syntax Error: Function with name already declared in global scope.");
+            } else {
+                s.m_globals.m_symbols.insert({fun_name, Symbol(fun_name, "", Type(T_FUN_TYPE, m_ret_type.type, ptypes), 0)});
             }
 
+            /*
             if (!s.m_globals.add_symbol(m_symbol, "", Type(T_FUN_TYPE, m_ret_type.type, ptypes))) { //NOTE: functions can't shadow, so 2nd arg not used
                 ems_add(&ems, m_symbol.line, "Syntax Error: Function with name already declared in global scope.");
-            }
+            }*/
 
 
             s.add_tac_label(fun_name);
@@ -237,6 +249,7 @@ class AstFunDef: public Ast {
             s.m_compiling_fun = this;
             m_body->emit_ir(s);
             s.m_compiling_fun = nullptr;
+
 
             int reserved_stack_variables = TacQuad::s_temp_counter - start_temps;
             s.m_quads[offset].m_opd2 = std::to_string((reserved_stack_variables) * 4);
@@ -273,17 +286,16 @@ class AstDeclSym: public Ast {
                 ems_add(&ems, m_symbol.line, "Type Error: Declaration type and assigned value type don't match!");
             }
 
-            if (s.m_env.declared_in_scope(m_symbol)) {
-                ems_add(&ems, m_symbol.line, "Syntax Error: Local symbol already declared in this scope!");
-            }
-
             std::string local_temp = TacQuad::new_temp() + std::string(m_symbol.start, m_symbol.len);
 
             std::string fun_name = std::string(f->m_symbol.start, f->m_symbol.len);
             std::unordered_map<std::string, X86Frame>::iterator it = s.m_frames->find(fun_name);
-            it->second.insert_local(local_temp, s.m_env.symbol_count());
+            if(!(it->second.add_symbol_to_scope(std::string(m_symbol.start, m_symbol.len), local_temp, Type(m_type.type)))) {
+                ems_add(&ems, m_symbol.line, "Syntax Error: Local symbol already declared in this scope!");
+            }
+            //it->second.insert_local(local_temp, s.m_env.symbol_count());
 
-            s.m_env.add_symbol(m_symbol, local_temp, Type(m_type.type));
+            //s.m_env.add_symbol(m_symbol, local_temp, Type(m_type.type));
 
             s.m_quads.push_back(TacQuad(local_temp, r.m_temp, "", T_EQUAL));
 
@@ -311,13 +323,17 @@ class AstGetSym: public Ast {
             }
 
             if (arg_offset == -1) { //symbol is local
-                Symbol* sym = s.m_env.get_symbol(m_symbol);
+                //Symbol* sym = s.m_env.get_symbol(m_symbol);
+                std::string fun_name = std::string(f->m_symbol.start, f->m_symbol.len);
+                std::unordered_map<std::string, X86Frame>::iterator it = s.m_frames->find(fun_name);
+                Symbol* sym = it->second.get_symbol_from_scopes(std::string(m_symbol.start, m_symbol.len));
+
                 if (!sym) {
                     ems_add(&ems, m_symbol.line, "Syntax Error: Variable not declared!");
                     return {"", Type(T_NIL_TYPE)};
                 }
                 
-                return {sym->m_tac_symbol, sym->m_type};
+                return {sym->m_tac_name, sym->m_type};
             } else { //symbol is formal parameter
 
                 Ast* n = f->m_params[arg_offset];
@@ -349,7 +365,10 @@ class AstSetSym: public Ast {
             }
 
             if (arg_offset == -1) { //symbol is a local
-                Symbol *sym = s.m_env.get_symbol(m_symbol);
+                std::string fun_name = std::string(f->m_symbol.start, f->m_symbol.len);
+                std::unordered_map<std::string, X86Frame>::iterator it = s.m_frames->find(fun_name);
+                Symbol* sym = it->second.get_symbol_from_scopes(std::string(m_symbol.start, m_symbol.len));
+                //Symbol *sym = s.m_env.get_symbol(m_symbol);
 
                 if (!sym) {
                     ems_add(&ems, m_symbol.line, "Syntax Error: Variable not declared!");
@@ -362,20 +381,24 @@ class AstSetSym: public Ast {
                     return {"", Type(T_NIL_TYPE)};
                 }
 
-                s.m_quads.push_back(TacQuad(sym->m_tac_symbol, r.m_temp, "", T_EQUAL));
+                s.m_quads.push_back(TacQuad(sym->m_tac_name, r.m_temp, "", T_EQUAL));
 
-                return {sym->m_tac_symbol, r.m_type};
+                return {sym->m_tac_name, r.m_type};
             } else { //symbol is a formal parameter
                 EmitTacResult r = m_value->emit_ir(s);
-                Symbol *sym = s.m_globals.get_symbol(f->m_symbol);
+                //Symbol *sym = s.m_globals.get_symbol(f->m_symbol);
+                std::string fun_name = std::string(f->m_symbol.start, f->m_symbol.len);
+                std::unordered_map<std::string, X86Frame>::iterator it = s.m_frames->find(fun_name);
+                Symbol* sym = it->second.get_symbol_from_frame(std::string(m_symbol.start, m_symbol.len));
+
                 Type type = sym->m_type.m_ptypes[arg_offset];
                 if (!type.is_of_type(r.m_type)) {
                     ems_add(&ems, m_symbol.line, "Type Error: Formal parameter type and assigned value type don't match!");
                     return {"", Type(T_NIL_TYPE)};
                 }
 
-                s.m_quads.push_back(TacQuad(sym->m_symbol, r.m_temp, "", T_EQUAL));
-                return {sym->m_symbol, r.m_type};
+                s.m_quads.push_back(TacQuad(sym->m_name, r.m_temp, "", T_EQUAL));
+                return {sym->m_name, r.m_type};
             }
         }
 };
@@ -388,13 +411,19 @@ class AstBlock: public Ast {
             return "block";
         }
         EmitTacResult emit_ir(Semant& s) {
-            s.m_env.begin_scope();
+            AstFunDef *f = dynamic_cast<AstFunDef*>(s.m_compiling_fun);
+            std::string fun_name = std::string(f->m_symbol.start, f->m_symbol.len);
+            std::unordered_map<std::string, X86Frame>::iterator it = s.m_frames->find(fun_name);
+            it->second.begin_scope();
+            //s.m_env.begin_scope();
 
             for (Ast* n: m_stmts) {
                 EmitTacResult r = n->emit_ir(s);
             }
 
-            s.m_env.end_scope();
+            it->second.end_scope();
+            //s.m_env.end_scope();
+
             return {"", Type(T_NIL_TYPE)};
         }
 };
@@ -478,10 +507,10 @@ class AstCall: public Ast {
             Symbol *sym = nullptr;
 
             //type-check if defined in current translation unit
-            if (!(sym = s.m_globals.get_symbol(m_symbol))) {
+            if (!(sym = s.m_globals.get_symbol(std::string(m_symbol.start, m_symbol.len)))) {
                 //check if symbol defined in imports
                 for (Semant* import_s: s.m_imports) {
-                    if ((sym = import_s->m_globals.get_symbol(m_symbol)))
+                    if ((sym = import_s->m_globals.get_symbol(std::string(m_symbol.start, m_symbol.len))))
                         break;
                 }
 

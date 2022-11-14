@@ -15,29 +15,12 @@ Read lecture 14, lecture 15, lecture 16
 Read 240 TAC examples
 
 ******************Emit x86 from TAC***********************
-Remove translate methods from TmdAst - it's on github if I need it, and it's making compilation more complicated
+We should insert the real variable into the 
+    
+
+Rename Scope to Environment
 
 Space in frame is not being reserved for temps (only parameters and locals/shadowing locals)
-
-    Found problem!!!! <----- temps NOT being added to X86Frame right now -only paramters and locals
-    we need temps too since they may need space on the stack
-    Idea! - Should have X86Frame produce the temps - then it can add them automatically too
-        X86Frame::new_temp(const std::string& suffix) {
-            std::string t = "_t" + (m_temp_counter++) + suffix;  //suffix needed for shadowed locals
-            //TODO: insert t into stack position 
-            //  !But we need environment information to know stack height...
-            return t;
-        } 
-
-    To solve problem above, we would have to move all (or at least most) Scope and Environment information
-        into the X86Frame class.  This is also a good opportunity to refactor environment.hpp
-
-    Let's just put all that information into Frames
-        don't worry about environments - the frame is the environment
-        Each frame will have a stack of scopes - get rid of the linked list since it's error-prone
-        Pop and push scopes as needed
-        When temps are
-
 
 Finish implementing X86Generator function that outputs x86 assembly
 

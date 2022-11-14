@@ -19,11 +19,12 @@ void Semant::generate_ir(const std::string& input_file, const std::string& outpu
     lex();
     parse();
 
+    /*
     add_tac_label("_start");
     std::string t = TacQuad::new_temp();
     m_quads.push_back(TacQuad(t, "call", "main", T_EQUAL));
     m_quads.push_back(TacQuad("", "push_arg", t, T_NIL));
-    m_quads.push_back(TacQuad("", "call", "_exit", T_NIL));
+    m_quads.push_back(TacQuad("", "call", "_exit", T_NIL));*/
 
     translate_to_ir();
 
@@ -37,6 +38,7 @@ void Semant::generate_ir(const std::string& input_file, const std::string& outpu
         }
         write_ir("    %s", q.to_string().c_str()); 
     }
+
     std::ofstream f(output_file, std::ios::out | std::ios::binary);
     f.write((const char*)m_irbuf.data(), m_irbuf.size());
 }
