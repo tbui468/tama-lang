@@ -25,7 +25,6 @@ set(Headers
     parser.hpp
     semant.hpp
     reserved_word.hpp
-    environment.hpp
     tmdAst.hpp
     linker.hpp
     elf.hpp

@@ -12,7 +12,6 @@
 #include "ast.hpp"
 #include "parser.hpp"
 #include "error.hpp"
-#include "environment.hpp"
 #include "tac.hpp"
 #include "x86_frame.hpp"
 
