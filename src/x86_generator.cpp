@@ -42,7 +42,12 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
 
 
         if (q.m_target == "") {
-            if (q.m_opd1 == "begin_fun") {
+            if (q.m_opd1 == "entry") {
+                //Add _start label (for linker)
+                //call main and cache return value
+                //call exit system call with return value
+                //"entry" quad may include a memory alignment value in opd2
+            } else if (q.m_opd1 == "begin_fun") {
                 current_frame_name = (*labels)[i];
                 current_frame_reserved_stack_size = q.m_opd2;
                 write_op("    %s    %s", "push", "ebp");
@@ -73,8 +78,31 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
             } 
         } else {
             switch (q.m_op) {
-                case T_PLUS:
-                    //evalu
+                case T_PLUS: {
+                    //load left into eax, load right into ecx, math that shit
+                    if (is_int(q.m_opd1)) {
+                        write_op("    %s     %s, %s", "mov", "eax", q.m_opd1);
+                    } else {
+                        X86Frame current_frame = frames->find(current_frame_name)->second;
+                        Symbol* sym = current_frame.get_symbol_from_frame(q.m_opd1);
+                        write_op("    %s     %s, [%s + %d]", "mov", "eax", "ebp", sym->m_fp_offset);
+                    }
+                    if (is_int(q.m_opd2)) {
+                        write_op("    %s     %s, %s", "mov", "ecx", q.m_opd2);
+                    } else {
+                        X86Frame current_frame = frames->find(current_frame_name)->second;
+                        Symbol* sym = current_frame.get_symbol_from_frame(q.m_opd2);
+                        write_op("    %s     %s, [%s + %d]", "mov", "ecx", "ebp", sym->m_fp_offset);
+                    }
+                    //add
+                    write_op("    %s     %s, %s", "add", "eax", "ecx");
+                    //load result in eax into target memory 
+                    X86Frame current_frame = frames->find(current_frame_name)->second;
+                    Symbol* sym = current_frame.get_symbol_from_frame(q.m_target);
+                    write_op("    %s     [%s + %d], %s", "mov", "ebp", sym->m_fp_offset, "eax");
+
+                    break;
+                }
                 default:
                     write_op("<not implemented>");
                     break;

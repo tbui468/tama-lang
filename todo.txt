@@ -15,6 +15,7 @@ Read lecture 14, lecture 15, lecture 16
 Read 240 TAC examples
 
 ******************Emit x86 from TAC***********************
+Why are parameter frame pointer offsets negative????
 
 Finish implementing X86Generator function that outputs x86 assembly
 
