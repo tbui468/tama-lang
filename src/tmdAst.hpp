@@ -30,7 +30,7 @@ class AstBinary: public Ast {
                 ret_type = Type(T_BOOL_TYPE);
             }
 
-            std::string t = TacQuad::new_temp();
+            std::string t = s.get_compiling_frame()->add_temp(ret_type);
             switch (m_op.type) {
                 case T_PLUS:
                 case T_MINUS:
@@ -48,25 +48,25 @@ class AstBinary: public Ast {
                     break;
                 }
                 case T_LESS_EQUAL: {
-                    std::string tl = TacQuad::new_temp();
+                    std::string tl = s.get_compiling_frame()->add_temp(ret_type);
                     s.m_quads.push_back(TacQuad(tl, left_result.m_temp, right_result.m_temp, T_LESS));
-                    std::string te = TacQuad::new_temp();
+                    std::string te = s.get_compiling_frame()->add_temp(ret_type);
                     s.m_quads.push_back(TacQuad(te, left_result.m_temp, right_result.m_temp, T_EQUAL_EQUAL));
                     s.m_quads.push_back(TacQuad(t, tl, te, T_OR));
                     break;
                 }
                 case T_GREATER_EQUAL: {
-                    std::string tg = TacQuad::new_temp();
+                    std::string tg = s.get_compiling_frame()->add_temp(ret_type);
                     s.m_quads.push_back(TacQuad(tg, right_result.m_temp, left_result.m_temp, T_LESS));
-                    std::string te = TacQuad::new_temp();
+                    std::string te = s.get_compiling_frame()->add_temp(ret_type);
                     s.m_quads.push_back(TacQuad(te, left_result.m_temp, right_result.m_temp, T_EQUAL_EQUAL));
                     s.m_quads.push_back(TacQuad(t, tg, te, T_OR));
                     break;
                 }
                 case T_NOT_EQUAL: {
-                    std::string tl = TacQuad::new_temp();
+                    std::string tl = s.get_compiling_frame()->add_temp(ret_type);
                     s.m_quads.push_back(TacQuad(tl, left_result.m_temp, right_result.m_temp, T_LESS));
-                    std::string tg = TacQuad::new_temp();
+                    std::string tg = s.get_compiling_frame()->add_temp(ret_type);
                     s.m_quads.push_back(TacQuad(tg, right_result.m_temp, left_result.m_temp, T_LESS));
                     s.m_quads.push_back(TacQuad(t, tl, tg, T_OR));
                     break;
@@ -91,13 +91,13 @@ class AstUnary: public Ast {
         EmitTacResult emit_ir(Semant& s) {
             EmitTacResult r = m_right->emit_ir(s);
 
-            std::string t = TacQuad::new_temp();
+            std::string t = s.get_compiling_frame()->add_temp(r.m_type);
             if (r.m_type.m_dtype == T_INT_TYPE) {
                 s.m_quads.push_back(TacQuad(t, "0", r.m_temp, T_MINUS));
             } else if (r.m_type.m_dtype == T_BOOL_TYPE) {
-                std::string tl = TacQuad::new_temp();
+                std::string tl = s.get_compiling_frame()->add_temp(r.m_type);
                 s.m_quads.push_back(TacQuad(tl, r.m_temp, "1", T_LESS));
-                std::string tg = TacQuad::new_temp();
+                std::string tg = s.get_compiling_frame()->add_temp(r.m_type);
                 s.m_quads.push_back(TacQuad(tg, "1", r.m_temp, T_LESS));
                 s.m_quads.push_back(TacQuad(t, tl, tg, T_OR));
             } else {
@@ -225,8 +225,6 @@ class AstFunDef: public Ast {
                 AstParam* param = (AstParam*)n;
                 it->second.add_parameter_to_frame(std::string(param->m_symbol.start, param->m_symbol.len), r.m_type, ord_num);
                 ord_num++;
-                //it->second.m_fp_offsets.insert({std::string(param->m_symbol.start, param->m_symbol.len), fp_offset});
-                //fp_offset += 4;
             }
             
             if (s.m_globals.m_symbols.find(fun_name) != s.m_globals.m_symbols.end()) {
@@ -235,23 +233,17 @@ class AstFunDef: public Ast {
                 s.m_globals.m_symbols.insert({fun_name, Symbol(fun_name, "", Type(T_FUN_TYPE, m_ret_type.type, ptypes), 0)});
             }
 
-            /*
-            if (!s.m_globals.add_symbol(m_symbol, "", Type(T_FUN_TYPE, m_ret_type.type, ptypes))) { //NOTE: functions can't shadow, so 2nd arg not used
-                ems_add(&ems, m_symbol.line, "Syntax Error: Function with name already declared in global scope.");
-            }*/
-
-
             s.add_tac_label(fun_name);
             int offset = s.m_quads.size();
             s.m_quads.push_back(TacQuad("", "begin_fun", "", T_NIL));
-            int start_temps = TacQuad::s_temp_counter;
+            int start_temps = X86Frame::s_temp_counter;
 
             s.m_compiling_fun = this;
             m_body->emit_ir(s);
             s.m_compiling_fun = nullptr;
 
 
-            int reserved_stack_variables = TacQuad::s_temp_counter - start_temps;
+            int reserved_stack_variables = X86Frame::s_temp_counter - start_temps;
             s.m_quads[offset].m_opd2 = std::to_string((reserved_stack_variables) * 4);
             s.m_quads.push_back(TacQuad("", "end_fun", "", T_NIL));
 
@@ -286,16 +278,11 @@ class AstDeclSym: public Ast {
                 ems_add(&ems, m_symbol.line, "Type Error: Declaration type and assigned value type don't match!");
             }
 
-            std::string local_temp = TacQuad::new_temp() + std::string(m_symbol.start, m_symbol.len);
-
-            std::string fun_name = std::string(f->m_symbol.start, f->m_symbol.len);
-            std::unordered_map<std::string, X86Frame>::iterator it = s.m_frames->find(fun_name);
-            if(!(it->second.add_symbol_to_scope(std::string(m_symbol.start, m_symbol.len), local_temp, Type(m_type.type)))) {
+            if(s.get_compiling_frame()->symbol_defined_in_current_scope(std::string(m_symbol.start, m_symbol.len))) {
                 ems_add(&ems, m_symbol.line, "Syntax Error: Local symbol already declared in this scope!");
             }
-            //it->second.insert_local(local_temp, s.m_env.symbol_count());
 
-            //s.m_env.add_symbol(m_symbol, local_temp, Type(m_type.type));
+            std::string local_temp = s.get_compiling_frame()->add_local(std::string(m_symbol.start, m_symbol.len), r.m_type);
 
             s.m_quads.push_back(TacQuad(local_temp, r.m_temp, "", T_EQUAL));
 
@@ -323,10 +310,7 @@ class AstGetSym: public Ast {
             }
 
             if (arg_offset == -1) { //symbol is local
-                //Symbol* sym = s.m_env.get_symbol(m_symbol);
-                std::string fun_name = std::string(f->m_symbol.start, f->m_symbol.len);
-                std::unordered_map<std::string, X86Frame>::iterator it = s.m_frames->find(fun_name);
-                Symbol* sym = it->second.get_symbol_from_scopes(std::string(m_symbol.start, m_symbol.len));
+                Symbol* sym = s.get_compiling_frame()->get_symbol_from_scopes(std::string(m_symbol.start, m_symbol.len));
 
                 if (!sym) {
                     ems_add(&ems, m_symbol.line, "Syntax Error: Variable not declared!");
@@ -365,10 +349,7 @@ class AstSetSym: public Ast {
             }
 
             if (arg_offset == -1) { //symbol is a local
-                std::string fun_name = std::string(f->m_symbol.start, f->m_symbol.len);
-                std::unordered_map<std::string, X86Frame>::iterator it = s.m_frames->find(fun_name);
-                Symbol* sym = it->second.get_symbol_from_scopes(std::string(m_symbol.start, m_symbol.len));
-                //Symbol *sym = s.m_env.get_symbol(m_symbol);
+                Symbol* sym = s.get_compiling_frame()->get_symbol_from_scopes(std::string(m_symbol.start, m_symbol.len));
 
                 if (!sym) {
                     ems_add(&ems, m_symbol.line, "Syntax Error: Variable not declared!");
@@ -386,10 +367,7 @@ class AstSetSym: public Ast {
                 return {sym->m_tac_name, r.m_type};
             } else { //symbol is a formal parameter
                 EmitTacResult r = m_value->emit_ir(s);
-                //Symbol *sym = s.m_globals.get_symbol(f->m_symbol);
-                std::string fun_name = std::string(f->m_symbol.start, f->m_symbol.len);
-                std::unordered_map<std::string, X86Frame>::iterator it = s.m_frames->find(fun_name);
-                Symbol* sym = it->second.get_symbol_from_frame(std::string(m_symbol.start, m_symbol.len));
+                Symbol* sym = s.get_compiling_frame()->get_symbol_from_frame(std::string(m_symbol.start, m_symbol.len));
 
                 Type type = sym->m_type.m_ptypes[arg_offset];
                 if (!type.is_of_type(r.m_type)) {
@@ -411,18 +389,13 @@ class AstBlock: public Ast {
             return "block";
         }
         EmitTacResult emit_ir(Semant& s) {
-            AstFunDef *f = dynamic_cast<AstFunDef*>(s.m_compiling_fun);
-            std::string fun_name = std::string(f->m_symbol.start, f->m_symbol.len);
-            std::unordered_map<std::string, X86Frame>::iterator it = s.m_frames->find(fun_name);
-            it->second.begin_scope();
-            //s.m_env.begin_scope();
+            s.get_compiling_frame()->begin_scope();
 
             for (Ast* n: m_stmts) {
                 EmitTacResult r = n->emit_ir(s);
             }
 
-            it->second.end_scope();
-            //s.m_env.end_scope();
+            s.get_compiling_frame()->end_scope();
 
             return {"", Type(T_NIL_TYPE)};
         }
@@ -535,7 +508,7 @@ class AstCall: public Ast {
 
             std::string t;
             if (sym->m_type.m_rtype != T_NIL_TYPE) {
-                t = TacQuad::new_temp();
+                t = s.get_compiling_frame()->add_temp(Type(sym->m_type.m_rtype));
                 s.m_quads.push_back(TacQuad(t, "call", std::string(m_symbol.start, m_symbol.len), T_EQUAL));
             } else {
                 t = "";

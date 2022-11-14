@@ -14,13 +14,28 @@ Read Slides13
 Read lecture 14, lecture 15, lecture 16
 Read 240 TAC examples
 
+*****************Problem with Temps NOT being properly added to reserved stack space************
+    this code:
+        add(3 + 4, 5)
+    produces:
+        push_arg 5
+        _t1 = 3 + 4
+        push_arg _t1
+    but since _t1 is not a local (regular or shadowing), it's not inside of the frame or allocated space on the stack
+
+
+    Implement and replace all calls of TacQuad::new_temp() and X86Frame::add_symbol_to_scope() with this:
+        std::string X86Frame::add_temp_to_scope(const std::string& reg_name, Type type) {
+            //generate unique temporary register
+            //suffix that with reg_name
+            //compute offset and insert into scope (can probably call this int TmdAst, instead of add_symbol_to_scope)
+            //  Note about key in scope pair: if reg_name is empty string, use the temp name (since names need to be unique)
+            //        else use the reg_name (compiler needs original identifier, and will take care of shadowing)
+
+            //return suffixed temp for compiler to use
+        }
+
 ******************Emit x86 from TAC***********************
-We should insert the real variable into the 
-    
-
-Rename Scope to Environment
-
-Space in frame is not being reserved for temps (only parameters and locals/shadowing locals)
 
 Finish implementing X86Generator function that outputs x86 assembly
 

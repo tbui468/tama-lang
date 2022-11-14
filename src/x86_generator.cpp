@@ -32,6 +32,7 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
     }*/
 
     std::string current_frame_name = "";
+    std::string current_frame_reserved_stack_size = "";
     int i = 0;
     for (const TacQuad& q: *quads) {
         std::cout << q.m_target << " " << q.m_opd1 << " " << q.m_opd2 << " \n";
@@ -43,6 +44,7 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
         if (q.m_target == "") {
             if (q.m_opd1 == "begin_fun") {
                 current_frame_name = (*labels)[i];
+                current_frame_reserved_stack_size = q.m_opd2;
                 write_op("    %s    %s", "push", "ebp");
                 write_op("    %s     %s, %s", "sub", "esp", q.m_opd2.c_str());
             } else if (q.m_opd1 == "push_arg") {
@@ -51,29 +53,33 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
                 } else {
                     X86Frame current_frame = frames->find(current_frame_name)->second;
                     Symbol* sym = current_frame.get_symbol_from_frame(q.m_opd2);
-                    write_op("    %s    [%s + %d]", "push", "ebp", sym->m_fp_offset);
+                    write_op("    %s     %s, [%s + %d]", "mov", "eax", "ebp", sym->m_fp_offset);
+                    write_op("    %s    %s", "push", "eax");
                 }
             } else if (q.m_opd1 == "pop_args") {
                 write_op("    %s     %s, %s", "add", "esp", q.m_opd2.c_str());
             } else if (q.m_opd1 == "return") {
-                //one with no operand
-                //one with a single operand
+                write_op("    %s     %s, %s", "mov", "eax", q.m_opd2.c_str());
             } else if (q.m_opd1 == "end_fun") {
-                //clean the stack of locals
-                //pop old base pointer back into ebp
+                write_op("    %s     %s, %s", "add", "esp", current_frame_reserved_stack_size.c_str());
+                write_op("    %s     %s", "pop", "ebp");
+                write_op("    %s", "ret");
                 current_frame_name = "";
+                current_frame_reserved_stack_size = "";
             } else if (q.m_opd1 == "call") {
-
+                write_op("    %s    %s", "call", q.m_opd2.c_str());
             } else if (q.m_opd1 == "goto") {
                 write_op("    %s     %s", "jmp", q.m_opd2.c_str());
-            } else if (q.m_target != "" && q.m_opd1 != "" && q.m_opd2 != "") {
-                //find location of target in frame
-                //evaluate right side using registers
-                //find location of target in frame
-                //assign that memory location to target
             } 
+        } else {
+            switch (q.m_op) {
+                case T_PLUS:
+                    //evalu
+                default:
+                    write_op("<not implemented>");
+                    break;
+            }
         }
-        //TODO: check each type of quad and writ out x86 using write_op
         
         i++;
     }

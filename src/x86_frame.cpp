@@ -1,6 +1,10 @@
 #include <iostream>
+#include <cassert>
 
 #include "x86_frame.hpp"
+
+
+int X86Frame::s_temp_counter = 0;
 
 void X86Frame::begin_scope() {
     Scope s;
@@ -19,6 +23,31 @@ int X86Frame::end_scope() {
 }
 
 
+std::string X86Frame::add_local(const std::string& reg_name, Type type) {
+    assert(!symbol_defined_in_current_scope(reg_name));
+
+    std::string tac_name = "_t" + std::to_string((X86Frame::s_temp_counter++)) + reg_name;
+
+    int offset = 0;
+    for (const Scope& s: m_scopes) {
+        offset += s.m_symbols.size();
+    }
+
+
+    m_scopes.back().m_symbols.insert({reg_name == "" ? tac_name : reg_name, Symbol(reg_name, tac_name, type, (offset + 1) * 4)});
+
+    return tac_name;
+}
+
+std::string X86Frame::add_temp(Type type) {
+    return add_local("", type);
+}
+
+bool X86Frame::symbol_defined_in_current_scope(const std::string& name) {
+    return m_scopes.back().get_symbol(name);
+}
+
+/*
 bool X86Frame::add_symbol_to_scope(const std::string& name, const std::string& tac_name, Type type) {
     if (m_scopes.back().get_symbol(name)) {
         return false; 
@@ -31,7 +60,7 @@ bool X86Frame::add_symbol_to_scope(const std::string& name, const std::string& t
 
     m_scopes.back().m_symbols.insert({name, Symbol(name, tac_name, type, (offset + 1) * 4)});
     return true;
-}
+}*/
 
 bool X86Frame::add_parameter_to_frame(const std::string& name, Type type, int ord_num) {
     std::unordered_map<std::string, Symbol>::iterator it = m_symbols.find(name);

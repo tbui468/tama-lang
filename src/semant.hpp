@@ -88,6 +88,7 @@ class Semant {
         void extract_global_declarations(const std::string& module_file);
         void write_ir(const char* format, ...);
         void add_tac_label(const std::string& label);
+        X86Frame* get_compiling_frame();
     private: 
         void read(const std::string& input_file);
         void lex();

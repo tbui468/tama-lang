@@ -16,12 +16,8 @@ class TacQuad {
         std::string m_opd1;
         std::string m_opd2;
         enum TokenType m_op;
-        static int s_temp_counter;
         static int s_label_counter;
     public:
-        static std::string new_temp() {
-            return "_t" + std::to_string(s_temp_counter++);
-        }
 
         static std::string new_label() {
             return "_L" + std::to_string(s_label_counter++);

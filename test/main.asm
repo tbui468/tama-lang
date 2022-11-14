@@ -1,18 +1,22 @@
-double:
+add:
     push    ebp
-    sub     esp, 20
-_L0:
-    jmp     _L0
-_L1:
+    sub     esp, 4
+<not implemented>
+    mov     eax, _t0
+    add     esp, 4
+    pop     ebp
+    ret
 main:
     push    ebp
-    sub     esp, 16
-    jmp     _L3
-_L2:
-_L3:
-    push    [ebp + 4]
-    push    1
+    sub     esp, 12
+    push    9
+<not implemented>
+    mov     eax, [ebp + 4]
+    push    eax
+<not implemented>
     add     esp, 8
-    push    21
-    push    0
-    add     esp, 8
+<not implemented>
+    mov     eax, _t3x
+    add     esp, 12
+    pop     ebp
+    ret

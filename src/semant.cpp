@@ -14,17 +14,20 @@ void Semant::add_tac_label(const std::string& label) {
 }
 
 
+X86Frame* Semant::get_compiling_frame() {
+    AstFunDef *f = dynamic_cast<AstFunDef*>(m_compiling_fun);
+    std::string fun_name = std::string(f->m_symbol.start, f->m_symbol.len);
+    std::unordered_map<std::string, X86Frame>::iterator it = m_frames->find(fun_name);
+    return &(it->second);
+}
+
+
 void Semant::generate_ir(const std::string& input_file, const std::string& output_file) {
     read(input_file);
     lex();
     parse();
 
-    /*
-    add_tac_label("_start");
-    std::string t = TacQuad::new_temp();
-    m_quads.push_back(TacQuad(t, "call", "main", T_EQUAL));
-    m_quads.push_back(TacQuad("", "push_arg", t, T_NIL));
-    m_quads.push_back(TacQuad("", "call", "_exit", T_NIL));*/
+    m_quads.push_back(TacQuad("", "entry", "<alignment>", T_NIL));
 
     translate_to_ir();
 
