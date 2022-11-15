@@ -1,7 +1,6 @@
 main: () -> int {
-                            x: int = 0
-                            while x < 5 {
-                                x = x + 1
-                            }
-                            return x
+                            x: bool = true and false
+                            y: bool = 6 < 10
+                            z: bool = 6 == 6
+                            return 0
                         }

@@ -28,6 +28,30 @@ void Optimizer::constant_folding(std::vector<TacQuad>* quads) {
                 case T_SLASH:
                     result = left / right;
                     break;
+                case T_LESS:
+                    result = left < right;
+                    break;
+                case T_GREATER:
+                    result = left > right;
+                    break;
+                case T_LESS_EQUAL:
+                    result = left <= right;
+                    break;
+                case T_GREATER_EQUAL:
+                    result = left >= right;
+                    break;
+                case T_EQUAL_EQUAL:
+                    result = left == right;
+                    break;
+                case T_NOT_EQUAL:
+                    result = left != right;
+                    break;
+                case T_AND:
+                    result = left && right;
+                    break;
+                case T_OR:
+                    result = left || right;
+                    break;
                 default:
                     continue;
             }
