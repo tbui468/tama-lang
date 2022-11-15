@@ -5,12 +5,12 @@ eg
     [TMD Parser Error]
 
 ******************Emit x86 from TAC***********************
-imports
-conditionals
-while loops
+implementation:
+    conditionals
+        L1 (end of conditional) is written, but L0 (start of else block is not written)
+    while loops
 
 tests for:
-    imports
     conditionals
     while loops
 

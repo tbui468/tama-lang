@@ -7,18 +7,34 @@ _start:
 main:
     push    ebp
     mov     ebp, esp
-    sub     esp, 8
-    push    5
+    sub     esp, 16
     mov     eax, 0
-    mov     ecx, 5
-    sub     eax, ecx
     mov     [ebp + -4], eax
-    mov     eax, [ebp + -4]
-    push    eax
-    call    myadd
+    mov     eax, 0
+    mov     ecx, 10
+    cmp     eax, ecx
+    setl    al
+    movzx   eax, al
     mov     [ebp + -8], eax
-    add     esp, 8
     mov     eax, [ebp + -8]
-    add     esp, 8
+    cmp     eax, 0
+    je      _L0
+    mov     eax, [ebp + -4]
+    mov     ecx, 1
+    add     eax, ecx
+    mov     [ebp + -12], eax
+    mov     eax, [ebp + -12]
+    mov     [ebp + -4], eax
+    jmp     _L1
+_L0:
+    mov     eax, [ebp + -4]
+    mov     ecx, 2
+    add     eax, ecx
+    mov     [ebp + -12], eax
+    mov     eax, [ebp + -12]
+    mov     [ebp + -4], eax
+_L1:
+    mov     eax, [ebp + -4]
+    add     esp, 16
     pop     ebp
     ret

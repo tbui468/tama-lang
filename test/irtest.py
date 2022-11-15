@@ -544,6 +544,83 @@ module_tests = [
             ),
         ]
 
+conditional_tests = [
+            ("if with true condition", 1,
+                [
+                    ("main.tmd",
+                        """
+                        main: () -> int {
+                            if 0 < 10 {
+                                return 1
+                            }
+                            return 2
+                        }
+                        """
+                    )
+                ]
+            ),
+            ("if with false condition", 2,
+                [
+                    ("main.tmd",
+                        """
+                        main: () -> int {
+                            if 0 > 10 {
+                                return 1
+                            }
+                            return 2
+                        }
+                        """
+                    )
+                ]
+            ),
+            ("if/else true condition", 1,
+                [
+                    ("main.tmd",
+                        """
+                        main: () -> int {
+                            if 0 < 10 {
+                                return 1
+                            } else {
+                                return 2
+                            }
+                        }
+                        """
+                    )
+                ]
+            ),
+            ("if/else false condition", 2,
+                [
+                    ("main.tmd",
+                        """
+                        main: () -> int {
+                            if 0 > 10 {
+                                return 1
+                            } else {
+                                return 2
+                            }
+                        }
+                        """
+                    )
+                ]
+            ),
+            ("if/else skip else", 1,
+                [
+                    ("main.tmd",
+                        """
+                        main: () -> int {
+                            x: int = 0
+                            if 0 < 10 {
+                                x = x + 1
+                            } else {
+                                x = x + 2
+                            }
+                            return x
+                        }
+                        """
+                    )
+                ]
+            ),
+        ]
 
 print("--Functions--")
 for data in function_tests:
@@ -565,4 +642,8 @@ print("--Modules--")
 for data in module_tests:
     test(data)
 
-print("Tests passed:", correct, "/", len(function_tests) + len(arithmetic_expr_tests) + len(boolean_expr_tests) + len(variable_tests) + len(module_tests))
+print("--Conditionals--")
+for data in conditional_tests:
+    test(data)
+
+print("Tests passed:", correct, "/", len(function_tests) + len(arithmetic_expr_tests) + len(boolean_expr_tests) + len(variable_tests) + len(module_tests) + len(conditional_tests))

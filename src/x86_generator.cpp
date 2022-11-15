@@ -65,10 +65,10 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
             } else if (q.m_opd1 == "return") {
                 if (is_int(q.m_opd2))   write_op("    %s     %s, %s", "mov", "eax", q.m_opd2.c_str());
                 else                    write_op("    %s     %s, [%s + %d]", "mov", "eax", "ebp", symbol_offset(q.m_opd2));
-            } else if (q.m_opd1 == "end_fun") {
                 write_op("    %s     %s, %s", "add", "esp", m_frame_size.c_str());
                 write_op("    %s     %s", "pop", "ebp");
                 write_op("    %s", "ret");
+            } else if (q.m_opd1 == "end_fun") {
                 m_frame_name = "";
                 m_frame_size = "";
             } else if (q.m_opd1 == "call") {
@@ -76,6 +76,10 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
             } else if (q.m_opd1 == "goto") {
                 write_op("    %s     %s", "jmp", q.m_opd2.c_str());
             } 
+        } else if (q.m_target == "goto_ifz") {
+            write_op("    %s     %s, [%s + %d]", "mov", "eax", "ebp", symbol_offset(q.m_opd1));
+            write_op("    %s     %s, %s", "cmp", "eax", "0");
+            write_op("    %s      %s", "je", q.m_opd2.c_str());
         } else {
             switch (q.m_op) {
                 case T_PLUS:
