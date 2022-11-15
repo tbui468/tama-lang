@@ -59,3 +59,21 @@ void Optimizer::constant_folding(std::vector<TacQuad>* quads) {
         }
     }
 }
+
+void Optimizer::merge_adjacent_store_fetch(std::vector<TacQuad>* quads) {
+    for (int i = 0; i < quads->size() - 1; i++) {
+        TacQuad* q1 = &((*quads)[i]);
+        TacQuad* q2 = &((*quads)[i + 1]);
+
+        if (q2->m_op == T_EQUAL && q2->m_opd1 == q1->m_target) {
+            q2->m_opd1 = q1->m_opd1;
+            q2->m_opd2 = q1->m_opd2;
+            q2->m_op = q1->m_op;
+            q1->m_target = "";
+            q1->m_opd1 = "";
+            q1->m_opd2 = "";
+            q1->m_op == T_NIL;
+        }
+
+    }
+}

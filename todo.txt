@@ -1,15 +1,9 @@
-********************Redo************************
-Make fetch / store functions for x86 to get rid of repeated code (if/else to check for ints is annoying)
-
-void fetch(const std::string& dst, const std::string& src);
-void store(const std::string& dst, const std::string& src);
-
-Set vimrc to have indents be 4 instead of 8
-
 ****************Basic Blocks**********************
-Basic Blocks and Traces
-	Need a clearer reason to try this
+Can apply optimizations to single blocks
 
+Algebraic simplication (remove x := x + 0 and x := x * 1)
+Copy propagation
+Constant folding
 Dead code elimination
 
 
@@ -21,17 +15,23 @@ Read lecture 16
 Read chapter in book
 K-coloring and allocate registers for x86
 
+****************SSA********************
+class SSATransformer {
+    std::vector<Block> create_basic_blocks(const std::vector<TacQuad>& quads);
+    std::vector<SSAQuad> create_ssa_form(const std::vector<TacQuad>& quads, const std::vector<Block>& blocks);
+};
+
+Need to create basic blocks first
+Then disallow reassignment (make a new temp to prevent this)
+Need to track the base variable/most current derived variable so 
+    that the most recent value can be used
+Add phi nodes when a block has two or more predecessors that (may?) change a variable
 ***************Optimization********************
 Compiler should accept flag to turn on/off optimizer
 
 Read Slides13
 Read lecture 14, lecture 15, lecture 16
 Read 240 TAC examples
-
-Dead code elimination
-    check target of each quad
-    if that target is not used in operand1 or oprand2 of any other quad, delete that quad
-    emit warning telling use code is unused
 
 ********************More Optimization********************
 ***************************Reorganize Quads basic-blocks*******************

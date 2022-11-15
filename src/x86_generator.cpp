@@ -44,6 +44,12 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
     int i = 0;
     for (const TacQuad& q: *quads) {
 //        std::cout << q.m_target << "*" << q.m_opd1 << "*" << q.m_opd2 << " \n";
+
+        if (q.m_target == "" && q.m_opd1 == "" && q.m_opd2 == "" && q.m_op == T_NIL) {
+            i++;
+            continue;
+        }
+
         if ((*labels)[i] != "") {
             write_op("%s:", (*labels)[i].c_str());
         }
@@ -92,10 +98,15 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
         } else {
             switch (q.m_op) {
                 case T_PLUS:
+                    fetch("eax", q.m_opd1);
+                    fetch("ecx", q.m_opd2);
+                    write_op("    %s     %s, %s", "add", "eax", "ecx");
+                    store(q.m_target, "eax");
+                    break;
                 case T_MINUS:
                     fetch("eax", q.m_opd1);
                     fetch("ecx", q.m_opd2);
-                    write_op("    %s     %s, %s", q.m_op == T_PLUS ? "add" : "sub", "eax", "ecx");
+                    write_op("    %s     %s, %s", "sub", "eax", "ecx");
                     store(q.m_target, "eax");
                     break;
                 case T_STAR:

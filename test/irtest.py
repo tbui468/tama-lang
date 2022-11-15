@@ -698,7 +698,7 @@ print("--While Loops--")
 for data in while_tests:
     test(data)
 
-x=        ("constant folding", 0,
+test(        ("constant folding", 0,
             [
                 ("main.tmd",
                     """
@@ -711,6 +711,6 @@ x=        ("constant folding", 0,
                     """
                 )
             ]
-        ),
+        ),)
 
 print("Tests passed:", correct, "/", len(function_tests) + len(arithmetic_expr_tests) + len(boolean_expr_tests) + len(variable_tests) + len(module_tests) + len(conditional_tests) + len(while_tests))
