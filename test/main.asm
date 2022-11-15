@@ -7,14 +7,14 @@ _start:
 main:
     push    ebp
     mov     ebp, esp
-    sub     esp, 24
+    sub     esp, 20
+    mov     eax, 10
+    mov     [ebp + -4], eax
+    mov     eax, [ebp + -4]
+    mov     [ebp + -12], eax
     mov     eax, 0
-    mov     [ebp + -8], eax
-    mov     eax, 1
-    mov     [ebp + -16], eax
-    mov     eax, 1
-    mov     [ebp + -24], eax
+    mov     [ebp + -20], eax
     mov     eax, 0
-    add     esp, 24
+    add     esp, 20
     pop     ebp
     ret

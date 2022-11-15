@@ -3,7 +3,7 @@
 #include "utility.hpp"
 #include <iostream>
 
-void Optimizer::constant_folding(std::vector<TacQuad>* quads) {
+void Optimizer::fold_constants(std::vector<TacQuad>* quads) {
     for (int i = 0; i < quads->size(); i++) {
         TacQuad q = (*quads)[i];
         if (q.m_opd1 == "" || q.m_opd2 == "") continue;
@@ -65,7 +65,7 @@ void Optimizer::merge_adjacent_store_fetch(std::vector<TacQuad>* quads) {
         TacQuad* q1 = &((*quads)[i]);
         TacQuad* q2 = &((*quads)[i + 1]);
 
-        if (q2->m_op == T_EQUAL && q2->m_opd1 == q1->m_target) {
+        if (q2->m_op == T_EQUAL && q2->m_opd2 == "" && q2->m_opd1 == q1->m_target) {
             q2->m_opd1 = q1->m_opd1;
             q2->m_opd2 = q1->m_opd2;
             q2->m_op = q1->m_op;
@@ -75,5 +75,70 @@ void Optimizer::merge_adjacent_store_fetch(std::vector<TacQuad>* quads) {
             q1->m_op == T_NIL;
         }
 
+    }
+}
+
+void Optimizer::simplify_algebraic_identities(std::vector<TacQuad>* quads) {
+    for (int i = 0; i < quads->size() - 1; i++) {
+        TacQuad* q = &((*quads)[i]);
+
+        switch (q->m_op) {
+            case T_PLUS:
+                if (q->m_opd1 == "0") {
+                    q->m_opd1 = q->m_opd2;
+                    q->m_opd2 = "";
+                    q->m_op = T_EQUAL;
+                } else if (q->m_opd2 == "0") {
+                    q->m_opd2 = "";
+                    q->m_op = T_EQUAL;
+                }
+                break;
+           case T_MINUS:
+                if (q->m_opd1 == q->m_opd2) {
+                    q->m_opd1 == "0";
+                    q->m_opd2 == "";
+                    q->m_op = T_EQUAL;
+                } else if(q->m_opd2 == "0") {
+                    q->m_opd2 = "";
+                    q->m_op = T_EQUAL;
+                }
+                break;
+            case T_STAR:
+                if (q->m_opd1 == "1") {
+                    q->m_opd1 = q->m_opd2;
+                    q->m_opd2 = "";
+                    q->m_op = T_EQUAL;
+                } else if (q->m_opd2 == "1") {
+                    q->m_opd2 = "";
+                    q->m_op = T_EQUAL;
+                } else if (q->m_opd1 == "0" || q->m_opd2 == "0") {
+                    q->m_opd1 = "0";
+                    q->m_opd2 = "";
+                    q->m_op = T_EQUAL;
+                }
+                break;
+            case T_SLASH:
+                if (q->m_opd2 == "1") {
+                    q->m_opd2 = "";
+                    q->m_op = T_EQUAL;
+                } else if (q->m_opd1 == q->m_opd2) {
+                    q->m_opd1 = "1";
+                    q->m_opd2 = "";
+                    q->m_op = T_EQUAL;
+                }
+                break;
+            case T_AND:
+                if (q->m_opd1 == q->m_opd2) {
+                    q->m_opd2 = "";
+                    q->m_op = T_EQUAL;
+                }
+                break;
+            case T_OR:
+                if (q->m_opd1 == q->m_opd2) {
+                    q->m_opd2 = "";
+                    q->m_op = T_EQUAL;
+                }
+                break;
+        }
     }
 }

@@ -6,8 +6,9 @@
 
 class Optimizer {
     public:
-        void constant_folding(std::vector<TacQuad>* quads);
+        void fold_constants(std::vector<TacQuad>* quads);
         void merge_adjacent_store_fetch(std::vector<TacQuad>* quads);
+        void simplify_algebraic_identities(std::vector<TacQuad>* quads);
 };
 
 

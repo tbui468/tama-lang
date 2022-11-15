@@ -59,8 +59,9 @@ int main (int argc, char **argv) {
         //optimize
         std::cout << "Optimizing IR..." << std::endl;
         Optimizer opt;
-        opt.constant_folding(&s.m_quads);
+        opt.fold_constants(&s.m_quads);
         opt.merge_adjacent_store_fetch(&s.m_quads);
+        opt.simplify_algebraic_identities(&s.m_quads);
 
         //TacQuad::print_tac(s.m_quads, s.m_tac_labels);
         //allocate registers here

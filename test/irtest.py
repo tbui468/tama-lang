@@ -703,9 +703,9 @@ test(        ("constant folding", 0,
                 ("main.tmd",
                     """
                     main: () -> int {
-                        x: bool = true and false
-                        y: bool = 6 < 10
-                        z: bool = 6 == 6
+                        x: int = 10
+                        y: int = x * 1
+                        z: int = x * 0
                         return 0
                     }
                     """
