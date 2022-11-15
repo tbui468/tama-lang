@@ -1,9 +1,7 @@
 main: () -> int {
                             x: int = 0
-                            if 0 < 10 {
+                            while x < 5 {
                                 x = x + 1
-                            } else {
-                                x = x + 2
                             }
                             return x
                         }

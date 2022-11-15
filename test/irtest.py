@@ -622,6 +622,54 @@ conditional_tests = [
             ),
         ]
 
+
+while_tests = [
+            ("condition initially false", 0,
+                [
+                    ("main.tmd",
+                        """
+                        main: () -> int {
+                            while 0 > 10 {
+                                return 1
+                            }
+                            return 0
+                        }
+                        """
+                    )
+                ]
+            ),
+            ("run once", 1,
+                [
+                    ("main.tmd",
+                        """
+                        main: () -> int {
+                            x: int = 0
+                            while x < 1 {
+                                x = x + 1
+                            }
+                            return x
+                        }
+                        """
+                    )
+                ]
+            ),
+            ("run more than once", 5,
+                [
+                    ("main.tmd",
+                        """
+                        main: () -> int {
+                            x: int = 0
+                            while x < 5 {
+                                x = x + 1
+                            }
+                            return x
+                        }
+                        """
+                    )
+                ]
+            ),
+        ]
+
 print("--Functions--")
 for data in function_tests:
     test(data)
@@ -646,4 +694,8 @@ print("--Conditionals--")
 for data in conditional_tests:
     test(data)
 
-print("Tests passed:", correct, "/", len(function_tests) + len(arithmetic_expr_tests) + len(boolean_expr_tests) + len(variable_tests) + len(module_tests) + len(conditional_tests))
+print("--While Loops--")
+for data in while_tests:
+    test(data)
+
+print("Tests passed:", correct, "/", len(function_tests) + len(arithmetic_expr_tests) + len(boolean_expr_tests) + len(variable_tests) + len(module_tests) + len(conditional_tests) + len(while_tests))

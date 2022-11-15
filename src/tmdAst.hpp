@@ -461,7 +461,7 @@ class AstWhile: public Ast {
             }
 
             std::string end_l = TacQuad::new_label();
-            s.m_quads.push_back(TacQuad("if_z_goto", cond_r.m_temp, end_l, T_NIL));
+            s.m_quads.push_back(TacQuad("goto_ifz", cond_r.m_temp, end_l, T_NIL));
 
             EmitTacResult while_r = m_while_block->emit_ir(s);
 
