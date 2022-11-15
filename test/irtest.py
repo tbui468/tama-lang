@@ -11,9 +11,28 @@ def test(data):
     cmd = "./../build/src/tama"
     for src in data[2]:
         cmd += " " + src[0]
-    #cmd += " > /dev/null"
+    cmd += " > /dev/null"
 
     cp = subprocess.call(cmd, shell=True)
+    subprocess.call("chmod +x out.exe", shell=True)
+    p = subprocess.call("./out.exe", shell=True)
+
+    name = "[" + data[0] + "]"
+    result = "Failed"
+    if p == data[1] and cp == 0:
+        result = "Passed"
+        global correct
+        correct += 1
+
+    print(name.ljust(40, " "), result)
+
+    #cleanup
+    for src in data[2]:
+        subprocess.call("rm " + src[0], shell=True)
+        subprocess.call("rm " + src[0][:-4] + ".asm", shell=True)
+        subprocess.call("rm " + src[0][:-4] + ".obj", shell=True)
+
+    subprocess.call("rm out.exe", shell=True)
 
 tests = [
             ("return code", 0,
@@ -21,7 +40,18 @@ tests = [
                     ("main.tmd",
                         """
                         main: () -> int {
-                            return 42
+                            return 0
+                        }
+                        """
+                    )
+                ]
+            ),
+            ("arithmetic", 0,
+                [
+                    ("main.tmd",
+                        """
+                        main: () -> int {
+                            return 1 + 2 / 1 - 3 * 1
                         }
                         """
                     )
@@ -30,8 +60,6 @@ tests = [
         ]
 
 
-                        #a: int = 1 + 2 * 3
-                        #b: int = 4
 for data in tests:
     test(data)
 

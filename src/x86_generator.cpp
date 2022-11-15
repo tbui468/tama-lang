@@ -31,14 +31,6 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
 
     m_frames = frames;
 
-    /*
-    for (const std::pair<std::string, X86Frame>& p: *frames) {
-        std::cout << p.first << std::endl;
-        for (const std::pair<std::string, int>& p2: p.second.m_fp_offsets) {
-            std::cout << p2.first << std::endl; 
-        }
-    }*/
-
     int i = 0;
     for (const TacQuad& q: *quads) {
 //        std::cout << q.m_target << "*" << q.m_opd1 << "*" << q.m_opd2 << " \n";
@@ -59,6 +51,7 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
                 m_frame_name = (*labels)[i];
                 m_frame_size = q.m_opd2;
                 write_op("    %s    %s", "push", "ebp");
+                write_op("    %s     %s, %s", "mov", "ebp", "esp");
                 write_op("    %s     %s, %s", "sub", "esp", q.m_opd2.c_str());
             } else if (q.m_opd1 == "push_arg") {
                 if (is_int(q.m_opd2)) {
@@ -70,7 +63,8 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
             } else if (q.m_opd1 == "pop_args") {
                 write_op("    %s     %s, %s", "add", "esp", q.m_opd2.c_str());
             } else if (q.m_opd1 == "return") {
-                write_op("    %s     %s, %s", "mov", "eax", q.m_opd2.c_str());
+                if (is_int(q.m_opd2))   write_op("    %s     %s, %s", "mov", "eax", q.m_opd2.c_str());
+                else                    write_op("    %s     %s, [%s + %d]", "mov", "eax", "ebp", symbol_offset(q.m_opd2));
             } else if (q.m_opd1 == "end_fun") {
                 write_op("    %s     %s, %s", "add", "esp", m_frame_size.c_str());
                 write_op("    %s     %s", "pop", "ebp");
@@ -84,29 +78,18 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
             } 
         } else {
             switch (q.m_op) {
-                case T_PLUS: {
+                case T_PLUS:
+                case T_MINUS:
                     //load left into eax, load right into ecx, math that shit
-                    if (is_int(q.m_opd1)) {
-                        write_op("    %s     %s, %s", "mov", "eax", q.m_opd1.c_str());
-                    } else {
-                        write_op("    %s     %s, [%s + %d]", "mov", "eax", "ebp", symbol_offset(q.m_opd1));
-                    }
-                    if (is_int(q.m_opd2)) {
-                        write_op("    %s     %s, %s", "mov", "ecx", q.m_opd2.c_str());
-                    } else {
-                        write_op("    %s     %s, [%s + %d]", "mov", "ecx", "ebp", symbol_offset(q.m_opd2));
-                    }
-                    //add
-                    write_op("    %s     %s, %s", "add", "eax", "ecx");
-                    //load result in eax into target memory 
-                    write_op("    %s     [%s + %d], %s", "mov", "ebp", symbol_offset(q.m_target), "eax");
+                    if (is_int(q.m_opd1))   write_op("    %s     %s, %s", "mov", "eax", q.m_opd1.c_str());
+                    else                    write_op("    %s     %s, [%s + %d]", "mov", "eax", "ebp", symbol_offset(q.m_opd1));
 
+                    if (is_int(q.m_opd2))   write_op("    %s     %s, %s", "mov", "ecx", q.m_opd2.c_str());
+                    else                    write_op("    %s     %s, [%s + %d]", "mov", "ecx", "ebp", symbol_offset(q.m_opd2));
+
+                    write_op("    %s     %s, %s", q.m_op == T_PLUS ? "add" : "sub", "eax", "ecx");
+                    write_op("    %s     [%s + %d], %s", "mov", "ebp", symbol_offset(q.m_target), "eax");
                     break;
-                }
-                case T_MINUS: {
-                    write_op("<subtraction>");
-                    break;
-                }
                 case T_EQUAL: {
                     if (q.m_opd1 == "call") {
                         write_op("    %s    %s", q.m_opd1.c_str(), q.m_opd2.c_str());

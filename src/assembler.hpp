@@ -747,9 +747,7 @@ class Assembler {
                 int32_t eval() {
                     assert(false && "NodeLabelDef cannot be evaluated");
                 }
-                void assemble([[maybe_unused]] Assembler& a) override {
-
-                    //TODO
+                void assemble(Assembler& a) override {
                 }
                 std::string to_string() {
                     return "Mem";

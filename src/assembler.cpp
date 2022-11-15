@@ -419,10 +419,10 @@ void Assembler::parse() {
         m_nodes.push_back(parse_stmt());
     }
 
-    /*
+    
     for (Node* n: m_nodes) {
-        std::cout << "instruction: " << n->to_string() << '\n';
-    }*/
+    //    std::cout << "instruction: " << n->to_string() << '\n';
+    }
 }
 
 struct Token Assembler::peek_one() {

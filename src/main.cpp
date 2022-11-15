@@ -61,7 +61,7 @@ int main (int argc, char **argv) {
         Optimizer opt;
         opt.constant_folding(&s.m_quads);
 
-        TacQuad::print_tac(s.m_quads, s.m_tac_labels);
+        //TacQuad::print_tac(s.m_quads, s.m_tac_labels);
         //allocate registers here
 
         std::cout << "Generating x86 assembly..." << std::endl;
