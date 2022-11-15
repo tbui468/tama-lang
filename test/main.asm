@@ -1,25 +1,13 @@
-add:
-    push    ebp
-    sub     esp, 4
-    mov     eax, [ebp + 8]
-    mov     ecx, [ebp + 12]
-    add     eax, ecx
-    mov     [ebp + -4], eax
-    mov     eax, _t0
-    add     esp, 4
-    pop     ebp
-    ret
+_start:
+    mov     ebp, esp
+    call    main
+    mov     ebx, eax
+    mov     eax, 0x1
+    int     0x80
 main:
     push    ebp
-    sub     esp, 12
-    push    9
-<not implemented>
-    mov     eax, [ebp + -4]
-    push    eax
-<not implemented>
-    add     esp, 8
-<not implemented>
-    mov     eax, _t3x
-    add     esp, 12
+    sub     esp, 0
+    mov     eax, 42
+    add     esp, 0
     pop     ebp
     ret

@@ -17,11 +17,19 @@ void X86Generator::write_op(const char* format, ...) {
     m_buf.insert(m_buf.end(), (uint8_t*)str.data(), (uint8_t*)str.data() + str.size());
 }
 
+int X86Generator::symbol_offset(const std::string& sym_name) {
+    X86Frame current_frame = m_frames->find(m_frame_name)->second;
+    Symbol* sym = current_frame.get_symbol_from_frame(sym_name);
+    return sym->m_fp_offset;
+}
+
 
 void X86Generator::generate_asm(const std::vector<TacQuad>* quads, 
                                 const std::vector<std::string>* labels, 
                                 const std::unordered_map<std::string, X86Frame>* frames, 
                                 const std::string& output_file) {
+
+    m_frames = frames;
 
     /*
     for (const std::pair<std::string, X86Frame>& p: *frames) {
@@ -31,11 +39,9 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
         }
     }*/
 
-    std::string current_frame_name = "";
-    std::string current_frame_reserved_stack_size = "";
     int i = 0;
     for (const TacQuad& q: *quads) {
-        std::cout << q.m_target << " " << q.m_opd1 << " " << q.m_opd2 << " \n";
+//        std::cout << q.m_target << "*" << q.m_opd1 << "*" << q.m_opd2 << " \n";
         if ((*labels)[i] != "") {
             write_op("%s:", (*labels)[i].c_str());
         }
@@ -43,22 +49,22 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
 
         if (q.m_target == "") {
             if (q.m_opd1 == "entry") {
-                //Add _start label (for linker)
-                //call main and cache return value
-                //call exit system call with return value
-                //"entry" quad may include a memory alignment value in opd2
+                write_op("_start:");
+                write_op("    %s     %s, %s", "mov", "ebp", "esp");
+                write_op("    %s    %s", "call", "main");
+                write_op("    %s     %s, %s", "mov", "ebx", "eax");
+                write_op("    %s     %s, %s", "mov", "eax", "0x1");
+                write_op("    %s     %s", "int", "0x80");
             } else if (q.m_opd1 == "begin_fun") {
-                current_frame_name = (*labels)[i];
-                current_frame_reserved_stack_size = q.m_opd2;
+                m_frame_name = (*labels)[i];
+                m_frame_size = q.m_opd2;
                 write_op("    %s    %s", "push", "ebp");
                 write_op("    %s     %s, %s", "sub", "esp", q.m_opd2.c_str());
             } else if (q.m_opd1 == "push_arg") {
                 if (is_int(q.m_opd2)) {
                     write_op("    %s    %s", "push", q.m_opd2.c_str());
                 } else {
-                    X86Frame current_frame = frames->find(current_frame_name)->second;
-                    Symbol* sym = current_frame.get_symbol_from_frame(q.m_opd2);
-                    write_op("    %s     %s, [%s + %d]", "mov", "eax", "ebp", sym->m_fp_offset);
+                    write_op("    %s     %s, [%s + %d]", "mov", "eax", "ebp", symbol_offset(q.m_opd2));
                     write_op("    %s    %s", "push", "eax");
                 }
             } else if (q.m_opd1 == "pop_args") {
@@ -66,11 +72,11 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
             } else if (q.m_opd1 == "return") {
                 write_op("    %s     %s, %s", "mov", "eax", q.m_opd2.c_str());
             } else if (q.m_opd1 == "end_fun") {
-                write_op("    %s     %s, %s", "add", "esp", current_frame_reserved_stack_size.c_str());
+                write_op("    %s     %s, %s", "add", "esp", m_frame_size.c_str());
                 write_op("    %s     %s", "pop", "ebp");
                 write_op("    %s", "ret");
-                current_frame_name = "";
-                current_frame_reserved_stack_size = "";
+                m_frame_name = "";
+                m_frame_size = "";
             } else if (q.m_opd1 == "call") {
                 write_op("    %s    %s", "call", q.m_opd2.c_str());
             } else if (q.m_opd1 == "goto") {
@@ -81,26 +87,35 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
                 case T_PLUS: {
                     //load left into eax, load right into ecx, math that shit
                     if (is_int(q.m_opd1)) {
-                        write_op("    %s     %s, %s", "mov", "eax", q.m_opd1);
+                        write_op("    %s     %s, %s", "mov", "eax", q.m_opd1.c_str());
                     } else {
-                        X86Frame current_frame = frames->find(current_frame_name)->second;
-                        Symbol* sym = current_frame.get_symbol_from_frame(q.m_opd1);
-                        write_op("    %s     %s, [%s + %d]", "mov", "eax", "ebp", sym->m_fp_offset);
+                        write_op("    %s     %s, [%s + %d]", "mov", "eax", "ebp", symbol_offset(q.m_opd1));
                     }
                     if (is_int(q.m_opd2)) {
-                        write_op("    %s     %s, %s", "mov", "ecx", q.m_opd2);
+                        write_op("    %s     %s, %s", "mov", "ecx", q.m_opd2.c_str());
                     } else {
-                        X86Frame current_frame = frames->find(current_frame_name)->second;
-                        Symbol* sym = current_frame.get_symbol_from_frame(q.m_opd2);
-                        write_op("    %s     %s, [%s + %d]", "mov", "ecx", "ebp", sym->m_fp_offset);
+                        write_op("    %s     %s, [%s + %d]", "mov", "ecx", "ebp", symbol_offset(q.m_opd2));
                     }
                     //add
                     write_op("    %s     %s, %s", "add", "eax", "ecx");
                     //load result in eax into target memory 
-                    X86Frame current_frame = frames->find(current_frame_name)->second;
-                    Symbol* sym = current_frame.get_symbol_from_frame(q.m_target);
-                    write_op("    %s     [%s + %d], %s", "mov", "ebp", sym->m_fp_offset, "eax");
+                    write_op("    %s     [%s + %d], %s", "mov", "ebp", symbol_offset(q.m_target), "eax");
 
+                    break;
+                }
+                case T_MINUS: {
+                    write_op("<subtraction>");
+                    break;
+                }
+                case T_EQUAL: {
+                    if (q.m_opd1 == "call") {
+                        write_op("    %s    %s", q.m_opd1.c_str(), q.m_opd2.c_str());
+                        write_op("    %s     [%s + %d], %s", "mov", "ebp", symbol_offset(q.m_target), "eax");
+                    } else {
+                        if (is_int(q.m_opd1)) write_op("    %s     %s, %s", "mov", "eax", q.m_opd1.c_str());
+                        else write_op("    %s     %s, [%s + %d]", "mov", "eax", "ebp", symbol_offset(q.m_opd1));
+                        write_op("    %s     [%s + %d], %s", "mov", "ebp", symbol_offset(q.m_target), "eax");
+                    }
                     break;
                 }
                 default:

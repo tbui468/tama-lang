@@ -1,6 +1,7 @@
 #ifndef TAC_HPP
 #define TAC_HPP
 
+#include <iostream>
 #include <string>
 #include "token.hpp"
 #include "type.hpp"
@@ -45,6 +46,18 @@ class TacQuad {
                 return ret += m_opd2;
             }
         }
+
+    static void print_tac(const std::vector<TacQuad>& quads, const std::vector<std::string>& tac_labels) {
+        for (int i = 0; i < quads.size(); i++) {
+            const TacQuad& q = quads[i];
+            const std::string& str = tac_labels[i];
+            if (str != "") {
+                std::cout << str << ":" << std::endl;
+            }
+            std::cout << "    " << q.to_string() << std::endl;
+        }
+    }
+
 };
 
 #endif //TAC_HPP

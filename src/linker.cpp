@@ -125,7 +125,7 @@ void Linker::patch_program_entry() {
         for (int j = 0; j < int(symtab_sh->m_size / symtab_sh->m_entsize); j++) {
             Elf32Symbol* sym = (Elf32Symbol*)(rel_buf->data() + symtab_sh->m_offset + j * sizeof(Elf32Symbol));
             char* sym_name = (char*)(rel_buf->data() + strtab_sh->m_offset + sym->m_name);
-            const char* entry_name = "_main";
+            const char* entry_name = "_start";
             if (strlen(sym_name) == strlen(entry_name) && strncmp(sym_name, entry_name, strlen(entry_name)) == 0) {
                 ((Elf32ElfHeader*)m_buf.data())->m_entry = program_offset + code_offset + sym->m_value + Linker::LOAD_ADDR;
             }

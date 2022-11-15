@@ -15,18 +15,13 @@ def test(data):
 
     cp = subprocess.call(cmd, shell=True)
 
-
 tests = [
             ("return code", 0,
                 [
                     ("main.tmd",
                         """
-                        add: (a: int, b: int) -> int {
-                            return a + b
-                        }
                         main: () -> int {
-                            x: int = add(-9, 9)
-                            return x
+                            return 42
                         }
                         """
                     )

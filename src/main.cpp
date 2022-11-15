@@ -47,6 +47,7 @@ int main (int argc, char **argv) {
     }
 
 
+    
     for (const std::string& f: tmd_files) {
         std::string out = f.substr(0, f.size() - 4) + ".tac";
 
@@ -60,24 +61,16 @@ int main (int argc, char **argv) {
         Optimizer opt;
         opt.constant_folding(&s.m_quads);
 
-        /*
-        for (int i = 0; i < s.m_quads.size(); i++) {
-            const TacQuad& q = s.m_quads[i];
-            const std::string& str = s.m_tac_labels[i];
-            if (str != "") {
-                std::cout << str << ":" << std::endl;
-            }
-            std::cout << "    " << q.to_string() << std::endl;
-        }*/
-
+        TacQuad::print_tac(s.m_quads, s.m_tac_labels);
         //allocate registers here
 
         std::cout << "Generating x86 assembly..." << std::endl;
         X86Generator gen;
         gen.generate_asm(&s.m_quads, &s.m_tac_labels, &frames, f.substr(0, f.size() - 4) + ".asm");
+        asm_files.push_back(f.substr(0, f.size() - 4) + ".asm");
     }
 
-    /*
+    
 
     for (const std::string& f: asm_files) {
         std::string out = f.substr(0, f.size() - 4) + ".obj";
@@ -90,7 +83,7 @@ int main (int argc, char **argv) {
 
     std::cout << "Linking ELF relocatable object(s) into ELF executable..." << std::endl;
     Linker l;
-    l.link(obj_files, "out.exe");*/
+    l.link(obj_files, "out.exe");
    
     ems_print(&ems);
 
