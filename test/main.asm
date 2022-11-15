@@ -7,20 +7,28 @@ _start:
 main:
     push    ebp
     mov     ebp, esp
-    sub     esp, 24
+    sub     esp, 12
     mov     eax, 0
     mov     [ebp + -4], eax
+_L0:
     mov     eax, [ebp + -4]
+    mov     ecx, 5
+    cmp     eax, ecx
+    setl    al
+    movzx   eax, al
     mov     [ebp + -8], eax
-    mov     eax, 1
+    mov     eax, [ebp + -8]
+    cmp     eax, 0
+    je      _L1
+    mov     eax, [ebp + -4]
+    mov     ecx, 1
+    add     eax, ecx
     mov     [ebp + -12], eax
     mov     eax, [ebp + -12]
-    mov     [ebp + -16], eax
-    mov     eax, 1
-    mov     [ebp + -20], eax
-    mov     eax, [ebp + -20]
-    mov     [ebp + -24], eax
-    mov     eax, 0
-    add     esp, 24
+    mov     [ebp + -4], eax
+    jmp     _L0
+_L1:
+    mov     eax, [ebp + -4]
+    add     esp, 12
     pop     ebp
     ret

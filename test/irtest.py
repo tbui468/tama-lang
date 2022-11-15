@@ -698,21 +698,19 @@ print("--While Loops--")
 for data in while_tests:
     test(data)
 
-test(
-            ("constant folding", 0,
-                [
-                    ("main.tmd",
-                        """
-                        main: () -> int {
-                            x: bool = true and false
-                            y: bool = 6 < 10
-                            z: bool = 6 == 6
-                            return 0
-                        }
-                        """
-                    )
-                ]
-            ),
-)
+x=        ("constant folding", 0,
+            [
+                ("main.tmd",
+                    """
+                    main: () -> int {
+                        x: bool = true and false
+                        y: bool = 6 < 10
+                        z: bool = 6 == 6
+                        return 0
+                    }
+                    """
+                )
+            ]
+        ),
 
 print("Tests passed:", correct, "/", len(function_tests) + len(arithmetic_expr_tests) + len(boolean_expr_tests) + len(variable_tests) + len(module_tests) + len(conditional_tests) + len(while_tests))

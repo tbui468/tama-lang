@@ -17,6 +17,8 @@ class X86Generator {
         void write_op(const char* format, ...);
         void generate_asm(const std::vector<TacQuad>* quads, const std::vector<std::string>* labels, const std::unordered_map<std::string, X86Frame>* frames, const std::string& output_file);
         void write(const std::string& output_file);
+        void fetch(const std::string& dst, const std::string& src);
+        void store(const std::string& dst, const std::string& src);
 };
 
 #endif //X86_GENERATOR_HPP
