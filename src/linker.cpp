@@ -180,17 +180,11 @@ void Linker::apply_relocations() {
 }
 
 void Linker::link(const std::vector<std::string>& obj_files, const std::string& output_file) {
-    std::cout << "Reading object files into buffers..." << std::endl;
     read_elf_relocatables(obj_files);
-    std::cout << "Appending elf header..." << std::endl;
     append_elf_executable_header();
-    std::cout << "Appending program header..." << std::endl;
     append_program_header();
-    std::cout << "Appending program code..." << std::endl;
     append_program();
-    std::cout << "Patching program entry point..." << std::endl;
     patch_program_entry();
-    std::cout << "Appling relocations..." << std::endl;
     apply_relocations();
     write_elf_executable(output_file);
 }

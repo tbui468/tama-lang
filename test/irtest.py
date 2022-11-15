@@ -59,6 +59,67 @@ function_tests = [
                     )
                 ]
             ),
+            ("true return value", 1,
+                [
+                    ("main.tmd",
+                        """
+                        main: () -> int {
+                            return 1
+                        }
+                        """
+                    )
+                ]
+            ),
+            ("false return value", 0,
+                [
+                    ("main.tmd",
+                        """
+                        main: () -> int {
+                            return 0
+                        }
+                        """
+                    )
+                ]
+            ),
+            ("nil return value", 0,
+                [
+                    ("main.tmd",
+                        """
+                        main: () -> nil {
+                            return nil
+                        }
+                        """
+                    )
+                ]
+            ),
+            ("declare function with parameters", 0,
+                [
+                    ("main.tmd",
+                        """
+                        myadd: (a: int, b: int) -> int {
+                            return a + b
+                        }
+                        main: () -> int {
+                            return 0
+                        }
+                        """
+                    )
+                ]
+            ),
+            ("call function with parameters", 0,
+                [
+                    ("main.tmd",
+                        """
+                        myadd: (a: int, b: int) -> int {
+                            return a + b
+                        }
+                        main: () -> int {
+                            return myadd(-5, 5)
+                        }
+                        """
+                    )
+                ]
+            ),
         ]
 arithmetic_expr_tests = [
             ("signed integer arithmetic", 0,
@@ -441,17 +502,67 @@ variable_tests = [
             ),
         ]
 
+
+module_tests = [
+            ("import module", 0,
+                [
+                    ("main.tmd",
+                        """
+                        import math
+                        main: () -> int {
+                            return 0
+                        }
+                        """
+                    ),
+                    ("math.tmd",
+                        """
+                        myadd: (a: int, b:int) -> int {
+                            return a + b
+                        }
+                        """
+                    )
+                ]
+            ),
+            ("call imported module function", 0,
+                [
+                    ("main.tmd",
+                        """
+                        import math
+                        main: () -> int {
+                            return myadd(-5, 5)
+                        }
+                        """
+                    ),
+                    ("math.tmd",
+                        """
+                        myadd: (a: int, b:int) -> int {
+                            return a + b
+                        }
+                        """
+                    )
+                ]
+            ),
+        ]
+
+
 print("--Functions--")
 for data in function_tests:
     test(data)
+
 print("--Arithmetic Expressions--")
 for data in arithmetic_expr_tests:
     test(data)
+
 print("--Logical Expressions--")
 for data in boolean_expr_tests:
     test(data)
+
 print("--Variables--")
 for data in variable_tests:
     test(data)
 
-print("Tests passed:", correct, "/", len(function_tests) + len(arithmetic_expr_tests) + len(boolean_expr_tests) + len(variable_tests))
+print("--Modules--")
+for data in module_tests:
+    test(data)
+
+print("Tests passed:", correct, "/", len(function_tests) + len(arithmetic_expr_tests) + len(boolean_expr_tests) + len(variable_tests) + len(module_tests))

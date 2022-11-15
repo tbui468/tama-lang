@@ -342,6 +342,24 @@ void Semant::extract_global_declarations(const std::string& module_file) {
     read(module_file);
     lex();
     parse();
-    translate_to_ir();
+    for (Ast* n: m_nodes) {
+        AstFunDef* f = dynamic_cast<AstFunDef*>(n);
+        if (f) {
+            //if function definition, grab type info...
+            std::string fun_name = std::string(f->m_symbol.start, f->m_symbol.len);
+            std::vector<Type> ptypes = std::vector<Type>();
+
+            for (Ast* n: f->m_params) {
+                EmitTacResult r = n->emit_ir(*this); //NOTE: this only returns type and does not actually add quads
+                ptypes.push_back(r.m_type); //NOTE: parameters should NOT emit any code
+            }
+            
+            if (m_globals.m_symbols.find(fun_name) != m_globals.m_symbols.end()) {
+                ems_add(&ems, f->m_symbol.line, "Syntax Error: Function with name already declared in global scope.");
+            } else {
+                m_globals.m_symbols.insert({fun_name, Symbol(fun_name, "", Type(T_FUN_TYPE, f->m_ret_type.type, ptypes), 0)});
+            }
+        }
+    }
 }
 

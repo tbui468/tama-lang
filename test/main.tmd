@@ -1,8 +1,4 @@
-main: () -> int {
-                            x: int = 1
-                            {
-                                x: int = 2
-                                x = 3
-                            }
-                            return x
+import math
+                        main: () -> int {
+                            return myadd(-5, 5)
                         }

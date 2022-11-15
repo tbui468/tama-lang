@@ -177,16 +177,11 @@ void Assembler::append_rel_section(int sh_rel_offset, int sh_text_offset, int sh
 }
 
 void Assembler::generate_obj(const std::string& input_file, const std::string& output_file) {
-    std::cout << "Reading x86 assembly from " << input_file << std::endl;
     read(input_file);
-    std::cout << "Lexing x86 assembly..." << std::endl;
     lex();
     if (ems.count > 0) return;
-    std::cout << "Parsing x86 assembly..." << std::endl;
     parse();
     if (ems.count > 0) return;
-
-    std::cout << "Appending elf headers..." << std::endl;
 
     Elf32ElfHeader eh;
     eh.m_shstrndx = 2;
@@ -221,21 +216,16 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
                                                3, 1, 4, sizeof(Elf32Relocation)});
 
 
-    std::cout << "Appending text section" << std::endl;
     bool undefined_globals = false;
     append_text_section(sh_text_offset, &undefined_globals);
 
-    std::cout << "Appending shstrtab section" << std::endl;
     append_shstrtab_section(sh_shstrtab_offset);
 
-    std::cout << "Appending symtab section" << std::endl;
     append_symtab_section(sh_symtab_offset, sh_text_offset, input_file);
 
-    std::cout << "Appending strtab section" << std::endl;
     append_strtab_section(sh_strtab_offset, input_file);
 
     if (undefined_globals) {
-        std::cout << "Appending rel.text section" << std::endl;
         append_rel_section(sh_rel_offset, sh_text_offset, sh_symtab_offset, sh_strtab_offset);
     }
 

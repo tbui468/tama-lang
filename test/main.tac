@@ -1,8 +1,10 @@
     entry <alignment>
 main:
     begin_fun 8
-    _t0x = 1 
-    _t1x = 2 
-    _t1x = 3 
-    return _t0x
+    push_arg 5
+    _t0 = 0 - 5
+    push_arg _t0
+    _t1 = call myadd
+    pop_args 8
+    return _t1
     end_fun 

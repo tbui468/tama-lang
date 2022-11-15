@@ -8,13 +8,17 @@ main:
     push    ebp
     mov     ebp, esp
     sub     esp, 8
-    mov     eax, 1
+    push    5
+    mov     eax, 0
+    mov     ecx, 5
+    sub     eax, ecx
     mov     [ebp + -4], eax
-    mov     eax, 2
-    mov     [ebp + -8], eax
-    mov     eax, 3
-    mov     [ebp + -8], eax
     mov     eax, [ebp + -4]
+    push    eax
+    call    myadd
+    mov     [ebp + -8], eax
+    add     esp, 8
+    mov     eax, [ebp + -8]
     add     esp, 8
     pop     ebp
     ret

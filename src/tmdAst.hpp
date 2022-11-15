@@ -558,7 +558,6 @@ class AstImport: public Ast {
         }
         EmitTacResult emit_ir(Semant& s) {
             Semant *new_s = new Semant(nullptr);
-            //TODO: Need to make this path more generalized - only works with python scripts in /test right now
             new_s->extract_global_declarations(std::string(m_symbol.start, m_symbol.len) + ".tmd");
             s.m_imports.push_back(new_s);
             return {"", Type(T_NIL_TYPE)};
