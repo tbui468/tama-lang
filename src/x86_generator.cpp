@@ -80,7 +80,7 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
             switch (q.m_op) {
                 case T_PLUS:
                 case T_MINUS:
-                    //load left into eax, load right into ecx, math that shit
+                    //load left into eax, load right into ecx
                     if (is_int(q.m_opd1))   write_op("    %s     %s, %s", "mov", "eax", q.m_opd1.c_str());
                     else                    write_op("    %s     %s, [%s + %d]", "mov", "eax", "ebp", symbol_offset(q.m_opd1));
 
@@ -88,6 +88,71 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
                     else                    write_op("    %s     %s, [%s + %d]", "mov", "ecx", "ebp", symbol_offset(q.m_opd2));
 
                     write_op("    %s     %s, %s", q.m_op == T_PLUS ? "add" : "sub", "eax", "ecx");
+                    write_op("    %s     [%s + %d], %s", "mov", "ebp", symbol_offset(q.m_target), "eax");
+                    break;
+                case T_STAR:
+                    if (is_int(q.m_opd1))   write_op("    %s     %s, %s", "mov", "eax", q.m_opd1.c_str());
+                    else                    write_op("    %s     %s, [%s + %d]", "mov", "eax", "ebp", symbol_offset(q.m_opd1));
+
+                    if (is_int(q.m_opd2))   write_op("    %s     %s, %s", "mov", "ecx", q.m_opd2.c_str());
+                    else                    write_op("    %s     %s, [%s + %d]", "mov", "ecx", "ebp", symbol_offset(q.m_opd2));
+
+                    write_op("    %s    %s, %s", "imul", "eax", "ecx");
+                    write_op("    %s     [%s + %d], %s", "mov", "ebp", symbol_offset(q.m_target), "eax");
+                    break;
+                case T_SLASH:
+                    if (is_int(q.m_opd1))   write_op("    %s     %s, %s", "mov", "eax", q.m_opd1.c_str());
+                    else                    write_op("    %s     %s, [%s + %d]", "mov", "eax", "ebp", symbol_offset(q.m_opd1));
+
+                    if (is_int(q.m_opd2))   write_op("    %s     %s, %s", "mov", "ecx", q.m_opd2.c_str());
+                    else                    write_op("    %s     %s, [%s + %d]", "mov", "ecx", "ebp", symbol_offset(q.m_opd2));
+
+                    write_op("    %s", "cdq");
+                    write_op("    %s    %s", "idiv", "ecx");
+                    write_op("    %s     [%s + %d], %s", "mov", "ebp", symbol_offset(q.m_target), "eax");
+                    break;
+                case T_LESS:
+                    if (is_int(q.m_opd1))   write_op("    %s     %s, %s", "mov", "eax", q.m_opd1.c_str());
+                    else                    write_op("    %s     %s, [%s + %d]", "mov", "eax", "ebp", symbol_offset(q.m_opd1));
+
+                    if (is_int(q.m_opd2))   write_op("    %s     %s, %s", "mov", "ecx", q.m_opd2.c_str());
+                    else                    write_op("    %s     %s, [%s + %d]", "mov", "ecx", "ebp", symbol_offset(q.m_opd2));
+
+                    write_op("    %s     %s, %s", "cmp", "eax", "ecx");
+                    write_op("    %s    %s", "setl", "al");
+                    write_op("    %s   %s, %s", "movzx", "eax", "al");
+                    write_op("    %s     [%s + %d], %s", "mov", "ebp", symbol_offset(q.m_target), "eax");
+                    break;
+                case T_EQUAL_EQUAL:
+                    if (is_int(q.m_opd1))   write_op("    %s     %s, %s", "mov", "eax", q.m_opd1.c_str());
+                    else                    write_op("    %s     %s, [%s + %d]", "mov", "eax", "ebp", symbol_offset(q.m_opd1));
+
+                    if (is_int(q.m_opd2))   write_op("    %s     %s, %s", "mov", "ecx", q.m_opd2.c_str());
+                    else                    write_op("    %s     %s, [%s + %d]", "mov", "ecx", "ebp", symbol_offset(q.m_opd2));
+
+                    write_op("    %s     %s, %s", "cmp", "eax", "ecx");
+                    write_op("    %s    %s", "sete", "al");
+                    write_op("    %s   %s, %s", "movzx", "eax", "al");
+                    write_op("    %s     [%s + %d], %s", "mov", "ebp", symbol_offset(q.m_target), "eax");
+                    break;
+                case T_AND:
+                    if (is_int(q.m_opd1))   write_op("    %s     %s, %s", "mov", "eax", q.m_opd1.c_str());
+                    else                    write_op("    %s     %s, [%s + %d]", "mov", "eax", "ebp", symbol_offset(q.m_opd1));
+
+                    if (is_int(q.m_opd2))   write_op("    %s     %s, %s", "mov", "ecx", q.m_opd2.c_str());
+                    else                    write_op("    %s     %s, [%s + %d]", "mov", "ecx", "ebp", symbol_offset(q.m_opd2));
+
+                    write_op("    %s     %s, %s", "and", "eax", "ecx");
+                    write_op("    %s     [%s + %d], %s", "mov", "ebp", symbol_offset(q.m_target), "eax");
+                    break;
+                case T_OR:
+                    if (is_int(q.m_opd1))   write_op("    %s     %s, %s", "mov", "eax", q.m_opd1.c_str());
+                    else                    write_op("    %s     %s, [%s + %d]", "mov", "eax", "ebp", symbol_offset(q.m_opd1));
+
+                    if (is_int(q.m_opd2))   write_op("    %s     %s, %s", "mov", "ecx", q.m_opd2.c_str());
+                    else                    write_op("    %s     %s, [%s + %d]", "mov", "ecx", "ebp", symbol_offset(q.m_opd2));
+
+                    write_op("    %s      %s, %s", "or", "eax", "ecx");
                     write_op("    %s     [%s + %d], %s", "mov", "ebp", symbol_offset(q.m_target), "eax");
                     break;
                 case T_EQUAL: {

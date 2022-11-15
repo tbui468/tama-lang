@@ -1,0 +1,8 @@
+main: () -> int {
+                            x: int = 1
+                            {
+                                x: int = 2
+                                x = 3
+                            }
+                            return x
+                        }

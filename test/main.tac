@@ -1,9 +1,8 @@
     entry <alignment>
 main:
-    begin_fun 16
-    _t0 = 2 / 1
-    _t1 = 1 + _t0
-    _t2 = 3 * 1
-    _t3 = _t1 - _t2
-    return _t3
+    begin_fun 8
+    _t0x = 1 
+    _t1x = 2 
+    _t1x = 3 
+    return _t0x
     end_fun 
