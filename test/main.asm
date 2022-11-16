@@ -4,17 +4,23 @@ _start:
     mov     ebx, eax
     mov     eax, 0x1
     int     0x80
+myadd:
+    push    ebp
+    mov     ebp, esp
+    sub     esp, 4
+    mov     eax, [ebp + 8]
+    mov     ecx, [ebp + 12]
+    add     eax, ecx
+    mov     [ebp + -4], eax
+    mov     eax, [ebp + -4]
+    add     esp, 4
+    pop     ebp
+    ret
 main:
     push    ebp
     mov     ebp, esp
-    sub     esp, 20
-    mov     eax, 10
-    mov     [ebp + -4], eax
-    mov     eax, [ebp + -4]
-    mov     [ebp + -12], eax
+    sub     esp, 0
     mov     eax, 0
-    mov     [ebp + -20], eax
-    mov     eax, 0
-    add     esp, 20
+    add     esp, 0
     pop     ebp
     ret

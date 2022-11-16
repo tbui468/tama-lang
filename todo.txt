@@ -1,11 +1,28 @@
+***********This crashes************
+
+myadd(a: int, b: int) -> int {
+    return a + b
+}
+main: () -> int {
+    x: int = 1
+    y: int = 5
+    while x < y {
+        if x < 3 {
+            x = myadd(x, 2)
+        } else {
+            x = myadd(x, 1)
+        }
+    }
+    return 0
+}
+
+Forgot the colon after function name - add error message
+
 ****************Basic Blocks**********************
-Can apply optimizations to single blocks
-
-Algebraic simplication (remove x := x + 0 and x := x * 1)
-Copy propagation
-Constant folding
-Dead code elimination
-
+!Will need to insert extra labels (or at least figure out how to separate blocks without labels)
+    main issue is the fall-through blocks
+Can apply some optimizations to single blocks
+registers are allocated by block
 
 ***************Allocate registers*********************
 Need to make inference graph and do some node coloring
@@ -34,6 +51,11 @@ Read lecture 14, lecture 15, lecture 16
 Read 240 TAC examples
 
 ********************More Optimization********************
+Copy propagation
+Constant folding
+Dead code elimination
+
+
 ***************************Reorganize Quads basic-blocks*******************
     Each instruction after label is start of block - the leader (this takes care of function definitions)
     Start at each leader and move down quads until we find next leader - previous is end of block (also takes care of functions)

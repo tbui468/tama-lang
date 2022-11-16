@@ -25,7 +25,9 @@ X86Frame* Semant::get_compiling_frame() {
 void Semant::generate_ir(const std::string& input_file, const std::string& output_file) {
     read(input_file);
     lex();
+    if (ems.count > 0) return;
     parse();
+    if (ems.count > 0) return;
 
     m_quads.push_back(TacQuad("", "entry", "<alignment>", T_NIL));
 

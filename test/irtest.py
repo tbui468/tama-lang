@@ -11,7 +11,7 @@ def test(data):
     cmd = "./../build/src/tama"
     for src in data[2]:
         cmd += " " + src[0]
-    cmd += " > /dev/null"
+    #cmd += " > /dev/null"
 
     cp = subprocess.call(cmd, shell=True)
     subprocess.call("chmod +x out.exe", shell=True)
@@ -669,7 +669,7 @@ while_tests = [
                 ]
             ),
         ]
-
+"""
 print("--Functions--")
 for data in function_tests:
     test(data)
@@ -698,14 +698,21 @@ print("--While Loops--")
 for data in while_tests:
     test(data)
 
-test(        ("constant folding", 0,
+
+                            if x < 3 {
+                                x = myadd(x, 2)
+                            } else {
+                                x = myadd(x, 1)
+                            }
+"""
+test(        ("test set", 0,
             [
                 ("main.tmd",
                     """
+                    myadd (a: int, b: int) -> int {
+                        return a + b
+                    }
                     main: () -> int {
-                        x: int = 10
-                        y: int = x * 1
-                        z: int = x * 0
                         return 0
                     }
                     """

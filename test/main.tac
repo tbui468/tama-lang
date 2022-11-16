@@ -1,10 +1,10 @@
     entry <alignment>
+myadd:
+    begin_fun 4
+    _t0 = a + b
+    return _t0
+    end_fun 
 main:
-    begin_fun 20
-    _t0x = 10 
-    _t1 = _t0x * 1
-    _t2y = _t1 
-    _t3 = _t0x * 0
-    _t4z = _t3 
+    begin_fun 0
     return 0
     end_fun 

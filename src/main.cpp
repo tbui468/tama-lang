@@ -55,6 +55,10 @@ int main (int argc, char **argv) {
         std::unordered_map<std::string, X86Frame> frames = std::unordered_map<std::string, X86Frame>();
         Semant s = Semant(&frames);
         s.generate_ir(f, out);
+        if (ems.count > 0) {
+            ems_print(&ems);
+            return 1;
+        }
 
         //optimize
         std::cout << "Optimizing IR..." << std::endl;
@@ -63,13 +67,17 @@ int main (int argc, char **argv) {
         opt.merge_adjacent_store_fetch(&s.m_quads);
         opt.simplify_algebraic_identities(&s.m_quads);
 
-        //TacQuad::print_tac(s.m_quads, s.m_tac_labels);
         //allocate registers here
 
         std::cout << "Generating x86 assembly..." << std::endl;
         X86Generator gen;
         gen.generate_asm(&s.m_quads, &s.m_tac_labels, &frames, f.substr(0, f.size() - 4) + ".asm");
         asm_files.push_back(f.substr(0, f.size() - 4) + ".asm");
+
+        if (ems.count > 0) {
+            ems_print(&ems);
+            return 1;
+        }
     }
 
     
@@ -81,15 +89,21 @@ int main (int argc, char **argv) {
         std::cout << "Assembling " << f << " to ELF relocatable objects..." << std::endl;
         Assembler a;
         a.generate_obj(f, out);
+
+        if (ems.count > 0) {
+            ems_print(&ems);
+            return 1;
+        }
     }
 
     std::cout << "Linking ELF relocatable object(s) into ELF executable..." << std::endl;
     Linker l;
     l.link(obj_files, "out.exe");
    
-    ems_print(&ems);
-
-    if (ems.count > 0) return 1;
+    if (ems.count > 0) {
+        ems_print(&ems);
+        return 1;
+    }
     
     //cleanup
 //    printf("Memory allocated: %ld\n", allocated);
