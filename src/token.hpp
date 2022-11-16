@@ -99,7 +99,9 @@ enum TokenType {
     T_SETLE,
     T_SETGE,
     T_SETE,
-    T_SETNE
+    T_SETNE,
+
+    T_CONDJUMP, //NOTE: used in TAC operator since we need three operands for conditional jumps
 };
 
 struct Token {

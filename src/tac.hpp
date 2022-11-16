@@ -28,7 +28,9 @@ class TacQuad {
 
         std::string to_string() const {
 
-            if (m_target == "" || m_op == T_NIL) {
+            if (m_op == T_CONDJUMP) {
+                return "goto_cond " + m_target + " " + m_opd1 + " " + m_opd2;
+            } else if (m_target == "" || m_op == T_NIL) {
                 return m_target + (m_target == "" ? "" : " ")  + m_opd1 + " " + m_opd2; 
             } else {
                 std::string ret = m_target + " = " + m_opd1;

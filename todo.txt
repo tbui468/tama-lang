@@ -1,28 +1,90 @@
-***********This crashes************
+****************Basic Blocks**********************
+find first label
+    a block is from that label until quad before next label/end of quads
 
-myadd(a: int, b: int) -> int {
+    class BasicBlock {
+        std::string m_label;
+        int m_begin; //first quad in block (same offset as label)
+        int m_end; //index of one quad after end of block
+        BasicBlock(const std::string& label, int begin, int end): m_label(label), m_begin(begin), m_end(end) {}
+    }
+
+    TEST!  Should be able to shuffle blocks, and use them to generate x86 code - the program output should be the same
+
+Iterate through each block and assign registers
+    analyze liveness of temps (true and local?)
+    assign temps (true) to registers
+    remove any register-allcoated true temps (NOT local temps since they could be used in other blocks) from frame
+
+Iterate through allocated frame stack offsets for true/local temps and look for gaps
+    if any stack offset has no true/local temps, decrement all true/local temps with higher offset to fill gap
+
+myadd: (a: int, b: int) -> int {
     return a + b
 }
 main: () -> int {
     x: int = 1
     y: int = 5
-    while x < y {
-        if x < 3 {
-            x = myadd(x, 2)
-        } else {
-            x = myadd(x, 1)
-        }
-    }
-    return 0
+    z: int = x + y
+    return z
 }
 
-Forgot the colon after function name - add error message
 
-****************Basic Blocks**********************
-!Will need to insert extra labels (or at least figure out how to separate blocks without labels)
-    main issue is the fall-through blocks
-Can apply some optimizations to single blocks
-registers are allocated by block
+    entry <alignment>
+myadd:
+    begin_fun 4
+    _t0 = a + b
+    return _t0
+    end_fun 
+main:
+    begin_fun 16
+    _t1x = 1 
+    _t2y = 5 
+    _t3 = _t1x + _t2y
+    _t4z = _t3 
+    return _t4z
+    end_fun 
+
+
+main:
+    push    ebp
+    mov     ebp, esp
+    sub     esp, 16
+    *****this block is simplified to 3 lines******
+    mov     eax, 1
+    mov     [ebp + -4], eax
+    mov     eax, 5
+    mov     [ebp + -8], eax
+    mov     eax, [ebp + -4]
+    mov     ecx, [ebp + -8]
+    add     eax, ecx
+    mov     [ebp + -16], eax
+    mov     eax, [ebp + -16]
+    ******************************************
+    add     esp, 16
+    pop     ebp
+    ret
+
+
+Two registers needed (eax and ecx)
+
+1. _t1x - live range is {2->3}
+2. _t2y - live range is {2->3}
+3. _t3 - live range is {3->4}
+4. _t4z - live range is {4->5}
+
+Assign each temp a register:
+_t1x = eax
+_t2y = ecx
+_t3 = eax
+_t4z = eax
+
+mov     eax, 1
+mov     ecx, 5
+add     eax, ecx
+mov     eax, eax - can remove
+mov     eax, eax - can remove
+mov     eax, eax - can remove
 
 ***************Allocate registers*********************
 Need to make inference graph and do some node coloring

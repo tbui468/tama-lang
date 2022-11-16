@@ -55,7 +55,11 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
         }
 
 
-        if (q.m_target == "") {
+        if (q.m_op == T_CONDJUMP) {
+            fetch("eax", q.m_target);
+            write_op("    %s     %s, %s", "cmp", "eax", "0");
+            write_op("    %s      %s", "je", q.m_opd1.c_str());
+        } else if (q.m_target == "") {
             if (q.m_opd1 == "entry") {
                 write_op("_start:");
                 write_op("    %s     %s, %s", "mov", "ebp", "esp");
@@ -91,10 +95,6 @@ void X86Generator::generate_asm(const std::vector<TacQuad>* quads,
             } else if (q.m_opd1 == "goto") {
                 write_op("    %s     %s", "jmp", q.m_opd2.c_str());
             } 
-        } else if (q.m_target == "goto_ifz") {
-            fetch("eax", q.m_opd1);
-            write_op("    %s     %s, %s", "cmp", "eax", "0");
-            write_op("    %s      %s", "je", q.m_opd2.c_str());
         } else {
             switch (q.m_op) {
                 case T_PLUS:

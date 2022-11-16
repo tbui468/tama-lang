@@ -1,6 +1,17 @@
-myadd (a: int, b: int) -> int {
+myadd: (a: int, b: int) -> int {
                         return a + b
                     }
                     main: () -> int {
-                        return 0
+                        x: int = 0
+                        while x < 10 {
+                            if x < 0 {
+                                x = myadd(x, 1)
+                            } else {
+                                x = myadd(x, 2)
+                            }
+                            if x > 0 {
+                                return 0
+                            }
+                        }
+                        return x
                     }

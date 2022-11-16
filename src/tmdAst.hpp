@@ -417,15 +417,17 @@ class AstIf: public Ast {
                 ems_add(&ems, m_t.line, "Syntax Error: 'if' keyword must be followed by boolean expression.");
             }
 
+            std::string true_label = TacQuad::new_label();
             std::string false_label = TacQuad::new_label();
             std::string end_label = TacQuad::new_label();
 
             if (m_else_block) {
-                s.m_quads.push_back(TacQuad("goto_ifz", cond_r.m_temp, false_label, T_NIL));
+                s.m_quads.push_back(TacQuad(cond_r.m_temp, false_label, true_label, T_CONDJUMP));
             } else {
-                s.m_quads.push_back(TacQuad("goto_ifz", cond_r.m_temp, end_label, T_NIL));
+                s.m_quads.push_back(TacQuad(cond_r.m_temp, end_label, true_label, T_CONDJUMP));
             }
 
+            s.add_tac_label(true_label);
             EmitTacResult then_r = m_then_block->emit_ir(s);
             if (m_else_block) {
                 s.m_quads.push_back(TacQuad("", "goto", end_label, T_NIL));
@@ -434,6 +436,7 @@ class AstIf: public Ast {
 
             if (m_else_block) {
                 EmitTacResult then_r = m_else_block->emit_ir(s);
+                s.m_quads.push_back(TacQuad("", "goto", end_label, T_NIL));
             }
             s.add_tac_label(end_label);
 
@@ -453,6 +456,7 @@ class AstWhile: public Ast {
         }
         EmitTacResult emit_ir(Semant& s) {
             std::string cond_l = TacQuad::new_label();
+            s.m_quads.push_back(TacQuad("", "goto", cond_l, T_NIL));
             s.add_tac_label(cond_l);
 
             EmitTacResult cond_r = m_condition->emit_ir(s);
@@ -460,9 +464,11 @@ class AstWhile: public Ast {
                 ems_add(&ems, m_t.line, "Type Error: 'while' keyword must be followed by boolean expression.");
             }
 
+            std::string body_l = TacQuad::new_label();
             std::string end_l = TacQuad::new_label();
-            s.m_quads.push_back(TacQuad("goto_ifz", cond_r.m_temp, end_l, T_NIL));
+            s.m_quads.push_back(TacQuad(cond_r.m_temp, end_l, body_l, T_CONDJUMP));
 
+            s.add_tac_label(body_l);
             EmitTacResult while_r = m_while_block->emit_ir(s);
 
             s.m_quads.push_back(TacQuad("", "goto", cond_l, T_NIL));
