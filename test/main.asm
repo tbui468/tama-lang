@@ -19,7 +19,7 @@ myadd:
 main:
     push    ebp
     mov     ebp, esp
-    sub     esp, 24
+    sub     esp, 28
     mov     eax, 0
     mov     [ebp + -4], eax
     jmp     _L0
@@ -42,7 +42,7 @@ _L1:
     mov     [ebp + -12], eax
     mov     eax, [ebp + -12]
     cmp     eax, 0
-    je      _L4
+    je      _L5
 _L3:
     push    1
     mov     eax, [ebp + -4]
@@ -52,8 +52,8 @@ _L3:
     add     esp, 8
     mov     eax, [ebp + -16]
     mov     [ebp + -4], eax
-    jmp     _L5
-_L4:
+    jmp     _L4
+_L5:
     push    2
     mov     eax, [ebp + -4]
     push    eax
@@ -62,8 +62,8 @@ _L4:
     add     esp, 8
     mov     eax, [ebp + -16]
     mov     [ebp + -4], eax
-    jmp     _L5
-_L5:
+    jmp     _L4
+_L4:
     mov     eax, 0
     mov     ecx, [ebp + -4]
     cmp     eax, ecx
@@ -72,16 +72,23 @@ _L5:
     mov     [ebp + -16], eax
     mov     eax, [ebp + -16]
     cmp     eax, 0
-    je      _L8
+    je      _L7
 _L6:
     mov     eax, 0
-    add     esp, 24
+    add     esp, 28
     pop     ebp
     ret
-_L8:
+_L7:
     jmp     _L0
 _L2:
     mov     eax, [ebp + -4]
-    add     esp, 24
+    add     esp, 28
+    pop     ebp
+    ret
+_L8:
+    mov     eax, 10
+    mov     [ebp + -12], eax
+    mov     eax, [ebp + -12]
+    add     esp, 28
     pop     ebp
     ret

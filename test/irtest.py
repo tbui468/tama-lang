@@ -11,7 +11,7 @@ def test(data):
     cmd = "./../build/src/tama"
     for src in data[2]:
         cmd += " " + src[0]
-    cmd += " > /dev/null"
+    #cmd += " > /dev/null"
 
     cp = subprocess.call(cmd, shell=True)
     subprocess.call("chmod +x out.exe", shell=True)
@@ -624,7 +624,7 @@ conditional_tests = [
 
 
 while_tests = [
-            ("condition initially false", 0,
+            ("run zero times", 0,
                 [
                     ("main.tmd",
                         """
@@ -670,6 +670,7 @@ while_tests = [
             ),
         ]
 
+"""
 print("--Functions--")
 for data in function_tests:
     test(data)
@@ -697,7 +698,7 @@ for data in conditional_tests:
 print("--While Loops--")
 for data in while_tests:
     test(data)
-
+"""
 test(        ("test set", 6,
             [
                 ("main.tmd",
@@ -718,6 +719,8 @@ test(        ("test set", 6,
                             }
                         }
                         return x
+                        z: int = 10
+                        return z
                     }
                     """
                 )

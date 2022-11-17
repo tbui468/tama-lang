@@ -13,6 +13,7 @@ set(Sources
     x86_generator.cpp
     x86_frame.cpp
     utility.cpp
+    ControlFlowGraph.cpp
     )
 
 set(Headers
@@ -35,6 +36,7 @@ set(Headers
     x86_generator.hpp
     utility.hpp
     symbol.hpp
+    ControlFlowGraph.hpp
     )
 
 add_executable(

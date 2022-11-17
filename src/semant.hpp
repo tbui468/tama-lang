@@ -82,6 +82,7 @@ class Semant {
     public:
         Semant(std::unordered_map<std::string, X86Frame>* frames): m_frames(frames) {}
         void generate_ir(const std::string& input_file, const std::string& output_file);
+        void insert_post_return_labels();
         void write_op(const char* format, ...);
         int generate_label_id();
         void extract_global_declarations(const std::string& module_file);

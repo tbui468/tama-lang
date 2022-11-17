@@ -418,10 +418,11 @@ class AstIf: public Ast {
             }
 
             std::string true_label = TacQuad::new_label();
-            std::string false_label = TacQuad::new_label();
+            std::string false_label;
             std::string end_label = TacQuad::new_label();
 
             if (m_else_block) {
+                false_label = TacQuad::new_label();
                 s.m_quads.push_back(TacQuad(cond_r.m_temp, false_label, true_label, T_CONDJUMP));
             } else {
                 s.m_quads.push_back(TacQuad(cond_r.m_temp, end_label, true_label, T_CONDJUMP));
@@ -432,9 +433,9 @@ class AstIf: public Ast {
             if (m_else_block) {
                 s.m_quads.push_back(TacQuad("", "goto", end_label, T_NIL));
             }
-            s.add_tac_label(false_label);
 
             if (m_else_block) {
+                s.add_tac_label(false_label);
                 EmitTacResult then_r = m_else_block->emit_ir(s);
                 s.m_quads.push_back(TacQuad("", "goto", end_label, T_NIL));
             }

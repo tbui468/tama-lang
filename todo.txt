@@ -1,15 +1,24 @@
+*******************Refactor********************
+Make tokens for tac code and use as m_op paramter
+
+TacT::Plus
+TacT::Minus
+TacT::Equal
+TacT::Goto
+TacT::CondGoto
+TacT::Return
+...
+
+Use these instead of those from token.hpp
+m_target, m_opd1, and m_opd2 should be clear based on m_op
+
 ****************Basic Blocks**********************
-find first label
-    a block is from that label until quad before next label/end of quads
+TEST!  Should be able to shuffle blocks, and use them to generate x86 code - the program output should be the same
+    as the unshuffled version
 
-    class BasicBlock {
-        std::string m_label;
-        int m_begin; //first quad in block (same offset as label)
-        int m_end; //index of one quad after end of block
-        BasicBlock(const std::string& label, int begin, int end): m_label(label), m_begin(begin), m_end(end) {}
-    }
-
-    TEST!  Should be able to shuffle blocks, and use them to generate x86 code - the program output should be the same
+eliminate dead code
+    If function is not called remove it (be careful not to remove 'main')
+    if no edges go to block, remove block or emit warning
 
 Iterate through each block and assign registers
     analyze liveness of temps (true and local?)

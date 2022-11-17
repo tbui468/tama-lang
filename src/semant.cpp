@@ -21,6 +21,16 @@ X86Frame* Semant::get_compiling_frame() {
     return &(it->second);
 }
 
+void Semant::insert_post_return_labels() {
+    for (int i = 0; i < m_quads.size() - 1; i++) {
+        const TacQuad& q1 = m_quads[i];
+        const TacQuad& q2 = m_quads[i + 1];
+        if (q1.m_opd1 == "return" && q2.m_opd1 != "end_fun" && m_tac_labels[i + 1] == "") {
+            std::string* s = &m_tac_labels[i + 1];
+            *s = TacQuad::new_label();
+        }
+    }
+}
 
 void Semant::generate_ir(const std::string& input_file, const std::string& output_file) {
     read(input_file);
@@ -34,6 +44,8 @@ void Semant::generate_ir(const std::string& input_file, const std::string& outpu
     translate_to_ir();
 
     m_tac_labels.resize(m_quads.size(), "");
+
+    insert_post_return_labels();
 
     for (int i = 0; i < m_quads.size(); i++) {
         const TacQuad& q = m_quads[i];

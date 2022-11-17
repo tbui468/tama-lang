@@ -13,6 +13,7 @@
 #include "x86_frame.hpp"
 #include "x86_generator.hpp"
 #include "optimizer.hpp"
+#include "ControlFlowGraph.hpp"
 
 #define MAX_MSG_LEN 256
 
@@ -60,16 +61,22 @@ int main (int argc, char **argv) {
             return 1;
         }
 
-        //optimize
+        std::cout << "Generating control-flow graph..." <<std::endl;
+        ControlFlowGraph cfg;
+        cfg.create_basic_blocks(s.m_quads, s.m_tac_labels);
+        cfg.generate_graph(s.m_quads);
+
+        //optimize TODO: should optmize within basic blocks - shouldn't really make a difference
         std::cout << "Optimizing IR..." << std::endl;
         Optimizer opt;
+        //opt.eliminate_dead_code();
         opt.fold_constants(&s.m_quads);
         opt.merge_adjacent_store_fetch(&s.m_quads);
         opt.simplify_algebraic_identities(&s.m_quads);
 
         //allocate registers here
 
-        std::cout << "Generating x86 assembly..." << std::endl;
+        std::cout << "Generating x86 code..." << std::endl;
         X86Generator gen;
         gen.generate_asm(&s.m_quads, &s.m_tac_labels, &frames, f.substr(0, f.size() - 4) + ".asm");
         asm_files.push_back(f.substr(0, f.size() - 4) + ".asm");
