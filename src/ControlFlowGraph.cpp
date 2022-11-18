@@ -1,5 +1,16 @@
 #include "ControlFlowGraph.hpp"
 
+
+BasicBlock* ControlFlowGraph::get_block(const std::string& name) {
+    for (BasicBlock& b: m_blocks) {
+        if (b.m_label == name) {
+            return &b;
+        }
+    }
+
+    return nullptr;
+}
+
 void ControlFlowGraph::create_basic_blocks(const std::vector<TacQuad>& quads, const std::vector<std::string>& labels) {
     std::string block_label = "";
     int begin_idx;
@@ -23,14 +34,9 @@ void ControlFlowGraph::create_basic_blocks(const std::vector<TacQuad>& quads, co
     }
 
     m_blocks.push_back({block_label, begin_idx, quads.size()});
-
-    std::cout << "quads: " << quads.size() << std::endl;
-    for (BasicBlock b: m_blocks) {
-        std::cout << b.m_label << ": " << b.m_begin << "->" << b.m_end << std::endl;
-    }
 }
 
-void ControlFlowGraph::generate_graph(const std::vector<TacQuad>& quads) {
+void ControlFlowGraph::generate_inter_block_edges(const std::vector<TacQuad>& quads) {
     for (int i = 0; i < m_blocks.size(); i++) {
         BasicBlock* b = &m_blocks[i];
         for (int j = b->m_begin; j < b->m_end; j++) {
@@ -43,8 +49,25 @@ void ControlFlowGraph::generate_graph(const std::vector<TacQuad>& quads) {
             }
         }
     }
+}
 
-    std::cout << "Edges" << std::endl;
+void ControlFlowGraph::generate_inter_procedural_edges(const std::vector<TacQuad>& quads) {
+    for (int i = 0; i < m_blocks.size(); i++) {
+        BasicBlock* b = &m_blocks[i];
+        for (int j = b->m_begin; j < b->m_end; j++) {
+            const TacQuad* q = &quads[j];
+            if (q->m_opd1 == "call") {
+                m_edges.push_back({b->m_label, q->m_opd2});
+            }
+        }
+    }
+}
+
+void ControlFlowGraph::generate_graph(const std::vector<TacQuad>& quads) {
+    generate_inter_block_edges(quads);
+    generate_inter_procedural_edges(quads);
+
+    std::cout << "--Edges--" << std::endl;
     for (BlockEdge e: m_edges) {
         std::cout << e.m_from << "->" << e.m_to << std::endl;
     }

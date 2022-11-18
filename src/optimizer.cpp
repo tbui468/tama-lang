@@ -2,6 +2,7 @@
 #include "token.hpp"
 #include "utility.hpp"
 #include <iostream>
+#include <stack>
 
 void Optimizer::fold_constants(std::vector<TacQuad>* quads) {
     for (int i = 0; i < quads->size(); i++) {
@@ -142,3 +143,29 @@ void Optimizer::simplify_algebraic_identities(std::vector<TacQuad>* quads) {
         }
     }
 }
+
+void Optimizer::eliminate_dead_code(ControlFlowGraph* cfg) {
+    std::stack<BasicBlock*> greys;
+    greys.push(cfg->get_block("main"));
+
+    while (greys.size() > 0) {
+        BasicBlock* cur = greys.top();
+        greys.pop();
+        for (const BlockEdge& e: cfg->m_edges) {
+            if (e.m_from == cur->m_label) {
+                BasicBlock* dst = cfg->get_block(e.m_to);
+                if (dst->m_mark == BasicBlock::Color::Black) {
+                    dst->m_mark = BasicBlock::Color::Grey;
+                    greys.push(dst);
+                }
+            }
+        }
+        cur->m_mark = BasicBlock::Color::White;
+    }
+
+}
+
+
+
+
+

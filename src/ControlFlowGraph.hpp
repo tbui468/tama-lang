@@ -6,9 +6,16 @@
 
 class BasicBlock {
     public:
+        enum class Color {
+            Black,
+            Grey,
+            White
+        };
+    public:
         std::string m_label;
         int m_begin;
         int m_end; //index of one quad after end of block
+        Color m_mark = Color::Black;
         BasicBlock(const std::string& label, int begin, int end): m_label(label), m_begin(begin), m_end(end) {}
 };
 
@@ -23,8 +30,10 @@ class ControlFlowGraph {
     public:
         void create_basic_blocks(const std::vector<TacQuad>& quads, const std::vector<std::string>& labels);
         void generate_graph(const std::vector<TacQuad>& quads);
+        BasicBlock* get_block(const std::string& name);
     private:
-        int get_block_index(const std::string& label);
+        void generate_inter_block_edges(const std::vector<TacQuad>& quads);
+        void generate_inter_procedural_edges(const std::vector<TacQuad>& quads);
     public:
         std::vector<BasicBlock> m_blocks;
         std::vector<BlockEdge> m_edges;

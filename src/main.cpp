@@ -66,10 +66,17 @@ int main (int argc, char **argv) {
         cfg.create_basic_blocks(s.m_quads, s.m_tac_labels);
         cfg.generate_graph(s.m_quads);
 
-        //optimize TODO: should optmize within basic blocks - shouldn't really make a difference
+        //optimize TODO: should optmize within basic blocks in the cfg
         std::cout << "Optimizing IR..." << std::endl;
         Optimizer opt;
-        //opt.eliminate_dead_code();
+        opt.eliminate_dead_code(&cfg);
+
+        /*
+        std::cout << "--Basic Blocks--" << std::endl;
+        for (BasicBlock b: cfg.m_blocks) {
+            std::cout << b.m_label << ": " << b.m_begin << "->" << b.m_end << ", reachable: " << (b.m_mark == BasicBlock::Color::White ? "true" : "false") << std::endl;
+        }*/
+
         opt.fold_constants(&s.m_quads);
         opt.merge_adjacent_store_fetch(&s.m_quads);
         opt.simplify_algebraic_identities(&s.m_quads);
