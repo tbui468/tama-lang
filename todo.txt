@@ -13,29 +13,24 @@ Use these instead of those from token.hpp
 m_target, m_opd1, and m_opd2 should be clear based on m_op
 
 ****************Basic Blocks**********************
-TEST!  Should be able to shuffle blocks, and use them to generate x86 code - the program output should be the same
-    as the unshuffled version - just need to make sure we emit code for entry as usual
+Problem!!! <------------
+    import tests fail now (segmentation fault) since we have 'unused' blocks
+        that are linked later....
+    commenting out eliminate_dead_code() in main.cpp prevents this
+    How can we fix this?  Maybe require imported functions to be prepended with module name?
+        then we could ignore them during dead code elmination
 
-Implement this function in Optimizer:
-    opt.eliminate_dead_code(&cfg);
+    Or if it doesn't exist, just skip it 
 
-    Black
-    Grey
-    White
-
-    mark all blocks as black (unreachable)
-    mark 'main' block as grey and put into working stack (grey is working set)
-    for each block in working set:
-        for each edge:
-            if current_block is src and dst is black, mark it gray and put dst block on stack
-        mark current_block as white (reachable)
-
-    black blocks will be unreachable, and can be eliminated during code generation
+x86Generator should take in the CFG as an argument so that unmarked blocks can be skipped
+    should use blocks (skipping unmarked ones) when picking quads for code generation
 
 Implement this function into Optmizer:
     opt.collapse_blocks(&cfg);
     for goto_cond, put false (or true) block directly afterwards (to make goto_ifz, essentially)
     Is there any reason to choose the true or false branch?  Does size of regions/traces make a difference?
+
+***************Register Allocation**************
 
 Iterate through each block and assign registers
     analyze liveness of temps (true and local?)
@@ -112,13 +107,6 @@ mov     eax, eax - can remove
 mov     eax, eax - can remove
 mov     eax, eax - can remove
 
-***************Allocate registers*********************
-Need to make inference graph and do some node coloring
-
-
-Read lecture 16
-Read chapter in book
-K-coloring and allocate registers for x86
 
 ****************SSA********************
 class SSATransformer {

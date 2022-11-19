@@ -66,10 +66,9 @@ int main (int argc, char **argv) {
         cfg.create_basic_blocks(s.m_quads, s.m_tac_labels);
         cfg.generate_graph(s.m_quads);
 
-        //optimize TODO: should optmize within basic blocks in the cfg
         std::cout << "Optimizing IR..." << std::endl;
         Optimizer opt;
-        opt.eliminate_dead_code(&cfg);
+        opt.eliminate_dead_code(&cfg); //TODO: big problem!!! What about imports???
 
         /*
         std::cout << "--Basic Blocks--" << std::endl;

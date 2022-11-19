@@ -146,7 +146,11 @@ void Optimizer::simplify_algebraic_identities(std::vector<TacQuad>* quads) {
 
 void Optimizer::eliminate_dead_code(ControlFlowGraph* cfg) {
     std::stack<BasicBlock*> greys;
-    greys.push(cfg->get_block("main"));
+    
+    BasicBlock* main_block = cfg->get_block("main");
+    if (main_block) {
+        greys.push(main_block);
+    }
 
     while (greys.size() > 0) {
         BasicBlock* cur = greys.top();
@@ -154,7 +158,8 @@ void Optimizer::eliminate_dead_code(ControlFlowGraph* cfg) {
         for (const BlockEdge& e: cfg->m_edges) {
             if (e.m_from == cur->m_label) {
                 BasicBlock* dst = cfg->get_block(e.m_to);
-                if (dst->m_mark == BasicBlock::Color::Black) {
+                //@note: dst may be nullptr if function is imported
+                if (dst && dst->m_mark == BasicBlock::Color::Black) {
                     dst->m_mark = BasicBlock::Color::Grey;
                     greys.push(dst);
                 }
