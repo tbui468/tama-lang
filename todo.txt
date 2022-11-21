@@ -12,11 +12,15 @@ TacT::Return
 Use these instead of those from token.hpp
 m_target, m_opd1, and m_opd2 should be clear based on m_op
 
+
 ****************Basic Blocks**********************
-Implement this function into Optmizer:
-    opt.collapse_blocks(&cfg);
-    for goto_cond, put false (or true) block directly afterwards (to make goto_ifz, essentially)
-    Is there any reason to choose the true or false branch?  Does size of regions/traces make a difference?
+Idea - have two types of edges:
+    dead code edges are unreachable blocks
+    dead function edges (made from calls) are unused functions
+
+    Have two types of code elimination, one of unreachable code, and one for unreachable functions
+    Run both optimizations for executable (with main function)
+    Run only the unreachable code optimization for libararies (without main function)
 
 ***************Register Allocation**************
 

@@ -168,21 +168,28 @@ void Optimizer::eliminate_dead_code(ControlFlowGraph* cfg) {
         cur->m_mark = BasicBlock::Color::White;
     }
 
+
     std::vector<BasicBlock> temp;
     for (BasicBlock b: cfg->m_blocks) {
         temp.push_back(b);
     }
+
     cfg->m_blocks.clear();
     for (BasicBlock b: temp) {
         if (b.m_mark == BasicBlock::Color::White) {
             cfg->m_blocks.push_back(b);
         }
     }
-    //TODO: need to remove unmarked blocks
 
 }
 
-
-
+void Optimizer::collapse_cond_jumps(std::vector<TacQuad>* quads, std::vector<std::string>* labels) {
+    for (int i = 0; i < quads->size() - 1; i++) {
+        TacQuad& q = (*quads)[i];
+        if (q.m_op == T_CONDJUMP && q.m_opd2 == (*labels)[i + 1]) {
+            q.m_opd2 = ""; 
+        }
+    }
+}
 
 

@@ -69,8 +69,12 @@ int main (int argc, char **argv) {
 
         std::cout << "Optimizing IR..." << std::endl;
         Optimizer opt;
-        opt.eliminate_dead_code(&cfg);
+
+        if (cfg.get_block("main")) {
+            opt.eliminate_dead_code(&cfg);
+        }
         
+        opt.collapse_cond_jumps(&s.m_quads, &s.m_tac_labels);
 
         std::cout << "--Basic Blocks--" << std::endl;
         for (BasicBlock b: cfg.m_blocks) {

@@ -701,15 +701,18 @@ for data in while_tests:
 
 print("--(test...for testing)--")
 test(
-            ("if with false condition", 2,
+            ("if/else skip else", 1,
                 [
                     ("main.tmd",
                         """
                         main: () -> int {
-                            if 0 > 10 {
-                                return 1
+                            x: int = 0
+                            if 0 < 10 {
+                                x = x + 1
+                            } else {
+                                x = x + 2
                             }
-                            return 2
+                            return x
                         }
                         """
                     )

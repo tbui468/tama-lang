@@ -59,7 +59,9 @@ void X86Generator::generate_asm(const ControlFlowGraph& cfg,
                 fetch("eax", q.m_target);
                 write_op("    %s     %s, %s", "cmp", "eax", "0");
                 write_op("    %s      %s", "je", q.m_opd1.c_str());
-                write_op("    %s     %s", "jmp", q.m_opd2.c_str());
+                if (q.m_opd2 != "") {
+                    write_op("    %s     %s", "jmp", q.m_opd2.c_str());
+                }
             } else if (q.m_target == "") {
                 if (q.m_opd1 == "entry") {
                     write_op("    %s     %s, %s", "mov", "ebp", "esp");
