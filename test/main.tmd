@@ -1,27 +1,6 @@
-mysub: (a: int, b: int) -> int {
-                        if a < b {
-                            x: int = 3
-                        } else {
-                            x: int = 10
-                        }
-                        return a - b
-                    }
-                    myadd: (a: int, b: int) -> int {
-                        return a + b
-                    }
-                    main: () -> int {
-                        x: int = 0
-                        while x < 10 {
-                            if x < 0 {
-                                x = myadd(x, 1)
-                            } else {
-                                x = myadd(x, 2)
+main: () -> int {
+                            if 0 > 10 {
+                                return 1
                             }
-                            if x > 0 {
-                                return 0
-                            }
+                            return 2
                         }
-                        return x
-                        z: int = 10
-                        return z
-                    }

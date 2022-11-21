@@ -1,4 +1,7 @@
-    entry <alignment>
+_start:
+    entry 
+    call main
+    exit 
 myadd:
     begin_fun 4
     _t2 = a + b

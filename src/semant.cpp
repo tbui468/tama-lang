@@ -21,13 +21,12 @@ X86Frame* Semant::get_compiling_frame() {
     return &(it->second);
 }
 
-void Semant::insert_post_return_labels() {
+void Semant::insert_return_labels() {
     for (int i = 0; i < m_quads.size() - 1; i++) {
         const TacQuad& q1 = m_quads[i];
         const TacQuad& q2 = m_quads[i + 1];
         if (q1.m_opd1 == "return" && q2.m_opd1 != "end_fun" && m_tac_labels[i + 1] == "") {
-            std::string* s = &m_tac_labels[i + 1];
-            *s = TacQuad::new_label();
+            m_tac_labels[i + 1] = TacQuad::new_label();
         }
     }
 }
@@ -39,13 +38,16 @@ void Semant::generate_ir(const std::string& input_file, const std::string& outpu
     parse();
     if (ems.count > 0) return;
 
-    m_quads.push_back(TacQuad("", "entry", "<alignment>", T_NIL));
+    add_tac_label("_start");
+    m_quads.push_back(TacQuad("", "entry", "", T_NIL));
+    m_quads.push_back(TacQuad("", "call", "main", T_NIL));
+    m_quads.push_back(TacQuad("", "exit", "", T_NIL));
 
     translate_to_ir();
 
     m_tac_labels.resize(m_quads.size(), "");
 
-    insert_post_return_labels();
+    insert_return_labels();
 
     for (int i = 0; i < m_quads.size(); i++) {
         const TacQuad& q = m_quads[i];

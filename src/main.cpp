@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <random>
 
 #include "memory.hpp"
 #include "ast.hpp"
@@ -68,13 +69,13 @@ int main (int argc, char **argv) {
 
         std::cout << "Optimizing IR..." << std::endl;
         Optimizer opt;
-        opt.eliminate_dead_code(&cfg); //TODO: big problem!!! What about imports???
+        opt.eliminate_dead_code(&cfg);
+        
 
-        /*
         std::cout << "--Basic Blocks--" << std::endl;
         for (BasicBlock b: cfg.m_blocks) {
             std::cout << b.m_label << ": " << b.m_begin << "->" << b.m_end << ", reachable: " << (b.m_mark == BasicBlock::Color::White ? "true" : "false") << std::endl;
-        }*/
+        }
 
         opt.fold_constants(&s.m_quads);
         opt.merge_adjacent_store_fetch(&s.m_quads);
@@ -84,7 +85,7 @@ int main (int argc, char **argv) {
 
         std::cout << "Generating x86 code..." << std::endl;
         X86Generator gen;
-        gen.generate_asm(&s.m_quads, &s.m_tac_labels, &frames, f.substr(0, f.size() - 4) + ".asm");
+        gen.generate_asm(cfg, &s.m_quads, &s.m_tac_labels, &frames, f.substr(0, f.size() - 4) + ".asm");
         asm_files.push_back(f.substr(0, f.size() - 4) + ".asm");
 
         if (ems.count > 0) {

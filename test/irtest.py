@@ -700,40 +700,21 @@ for data in while_tests:
     test(data)
 
 print("--(test...for testing)--")
-test(        ("test set", 6,
-            [
-                ("main.tmd",
-                    """
-                    mysub: (a: int, b: int) -> int {
-                        if a < b {
-                            x: int = 3
-                        } else {
-                            x: int = 10
-                        }
-                        return a - b
-                    }
-                    myadd: (a: int, b: int) -> int {
-                        return a + b
-                    }
-                    main: () -> int {
-                        x: int = 0
-                        while x < 10 {
-                            if x < 0 {
-                                x = myadd(x, 1)
-                            } else {
-                                x = myadd(x, 2)
+test(
+            ("if with false condition", 2,
+                [
+                    ("main.tmd",
+                        """
+                        main: () -> int {
+                            if 0 > 10 {
+                                return 1
                             }
-                            if x > 0 {
-                                return 0
-                            }
+                            return 2
                         }
-                        return x
-                        z: int = 10
-                        return z
-                    }
-                    """
-                )
-            ]
-        ),)
+                        """
+                    )
+                ]
+            ),
+        )
 
 print("Tests passed:", correct, "/", len(function_tests) + len(arithmetic_expr_tests) + len(boolean_expr_tests) + len(variable_tests) + len(module_tests) + len(conditional_tests) + len(while_tests))

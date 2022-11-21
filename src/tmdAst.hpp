@@ -242,7 +242,6 @@ class AstFunDef: public Ast {
             m_body->emit_ir(s);
             s.m_compiling_fun = nullptr;
 
-
             int reserved_stack_variables = X86Frame::s_temp_counter - start_temps;
             s.m_quads[offset].m_opd2 = std::to_string((reserved_stack_variables) * 4);
             s.m_quads.push_back(TacQuad("", "end_fun", "", T_NIL));

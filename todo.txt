@@ -13,18 +13,6 @@ Use these instead of those from token.hpp
 m_target, m_opd1, and m_opd2 should be clear based on m_op
 
 ****************Basic Blocks**********************
-Problem!!! <------------
-    import tests fail now (segmentation fault) since we have 'unused' blocks
-        that are linked later....
-    commenting out eliminate_dead_code() in main.cpp prevents this
-    How can we fix this?  Maybe require imported functions to be prepended with module name?
-        then we could ignore them during dead code elmination
-
-    Or if it doesn't exist, just skip it 
-
-x86Generator should take in the CFG as an argument so that unmarked blocks can be skipped
-    should use blocks (skipping unmarked ones) when picking quads for code generation
-
 Implement this function into Optmizer:
     opt.collapse_blocks(&cfg);
     for goto_cond, put false (or true) block directly afterwards (to make goto_ifz, essentially)

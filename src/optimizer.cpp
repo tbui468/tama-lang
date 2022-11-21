@@ -147,7 +147,7 @@ void Optimizer::simplify_algebraic_identities(std::vector<TacQuad>* quads) {
 void Optimizer::eliminate_dead_code(ControlFlowGraph* cfg) {
     std::stack<BasicBlock*> greys;
     
-    BasicBlock* main_block = cfg->get_block("main");
+    BasicBlock* main_block = cfg->get_block("_start");
     if (main_block) {
         greys.push(main_block);
     }
@@ -167,6 +167,18 @@ void Optimizer::eliminate_dead_code(ControlFlowGraph* cfg) {
         }
         cur->m_mark = BasicBlock::Color::White;
     }
+
+    std::vector<BasicBlock> temp;
+    for (BasicBlock b: cfg->m_blocks) {
+        temp.push_back(b);
+    }
+    cfg->m_blocks.clear();
+    for (BasicBlock b: temp) {
+        if (b.m_mark == BasicBlock::Color::White) {
+            cfg->m_blocks.push_back(b);
+        }
+    }
+    //TODO: need to remove unmarked blocks
 
 }
 
