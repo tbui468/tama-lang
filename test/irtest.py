@@ -120,6 +120,24 @@ function_tests = [
                     )
                 ]
             ),
+            ("recursion", 55,
+                [
+                    ("main.tmd",
+                        """
+                        fib: (n: int) -> int {
+                            if n < 2 {
+                                return n
+                            } else {
+                                return fib(n - 1) + fib(n - 2)
+                            }
+                        }
+                        main: () -> int {
+                            return fib(10)
+                        }
+                        """
+                    )
+                ]
+            ),
         ]
 arithmetic_expr_tests = [
             ("signed integer arithmetic", 0,
@@ -719,5 +737,4 @@ test(
                 ]
             ),
         )
-
 print("Tests passed:", correct, "/", len(function_tests) + len(arithmetic_expr_tests) + len(boolean_expr_tests) + len(variable_tests) + len(module_tests) + len(conditional_tests) + len(while_tests))

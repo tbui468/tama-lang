@@ -41,9 +41,9 @@ void ControlFlowGraph::generate_inter_block_edges(const std::vector<TacQuad>& qu
         BasicBlock* b = &m_blocks[i];
         for (int j = b->m_begin; j < b->m_end; j++) {
             const TacQuad* q = &quads[j];
-            if (q->m_opd1 == "goto") {
+            if (q->m_op == TacT::Goto) {
                 m_edges.push_back({b->m_label, q->m_opd2});
-            } else if (q->m_op == T_CONDJUMP) {
+            } else if (q->m_op == TacT::CondGoto) {
                 m_edges.push_back({b->m_label, q->m_opd1});
                 m_edges.push_back({b->m_label, q->m_opd2});
             }
@@ -56,7 +56,7 @@ void ControlFlowGraph::generate_inter_procedural_edges(const std::vector<TacQuad
         BasicBlock* b = &m_blocks[i];
         for (int j = b->m_begin; j < b->m_end; j++) {
             const TacQuad* q = &quads[j];
-            if (q->m_opd1 == "call") {
+            if (q->m_op == TacT::CallNil || q->m_op == TacT::CallResult) {
                 m_edges.push_back({b->m_label, q->m_opd2});
             }
         }

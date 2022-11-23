@@ -17,21 +17,31 @@ void Optimizer::fold_constants(std::vector<TacQuad>* quads) {
             int right = (int)strtol(q.m_opd2.c_str(), &p2, 10);
             int result;
             switch (q.m_op) {
-                case T_PLUS:
+                case TacT::Plus:
                     result = left + right;
                     break;
-                case T_MINUS:
+                case TacT::Minus:
                     result = left - right;
                     break;
-                case T_STAR:
+                case TacT::Star:
                     result = left * right;
                     break;
-                case T_SLASH:
+                case TacT::Slash:
                     result = left / right;
                     break;
-                case T_LESS:
+                case TacT::Less:
                     result = left < right;
                     break;
+                case TacT::EqualEqual:
+                    result = left == right;
+                    break;
+                case TacT::And:
+                    result = left && right;
+                    break;
+                case TacT::Or:
+                    result = left || right;
+                    break;
+                    /*
                 case T_GREATER:
                     result = left > right;
                     break;
@@ -41,22 +51,13 @@ void Optimizer::fold_constants(std::vector<TacQuad>* quads) {
                 case T_GREATER_EQUAL:
                     result = left >= right;
                     break;
-                case T_EQUAL_EQUAL:
-                    result = left == right;
-                    break;
                 case T_NOT_EQUAL:
                     result = left != right;
-                    break;
-                case T_AND:
-                    result = left && right;
-                    break;
-                case T_OR:
-                    result = left || right;
-                    break;
+                    break;*/
                 default:
                     continue;
             }
-            (*quads)[i] = TacQuad(q.m_target, std::to_string(result), "", T_EQUAL);
+            (*quads)[i] = TacQuad(q.m_target, std::to_string(result), "", TacT::Assign);
         }
     }
 }
@@ -66,14 +67,14 @@ void Optimizer::merge_adjacent_store_fetch(std::vector<TacQuad>* quads) {
         TacQuad* q1 = &((*quads)[i]);
         TacQuad* q2 = &((*quads)[i + 1]);
 
-        if (q2->m_op == T_EQUAL && q2->m_opd2 == "" && q2->m_opd1 == q1->m_target) {
+        if (q2->m_op == TacT::Assign && q2->m_opd1 == q1->m_target) {
             q2->m_opd1 = q1->m_opd1;
             q2->m_opd2 = q1->m_opd2;
             q2->m_op = q1->m_op;
             q1->m_target = "";
             q1->m_opd1 = "";
             q1->m_opd2 = "";
-            q1->m_op == T_NIL;
+            q1->m_op = TacT::EmptyQuad;
         }
 
     }
@@ -84,60 +85,60 @@ void Optimizer::simplify_algebraic_identities(std::vector<TacQuad>* quads) {
         TacQuad* q = &((*quads)[i]);
 
         switch (q->m_op) {
-            case T_PLUS:
+            case TacT::Plus:
                 if (q->m_opd1 == "0") {
                     q->m_opd1 = q->m_opd2;
                     q->m_opd2 = "";
-                    q->m_op = T_EQUAL;
+                    q->m_op = TacT::Assign;
                 } else if (q->m_opd2 == "0") {
                     q->m_opd2 = "";
-                    q->m_op = T_EQUAL;
+                    q->m_op = TacT::Assign;
                 }
                 break;
-           case T_MINUS:
+            case TacT::Minus:
                 if (q->m_opd1 == q->m_opd2) {
                     q->m_opd1 == "0";
                     q->m_opd2 == "";
-                    q->m_op = T_EQUAL;
+                    q->m_op = TacT::Assign;
                 } else if(q->m_opd2 == "0") {
                     q->m_opd2 = "";
-                    q->m_op = T_EQUAL;
+                    q->m_op = TacT::Assign;
                 }
                 break;
-            case T_STAR:
+            case TacT::Star:
                 if (q->m_opd1 == "1") {
                     q->m_opd1 = q->m_opd2;
                     q->m_opd2 = "";
-                    q->m_op = T_EQUAL;
+                    q->m_op = TacT::Assign;
                 } else if (q->m_opd2 == "1") {
                     q->m_opd2 = "";
-                    q->m_op = T_EQUAL;
+                    q->m_op = TacT::Assign;
                 } else if (q->m_opd1 == "0" || q->m_opd2 == "0") {
                     q->m_opd1 = "0";
                     q->m_opd2 = "";
-                    q->m_op = T_EQUAL;
+                    q->m_op = TacT::Assign;
                 }
                 break;
-            case T_SLASH:
+            case TacT::Slash:
                 if (q->m_opd2 == "1") {
                     q->m_opd2 = "";
-                    q->m_op = T_EQUAL;
+                    q->m_op = TacT::Assign;
                 } else if (q->m_opd1 == q->m_opd2) {
                     q->m_opd1 = "1";
                     q->m_opd2 = "";
-                    q->m_op = T_EQUAL;
+                    q->m_op = TacT::Assign;
                 }
                 break;
-            case T_AND:
+            case TacT::And:
                 if (q->m_opd1 == q->m_opd2) {
                     q->m_opd2 = "";
-                    q->m_op = T_EQUAL;
+                    q->m_op = TacT::Assign;
                 }
                 break;
-            case T_OR:
+            case TacT::Or:
                 if (q->m_opd1 == q->m_opd2) {
                     q->m_opd2 = "";
-                    q->m_op = T_EQUAL;
+                    q->m_op = TacT::Assign;
                 }
                 break;
         }
@@ -199,7 +200,7 @@ void Optimizer::eliminate_dead_code(ControlFlowGraph* cfg, const std::vector<std
 void Optimizer::collapse_cond_jumps(std::vector<TacQuad>* quads, std::vector<std::string>* labels) {
     for (int i = 0; i < quads->size() - 1; i++) {
         TacQuad& q = (*quads)[i];
-        if (q.m_op == T_CONDJUMP && q.m_opd2 == (*labels)[i + 1]) {
+        if (q.m_op == TacT::CondGoto && q.m_opd2 == (*labels)[i + 1]) {
             q.m_opd2 = ""; 
         }
     }

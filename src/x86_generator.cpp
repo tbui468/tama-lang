@@ -47,126 +47,131 @@ void X86Generator::generate_asm(const ControlFlowGraph& cfg,
         for (int i = bb.m_begin; i < bb.m_end; i++) {
             TacQuad q = (*quads)[i];
 
-            if (q.m_target == "" && q.m_opd1 == "" && q.m_opd2 == "" && q.m_op == T_NIL) {
-                continue;
-            }
-
             if ((*labels)[i] != "") {
                 write_op("%s:", (*labels)[i].c_str());
             }
 
-            if (q.m_op == T_CONDJUMP) {
-                fetch("eax", q.m_target);
-                write_op("    %s     %s, %s", "cmp", "eax", "0");
-                write_op("    %s      %s", "je", q.m_opd1.c_str());
-                if (q.m_opd2 != "") {
-                    write_op("    %s     %s", "jmp", q.m_opd2.c_str());
-                }
-            } else if (q.m_target == "") {
-                if (q.m_opd1 == "entry") {
+            if (q.m_op == TacT::EmptyQuad) {
+                continue;
+            }
+
+            switch (q.m_op) {
+                case TacT::CondGoto:
+                    fetch("eax", q.m_target);
+                    write_op("    %s     %s, %s", "cmp", "eax", "0");
+                    write_op("    %s      %s", "je", q.m_opd1.c_str());
+                    if (q.m_opd2 != "") {
+                        write_op("    %s     %s", "jmp", q.m_opd2.c_str());
+                    }
+                    break;
+                case TacT::Entry:
                     write_op("    %s     %s, %s", "mov", "ebp", "esp");
-                } else if (q.m_opd1 == "exit") {
+                    break;
+                case TacT::Exit:
                     write_op("    %s     %s, %s", "mov", "ebx", "eax");
                     write_op("    %s     %s, %s", "mov", "eax", "0x1");
                     write_op("    %s     %s", "int", "0x80");
-                } else if (q.m_opd1 == "begin_fun") {
+                    break;
+                case TacT::FunBegin:
                     m_frame_name = (*labels)[i];
                     m_frame_size = q.m_opd2;
                     write_op("    %s    %s", "push", "ebp");
                     write_op("    %s     %s, %s", "mov", "ebp", "esp");
                     write_op("    %s     %s, %s", "sub", "esp", q.m_opd2.c_str());
-                } else if (q.m_opd1 == "end_fun") {
+                    break;
+                case TacT::FunEnd:
                     m_frame_name = "";
                     m_frame_size = "";
-                } else if (q.m_opd1 == "push_arg") {
+                    break;
+                case TacT::PushArg:
                     if (is_int(q.m_opd2)) {
                         write_op("    %s    %s", "push", q.m_opd2.c_str());
                     } else {
                         fetch("eax", q.m_opd2);
                         write_op("    %s    %s", "push", "eax");
                     }
-                } else if (q.m_opd1 == "pop_args") {
+                    break;
+                case TacT::PopArgs:
                     write_op("    %s     %s, %s", "add", "esp", q.m_opd2.c_str());
-                } else if (q.m_opd1 == "call") {
+                    break;
+                case TacT::CallNil:
                     write_op("    %s    %s", "call", q.m_opd2.c_str());
-                } else if (q.m_opd1 == "goto") {
+                    break;
+                case TacT::CallResult:
+                    write_op("    %s    %s", q.m_opd1.c_str(), q.m_opd2.c_str());
+                    store(q.m_target, "eax");
+                    break;
+                case TacT::Assign:
+                    fetch("eax", q.m_opd1);
+                    store(q.m_target, "eax");
+                    break;
+                case TacT::Goto:
                     write_op("    %s     %s", "jmp", q.m_opd2.c_str());
-                } else if (q.m_opd1 == "return") {
+                    break;
+                case TacT::Return:
                     fetch("eax", q.m_opd2);
                     write_op("    %s     %s, %s", "add", "esp", m_frame_size.c_str());
                     write_op("    %s     %s", "pop", "ebp");
                     write_op("    %s", "ret");
-                }
-            } else {
-                switch (q.m_op) {
-                    case T_PLUS:
-                        fetch("eax", q.m_opd1);
-                        fetch("ecx", q.m_opd2);
-                        write_op("    %s     %s, %s", "add", "eax", "ecx");
-                        store(q.m_target, "eax");
-                        break;
-                    case T_MINUS:
-                        fetch("eax", q.m_opd1);
-                        fetch("ecx", q.m_opd2);
-                        write_op("    %s     %s, %s", "sub", "eax", "ecx");
-                        store(q.m_target, "eax");
-                        break;
-                    case T_STAR:
-                        fetch("eax", q.m_opd1);
-                        fetch("ecx", q.m_opd2);
-                        write_op("    %s    %s, %s", "imul", "eax", "ecx");
-                        store(q.m_target, "eax");
-                        break;
-                    case T_SLASH:
-                        fetch("eax", q.m_opd1);
-                        fetch("ecx", q.m_opd2);
-                        write_op("    %s", "cdq");
-                        write_op("    %s    %s", "idiv", "ecx");
-                        store(q.m_target, "eax");
-                        break;
-                    case T_LESS:
-                        fetch("eax", q.m_opd1);
-                        fetch("ecx", q.m_opd2);
-                        write_op("    %s     %s, %s", "cmp", "eax", "ecx");
-                        write_op("    %s    %s", "setl", "al");
-                        write_op("    %s   %s, %s", "movzx", "eax", "al");
-                        store(q.m_target, "eax");
-                        break;
-                    case T_EQUAL_EQUAL:
-                        fetch("eax", q.m_opd1);
-                        fetch("ecx", q.m_opd2);
-                        write_op("    %s     %s, %s", "cmp", "eax", "ecx");
-                        write_op("    %s    %s", "sete", "al");
-                        write_op("    %s   %s, %s", "movzx", "eax", "al");
-                        store(q.m_target, "eax");
-                        break;
-                    case T_AND:
-                        fetch("eax", q.m_opd1);
-                        fetch("ecx", q.m_opd2);
-                        write_op("    %s     %s, %s", "and", "eax", "ecx");
-                        store(q.m_target, "eax");
-                        break;
-                    case T_OR:
-                        fetch("eax", q.m_opd1);
-                        fetch("ecx", q.m_opd2);
-                        write_op("    %s      %s, %s", "or", "eax", "ecx");
-                        store(q.m_target, "eax");
-                        break;
-                    case T_EQUAL: {
-                        if (q.m_opd1 == "call") {
-                            write_op("    %s    %s", q.m_opd1.c_str(), q.m_opd2.c_str());
-                            store(q.m_target, "eax");
-                        } else {
-                            fetch("eax", q.m_opd1);
-                            store(q.m_target, "eax");
-                        }
-                        break;
-                    }
-                    default:
-                        write_op("<not implemented>");
-                        break;
-                }
+                    break;
+                case TacT::Plus:
+                    fetch("eax", q.m_opd1);
+                    fetch("ecx", q.m_opd2);
+                    write_op("    %s     %s, %s", "add", "eax", "ecx");
+                    store(q.m_target, "eax");
+                    break;
+                case TacT::Minus:
+                    fetch("eax", q.m_opd1);
+                    fetch("ecx", q.m_opd2);
+                    write_op("    %s     %s, %s", "sub", "eax", "ecx");
+                    store(q.m_target, "eax");
+                    break;
+                case TacT::Star:
+                    fetch("eax", q.m_opd1);
+                    fetch("ecx", q.m_opd2);
+                    write_op("    %s    %s, %s", "imul", "eax", "ecx");
+                    store(q.m_target, "eax");
+                    break;
+                case TacT::Slash:
+                    fetch("eax", q.m_opd1);
+                    fetch("ecx", q.m_opd2);
+                    write_op("    %s", "cdq");
+                    write_op("    %s    %s", "idiv", "ecx");
+                    store(q.m_target, "eax");
+                    break;
+                case TacT::Less:
+                    fetch("eax", q.m_opd1);
+                    fetch("ecx", q.m_opd2);
+                    write_op("    %s     %s, %s", "cmp", "eax", "ecx");
+                    write_op("    %s    %s", "setl", "al");
+                    write_op("    %s   %s, %s", "movzx", "eax", "al");
+                    store(q.m_target, "eax");
+                    break;
+                case TacT::EqualEqual:
+                    fetch("eax", q.m_opd1);
+                    fetch("ecx", q.m_opd2);
+                    write_op("    %s     %s, %s", "cmp", "eax", "ecx");
+                    write_op("    %s    %s", "sete", "al");
+                    write_op("    %s   %s, %s", "movzx", "eax", "al");
+                    store(q.m_target, "eax");
+                    break;
+                case TacT::And:
+                    fetch("eax", q.m_opd1);
+                    fetch("ecx", q.m_opd2);
+                    write_op("    %s     %s, %s", "and", "eax", "ecx");
+                    store(q.m_target, "eax");
+                    break;
+                case TacT::Or:
+                    fetch("eax", q.m_opd1);
+                    fetch("ecx", q.m_opd2);
+                    write_op("    %s      %s, %s", "or", "eax", "ecx");
+                    store(q.m_target, "eax");
+                    break;
+                default:
+                    write_op("<not implemented>");
+                    break;
             }
+
             
         }
     }

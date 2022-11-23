@@ -33,42 +33,56 @@ class AstBinary: public Ast {
             std::string t = s.get_compiling_frame()->add_temp(ret_type);
             switch (m_op.type) {
                 case T_PLUS:
+                    s.m_quads.push_back(TacQuad(t, left_result.m_temp, right_result.m_temp, TacT::Plus));
+                    break;
                 case T_MINUS:
+                    s.m_quads.push_back(TacQuad(t, left_result.m_temp, right_result.m_temp, TacT::Minus));
+                    break;
                 case T_STAR:
+                    s.m_quads.push_back(TacQuad(t, left_result.m_temp, right_result.m_temp, TacT::Star));
+                    break;
                 case T_SLASH:
+                    s.m_quads.push_back(TacQuad(t, left_result.m_temp, right_result.m_temp, TacT::Slash));
+                    break;
                 case T_LESS:
+                    s.m_quads.push_back(TacQuad(t, left_result.m_temp, right_result.m_temp, TacT::Less));
+                    break;
                 case T_EQUAL_EQUAL:
+                    s.m_quads.push_back(TacQuad(t, left_result.m_temp, right_result.m_temp, TacT::EqualEqual));
+                    break;
                 case T_AND:
+                    s.m_quads.push_back(TacQuad(t, left_result.m_temp, right_result.m_temp, TacT::And));
+                    break;
                 case T_OR:
-                    s.m_quads.push_back(TacQuad(t, left_result.m_temp, right_result.m_temp, m_op.type));
+                    s.m_quads.push_back(TacQuad(t, left_result.m_temp, right_result.m_temp, TacT::Or));
                     break;
                 //synthesize these other operators
                 case T_GREATER: {
-                    s.m_quads.push_back(TacQuad(t, right_result.m_temp, left_result.m_temp, T_LESS));
+                    s.m_quads.push_back(TacQuad(t, right_result.m_temp, left_result.m_temp, TacT::Less));
                     break;
                 }
                 case T_LESS_EQUAL: {
                     std::string tl = s.get_compiling_frame()->add_temp(ret_type);
-                    s.m_quads.push_back(TacQuad(tl, left_result.m_temp, right_result.m_temp, T_LESS));
+                    s.m_quads.push_back(TacQuad(tl, left_result.m_temp, right_result.m_temp, TacT::Less));
                     std::string te = s.get_compiling_frame()->add_temp(ret_type);
-                    s.m_quads.push_back(TacQuad(te, left_result.m_temp, right_result.m_temp, T_EQUAL_EQUAL));
-                    s.m_quads.push_back(TacQuad(t, tl, te, T_OR));
+                    s.m_quads.push_back(TacQuad(te, left_result.m_temp, right_result.m_temp, TacT::EqualEqual));
+                    s.m_quads.push_back(TacQuad(t, tl, te, TacT::Or));
                     break;
                 }
                 case T_GREATER_EQUAL: {
                     std::string tg = s.get_compiling_frame()->add_temp(ret_type);
-                    s.m_quads.push_back(TacQuad(tg, right_result.m_temp, left_result.m_temp, T_LESS));
+                    s.m_quads.push_back(TacQuad(tg, right_result.m_temp, left_result.m_temp, TacT::Less));
                     std::string te = s.get_compiling_frame()->add_temp(ret_type);
-                    s.m_quads.push_back(TacQuad(te, left_result.m_temp, right_result.m_temp, T_EQUAL_EQUAL));
-                    s.m_quads.push_back(TacQuad(t, tg, te, T_OR));
+                    s.m_quads.push_back(TacQuad(te, left_result.m_temp, right_result.m_temp, TacT::EqualEqual));
+                    s.m_quads.push_back(TacQuad(t, tg, te, TacT::Or));
                     break;
                 }
                 case T_NOT_EQUAL: {
                     std::string tl = s.get_compiling_frame()->add_temp(ret_type);
-                    s.m_quads.push_back(TacQuad(tl, left_result.m_temp, right_result.m_temp, T_LESS));
+                    s.m_quads.push_back(TacQuad(tl, left_result.m_temp, right_result.m_temp, TacT::Less));
                     std::string tg = s.get_compiling_frame()->add_temp(ret_type);
-                    s.m_quads.push_back(TacQuad(tg, right_result.m_temp, left_result.m_temp, T_LESS));
-                    s.m_quads.push_back(TacQuad(t, tl, tg, T_OR));
+                    s.m_quads.push_back(TacQuad(tg, right_result.m_temp, left_result.m_temp, TacT::Less));
+                    s.m_quads.push_back(TacQuad(t, tl, tg, TacT::Or));
                     break;
                 }
                 default:
@@ -93,13 +107,13 @@ class AstUnary: public Ast {
 
             std::string t = s.get_compiling_frame()->add_temp(r.m_type);
             if (r.m_type.m_dtype == T_INT_TYPE) {
-                s.m_quads.push_back(TacQuad(t, "0", r.m_temp, T_MINUS));
+                s.m_quads.push_back(TacQuad(t, "0", r.m_temp, TacT::Minus));
             } else if (r.m_type.m_dtype == T_BOOL_TYPE) {
                 std::string tl = s.get_compiling_frame()->add_temp(r.m_type);
-                s.m_quads.push_back(TacQuad(tl, r.m_temp, "1", T_LESS));
+                s.m_quads.push_back(TacQuad(tl, r.m_temp, "1", TacT::Less));
                 std::string tg = s.get_compiling_frame()->add_temp(r.m_type);
-                s.m_quads.push_back(TacQuad(tg, "1", r.m_temp, T_LESS));
-                s.m_quads.push_back(TacQuad(t, tl, tg, T_OR));
+                s.m_quads.push_back(TacQuad(tg, "1", r.m_temp, TacT::Less));
+                s.m_quads.push_back(TacQuad(t, tl, tg, TacT::Or));
             } else {
                 ems_add(&ems, m_op.line, "Unary expression does not support that operator.");
             }
@@ -157,15 +171,15 @@ class AstPrint: public Ast {
         EmitTacResult emit_ir(Semant& s) {
             EmitTacResult r = m_arg->emit_ir(s);
 
-            s.m_quads.push_back(TacQuad("", "push_arg", r.m_temp, T_NIL)); 
+            s.m_quads.push_back(TacQuad("", "push_arg", r.m_temp, TacT::PushArg)); 
             if (r.m_type.m_dtype == T_INT_TYPE) {
-                s.m_quads.push_back(TacQuad("", "call", "_print_int", T_NIL)); 
+                s.m_quads.push_back(TacQuad("", "call", "_print_int", TacT::CallNil)); 
             } else if (r.m_type.m_dtype == T_BOOL_TYPE) {
-                s.m_quads.push_back(TacQuad("", "call", "_print_bool", T_NIL)); 
+                s.m_quads.push_back(TacQuad("", "call", "_print_bool", TacT::CallNil)); 
             } else {
                 //TODO: error message with line info goes here
             }
-            s.m_quads.push_back(TacQuad("", "pop_args", std::to_string(4), T_NIL)); 
+            s.m_quads.push_back(TacQuad("", "pop_args", std::to_string(4), TacT::PopArgs)); 
 
             return {"", Type(T_NIL_TYPE)};
         }
@@ -235,7 +249,7 @@ class AstFunDef: public Ast {
 
             s.add_tac_label(fun_name);
             int offset = s.m_quads.size();
-            s.m_quads.push_back(TacQuad("", "begin_fun", "", T_NIL));
+            s.m_quads.push_back(TacQuad("", "begin_fun", "", TacT::FunBegin));
             int start_temps = X86Frame::s_temp_counter;
 
             s.m_compiling_fun = this;
@@ -244,7 +258,7 @@ class AstFunDef: public Ast {
 
             int reserved_stack_variables = X86Frame::s_temp_counter - start_temps;
             s.m_quads[offset].m_opd2 = std::to_string((reserved_stack_variables) * 4);
-            s.m_quads.push_back(TacQuad("", "end_fun", "", T_NIL));
+            s.m_quads.push_back(TacQuad("", "end_fun", "", TacT::FunEnd));
 
 
             return {"", Type(T_NIL_TYPE)};
@@ -283,7 +297,7 @@ class AstDeclSym: public Ast {
 
             std::string local_temp = s.get_compiling_frame()->add_local(std::string(m_symbol.start, m_symbol.len), r.m_type);
 
-            s.m_quads.push_back(TacQuad(local_temp, r.m_temp, "", T_EQUAL));
+            s.m_quads.push_back(TacQuad(local_temp, r.m_temp, "", TacT::Assign));
 
             return {"", Type(T_NIL_TYPE)};
         }
@@ -361,7 +375,7 @@ class AstSetSym: public Ast {
                     return {"", Type(T_NIL_TYPE)};
                 }
 
-                s.m_quads.push_back(TacQuad(sym->m_tac_name, r.m_temp, "", T_EQUAL));
+                s.m_quads.push_back(TacQuad(sym->m_tac_name, r.m_temp, "", TacT::Assign));
 
                 return {sym->m_tac_name, r.m_type};
             } else { //symbol is a formal parameter
@@ -374,7 +388,7 @@ class AstSetSym: public Ast {
                     return {"", Type(T_NIL_TYPE)};
                 }
 
-                s.m_quads.push_back(TacQuad(sym->m_name, r.m_temp, "", T_EQUAL));
+                s.m_quads.push_back(TacQuad(sym->m_name, r.m_temp, "", TacT::Assign));
                 return {sym->m_name, r.m_type};
             }
         }
@@ -422,21 +436,21 @@ class AstIf: public Ast {
 
             if (m_else_block) {
                 false_label = TacQuad::new_label();
-                s.m_quads.push_back(TacQuad(cond_r.m_temp, false_label, true_label, T_CONDJUMP));
+                s.m_quads.push_back(TacQuad(cond_r.m_temp, false_label, true_label, TacT::CondGoto));
             } else {
-                s.m_quads.push_back(TacQuad(cond_r.m_temp, end_label, true_label, T_CONDJUMP));
+                s.m_quads.push_back(TacQuad(cond_r.m_temp, end_label, true_label, TacT::CondGoto));
             }
 
             s.add_tac_label(true_label);
             EmitTacResult then_r = m_then_block->emit_ir(s);
             if (m_else_block) {
-                s.m_quads.push_back(TacQuad("", "goto", end_label, T_NIL));
+                s.m_quads.push_back(TacQuad("", "goto", end_label, TacT::Goto));
             }
 
             if (m_else_block) {
                 s.add_tac_label(false_label);
                 EmitTacResult then_r = m_else_block->emit_ir(s);
-                s.m_quads.push_back(TacQuad("", "goto", end_label, T_NIL));
+                s.m_quads.push_back(TacQuad("", "goto", end_label, TacT::Goto));
             }
             s.add_tac_label(end_label);
 
@@ -456,7 +470,7 @@ class AstWhile: public Ast {
         }
         EmitTacResult emit_ir(Semant& s) {
             std::string cond_l = TacQuad::new_label();
-            s.m_quads.push_back(TacQuad("", "goto", cond_l, T_NIL));
+            s.m_quads.push_back(TacQuad("", "goto", cond_l, TacT::Goto));
             s.add_tac_label(cond_l);
 
             EmitTacResult cond_r = m_condition->emit_ir(s);
@@ -466,12 +480,12 @@ class AstWhile: public Ast {
 
             std::string body_l = TacQuad::new_label();
             std::string end_l = TacQuad::new_label();
-            s.m_quads.push_back(TacQuad(cond_r.m_temp, end_l, body_l, T_CONDJUMP));
+            s.m_quads.push_back(TacQuad(cond_r.m_temp, end_l, body_l, TacT::CondGoto));
 
             s.add_tac_label(body_l);
             EmitTacResult while_r = m_while_block->emit_ir(s);
 
-            s.m_quads.push_back(TacQuad("", "goto", cond_l, T_NIL));
+            s.m_quads.push_back(TacQuad("", "goto", cond_l, TacT::Goto));
             s.add_tac_label(end_l);
 
             return {"", Type(T_NIL_TYPE)};
@@ -516,19 +530,19 @@ class AstCall: public Ast {
                 if (!r.m_type.is_of_type(sym->m_type.m_ptypes[i])) {
                     ems_add(&ems, m_symbol.line, "Type Error: Argument type doesn't match formal parameter type.");
                 }
-                s.m_quads.push_back(TacQuad("", "push_arg", r.m_temp, T_NIL));
+                s.m_quads.push_back(TacQuad("", "push_arg", r.m_temp, TacT::PushArg));
             }
 
             std::string t;
             if (sym->m_type.m_rtype != T_NIL_TYPE) {
                 t = s.get_compiling_frame()->add_temp(Type(sym->m_type.m_rtype));
-                s.m_quads.push_back(TacQuad(t, "call", std::string(m_symbol.start, m_symbol.len), T_EQUAL));
+                s.m_quads.push_back(TacQuad(t, "call", std::string(m_symbol.start, m_symbol.len), TacT::CallResult));
             } else {
                 t = "";
-                s.m_quads.push_back(TacQuad(t, "call", std::string(m_symbol.start, m_symbol.len), T_NIL));
+                s.m_quads.push_back(TacQuad(t, "call", std::string(m_symbol.start, m_symbol.len), TacT::CallNil));
             }
 
-            s.m_quads.push_back(TacQuad("", "pop_args", std::to_string(m_args.size() * 4), T_NIL));
+            s.m_quads.push_back(TacQuad("", "pop_args", std::to_string(m_args.size() * 4), TacT::PopArgs));
 
             return {t, Type(sym->m_type.m_rtype)};
 
@@ -556,7 +570,7 @@ class AstReturn: public Ast {
                 ems_add(&ems, m_return.line, "Synax Error: return data type does not match function return type.");
             }
 
-            s.m_quads.push_back(TacQuad("", "return", r.m_temp, T_NIL));
+            s.m_quads.push_back(TacQuad("", "return", r.m_temp, TacT::Return));
             return {"", Type(T_NIL_TYPE)};
         }
 };
