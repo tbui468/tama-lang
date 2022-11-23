@@ -67,12 +67,20 @@ int main (int argc, char **argv) {
         cfg.create_basic_blocks(s.m_quads, s.m_tac_labels);
         cfg.generate_graph(s.m_quads);
 
+        std::cout << "--Edges--" << std::endl;
+        for (BlockEdge e: cfg.m_edges) {
+            std::cout << e.m_from << "->" << e.m_to << std::endl;
+        }
+
+        std::cout << "--Basic Blocks--" << std::endl;
+        for (BasicBlock b: cfg.m_blocks) {
+            std::cout << b.m_label << ": " << b.m_begin << "->" << b.m_end << ", reachable: " << (b.m_mark == BasicBlock::Color::White ? "true" : "false") << std::endl;
+        }
+
         std::cout << "Optimizing IR..." << std::endl;
         Optimizer opt;
 
-        if (cfg.get_block("main")) {
-            opt.eliminate_dead_code(&cfg);
-        }
+        opt.eliminate_dead_code(&cfg, s.m_tac_labels);
         
         opt.collapse_cond_jumps(&s.m_quads, &s.m_tac_labels);
 

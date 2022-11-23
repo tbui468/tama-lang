@@ -14,16 +14,25 @@ m_target, m_opd1, and m_opd2 should be clear based on m_op
 
 
 ****************Basic Blocks**********************
-Idea - have two types of edges:
+Look at dead_code_elimination function
+    trying to split into libraries and executable versions
+    but getting segmenation fault...
+
+    Recall that the goal is to eliminate unused functions in executable
+    but not in libraries (code without 'main' function) since
+    But unreachable intra-procedure code can be removed
+
+Idea to solve dead code elimination problem:
     dead code edges are unreachable blocks
     dead function edges (made from calls) are unused functions
 
-    Have two types of code elimination, one of unreachable code, and one for unreachable functions
+    Have two types of code elimination, one of unreachable code, and one for unused functions
     Run both optimizations for executable (with main function)
     Run only the unreachable code optimization for libararies (without main function)
 
-***************Register Allocation**************
 
+
+***************Register Allocation**************
 Iterate through each block and assign registers
     analyze liveness of temps (true and local?)
     assign temps (true) to registers
@@ -99,7 +108,6 @@ mov     eax, eax - can remove
 mov     eax, eax - can remove
 mov     eax, eax - can remove
 
-
 ****************SSA********************
 class SSATransformer {
     std::vector<Block> create_basic_blocks(const std::vector<TacQuad>& quads);
@@ -111,6 +119,7 @@ Then disallow reassignment (make a new temp to prevent this)
 Need to track the base variable/most current derived variable so 
     that the most recent value can be used
 Add phi nodes when a block has two or more predecessors that (may?) change a variable
+
 ***************Optimization********************
 Compiler should accept flag to turn on/off optimizer
 
@@ -122,33 +131,6 @@ Read 240 TAC examples
 Copy propagation
 Constant folding
 Dead code elimination
-
-
-***************************Reorganize Quads basic-blocks*******************
-    Each instruction after label is start of block - the leader (this takes care of function definitions)
-    Start at each leader and move down quads until we find next leader - previous is end of block (also takes care of functions)
-    Need to create CFG during this time (nodes are blocks, and edges (jumps) connect blocks)
-
-    class TacBlock {
-        public:
-            TacLabel* m_label;
-            TacQuad* m_begin;
-            TacQuad* m_end; //one after end of block
-    };
-
-    std::vector<TacBlock> m_blocks;
-    
-    struct TacEdge {
-        int m_from;
-        int m_to;
-        TacEdge(int from, int to): m_from(from), m_to(to) {}
-    };
-
-    std::vector<TacEdge> m_edges;
-
-
-****************Control-Flow Graph**********************
-What about trace scheduling? (Mentioned in Modern Compiler Implementation in C book, but not in standford lectures)
 
 ***************SSA*************************
 Could transform to SSA IR and do more optimizations

@@ -67,8 +67,4 @@ void ControlFlowGraph::generate_graph(const std::vector<TacQuad>& quads) {
     generate_inter_block_edges(quads);
     generate_inter_procedural_edges(quads);
 
-    std::cout << "--Edges--" << std::endl;
-    for (BlockEdge e: m_edges) {
-        std::cout << e.m_from << "->" << e.m_to << std::endl;
-    }
 }

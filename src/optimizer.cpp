@@ -144,30 +144,43 @@ void Optimizer::simplify_algebraic_identities(std::vector<TacQuad>* quads) {
     }
 }
 
-void Optimizer::eliminate_dead_code(ControlFlowGraph* cfg) {
-    std::stack<BasicBlock*> greys;
-    
-    BasicBlock* main_block = cfg->get_block("_start");
-    if (main_block) {
-        greys.push(main_block);
-    }
+void Optimizer::mark_from_root_label(ControlFlowGraph* cfg, const std::string& label) {
+        std::stack<BasicBlock*> greys;
+        BasicBlock* main_block = cfg->get_block(label);
+        if (main_block) {
+            greys.push(main_block);
+        }
 
-    while (greys.size() > 0) {
-        BasicBlock* cur = greys.top();
-        greys.pop();
-        for (const BlockEdge& e: cfg->m_edges) {
-            if (e.m_from == cur->m_label) {
-                BasicBlock* dst = cfg->get_block(e.m_to);
-                //@note: dst may be nullptr if function is imported
-                if (dst && dst->m_mark == BasicBlock::Color::Black) {
-                    dst->m_mark = BasicBlock::Color::Grey;
-                    greys.push(dst);
+        while (greys.size() > 0) {
+            BasicBlock* cur = greys.top();
+            greys.pop();
+            for (const BlockEdge& e: cfg->m_edges) {
+                if (e.m_from == cur->m_label) {
+                    BasicBlock* dst = cfg->get_block(e.m_to);
+                    //@note: dst may be nullptr if function is imported
+                    if (dst && dst->m_mark == BasicBlock::Color::Black) {
+                        dst->m_mark = BasicBlock::Color::Grey;
+                        greys.push(dst);
+                    }
                 }
             }
+            cur->m_mark = BasicBlock::Color::White;
         }
-        cur->m_mark = BasicBlock::Color::White;
-    }
+}
 
+void Optimizer::eliminate_dead_code(ControlFlowGraph* cfg, const std::vector<std::string>& labels) {
+    
+    bool is_executable = nullptr != cfg->get_block("main"); 
+
+    if (is_executable) {
+        mark_from_root_label(cfg, "_start");
+    } else {
+        for (BasicBlock& b: cfg->m_blocks) {
+            if (labels[b.m_begin][0] != '_') {
+                mark_from_root_label(cfg, labels[b.m_begin]);
+            }
+        }
+    }
 
     std::vector<BasicBlock> temp;
     for (BasicBlock b: cfg->m_blocks) {
