@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <random>
 
-#include "memory.hpp"
 #include "ast.hpp"
 #include "error.hpp"
 #include "lexer.hpp"
@@ -14,10 +13,6 @@
 #include "x86_generator.hpp"
 #include "optimizer.hpp"
 #include "ControlFlowGraph.hpp"
-
-#define MAX_MSG_LEN 256
-
-extern size_t allocated;
 
 int main (int argc, char **argv) {
 

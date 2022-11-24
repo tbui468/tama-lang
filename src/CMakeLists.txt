@@ -1,6 +1,5 @@
 set(Sources
     main.cpp
-    memory.cpp
     assembler.cpp
     error.cpp
     lexer.cpp
@@ -17,7 +16,6 @@ set(Sources
 
 set(Headers
     ast.hpp
-    memory.hpp
     token.hpp
     assembler.hpp
     error.hpp

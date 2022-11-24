@@ -2,8 +2,6 @@
 Replace C-style enum with type-safe C++ enum class
     Also, have separate tokens for tmdParser and asmParser
 
-ErrorMsgs should be a vector instead of C struct
-
 MemoryManager can go for now
 
 Add COLON_COLON token for static symbols
@@ -11,6 +9,13 @@ Add COLON_COLON token for static symbols
 **************What programs can I write with tamarind***********
 blockchain
     gossip network
+        network support
+        hashing algorithms
+
+neural network
+    feedforward to recognize MNIST dataset
+        arrays
+        floating point
 
 ****************print***********************
 assemble basic.asm into basic.obj
