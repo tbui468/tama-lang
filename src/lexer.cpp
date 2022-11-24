@@ -82,7 +82,7 @@ struct Token Lexer::read_number() {
         } else if (next == '.') {
             t.len++;
             if (has_decimal) {
-                ems_add(&ems, m_line, "Token Error: Too many decimals!");
+                ems.add_error(m_line, "Token Error: Too many decimals!");
             } else {
                 has_decimal = true;
             }

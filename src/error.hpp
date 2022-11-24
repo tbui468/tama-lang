@@ -1,26 +1,25 @@
-#ifndef TMD_ERROR_H
-#define TMD_ERROR_H
+#ifndef TMD_ERROR_HPP
+#define TMD_ERROR_HPP
 
+#include <vector>
+#include <string>
 
 struct Error {
-    char* msg;
+    std::string msg;
     int line;
 };
 
-
-struct ErrorMsgs {
-    struct Error *errors;
-    int count;
-    int max_count;
+class ErrorMsgs {
+    public:
+        std::vector<Error> m_errors;
+    public:
+        void add_error(int line, const char* format, ...);
+        void sort();
+        void print();
+        bool has_errors();
 };
 
+extern ErrorMsgs ems;
 
-extern struct ErrorMsgs ems;
 
-void ems_init(struct ErrorMsgs *ems);
-void ems_free(struct ErrorMsgs *ems);
-void ems_add(struct ErrorMsgs *ems, int line, const char* format, ...);
-void ems_sort(struct ErrorMsgs *ems); //this can be static
-void ems_print(struct ErrorMsgs *ems);
-
-#endif //TMD_ERROR_H
+#endif //TMD_ERROR_HPP

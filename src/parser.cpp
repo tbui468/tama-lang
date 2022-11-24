@@ -27,7 +27,7 @@ struct Token Parser::next_token() {
 struct Token Parser::consume_token(enum TokenType tt) {
     struct Token t = next_token();
     if (t.type != tt) {
-        ems_add(&ems, t.line, "Unexpected token!");
+        ems.add_error(t.line, "Unexpected token!");
     }
     return t;
 }

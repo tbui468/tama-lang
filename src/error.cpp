@@ -1,67 +1,43 @@
-#include <stdio.h>
+#include <cstdio>
 #include <stdarg.h>
+#include <iostream>
 
 #include "error.hpp"
-#include "memory.hpp"
 
-#define MAX_MSG_LEN 256
+ErrorMsgs ems;
 
-struct ErrorMsgs ems;
-
-void ems_init(struct ErrorMsgs *ems) {
-    ems->errors = NULL;
-    ems->count = 0;
-    ems->max_count = 0;
-}
-
-void ems_free(struct ErrorMsgs *ems) {
-    for (int i = 0; i < ems->count; i++) {
-        free_unit(ems->errors[i].msg, MAX_MSG_LEN);
-    }
-    free_arr(ems->errors, sizeof(struct Error), ems->max_count);
-}
-
-void ems_add(struct ErrorMsgs *ems, int line, const char* format, ...) {
-    if (ems->count + 1 > ems->max_count) {
-        int old_max = ems->max_count;
-        if (ems->max_count == 0) {
-            ems->max_count = 8;
-        } else {
-            ems->max_count *= 2;
-        }
-        ems->errors = (struct Error*)alloc_arr(ems->errors, sizeof(struct Error), old_max, ems->max_count);
-    }
-
+void ErrorMsgs::add_error(int line, const char* format, ...) {
     va_list ap;
     va_start(ap, format);
-    char* s = (char*)alloc_unit(MAX_MSG_LEN);
-    int written = snprintf(s, MAX_MSG_LEN, "[%d] ", line);
-    vsnprintf(s + written, MAX_MSG_LEN - written, format, ap);
+    char* s = (char*)malloc(256);
+    int written = snprintf(s, 256, "[%d] ", line);
+    vsnprintf(s + written, 256 - written, format, ap);
     va_end(ap);
 
-    struct Error e;
-    e.msg = s;
-    e.line = line;
-
-    ems->errors[ems->count++] = e;
+    m_errors.push_back({std::string(s), line});
 }
 
-void ems_sort(struct ErrorMsgs *ems) {
-    for (int end = ems->count - 1; end > 0; end--) {
+void ErrorMsgs::sort() {
+    for (int end = m_errors.size() - 1; end > 0; end--) {
         for (int i = 0; i < end; i++) {
-            struct Error left = ems->errors[i];
-            struct Error right = ems->errors[i + 1];
+            Error left = m_errors[i];
+            Error right = m_errors[i + 1];
             if (left.line > right.line) {
-                ems->errors[i] = right;
-                ems->errors[i + 1] = left;
+                m_errors[i] = right;
+                m_errors[i + 1] = left;
             }
         }
     }
 }
 
-void ems_print(struct ErrorMsgs *ems) {
-    ems_sort(ems);
-    for (int i = 0; i < ems->count; i++) {
-        printf("%s\n", ems->errors[i].msg); 
+void ErrorMsgs::print() {
+    for (const Error& e: m_errors) {
+        std::cout << e.msg << std::endl;
     }
 }
+
+bool ErrorMsgs::has_errors() {
+    return !m_errors.empty();
+}
+
+

@@ -1,7 +1,10 @@
 ****************Refactor******************
 Replace C-style enum with type-safe C++ enum class
+    Also, have separate tokens for tmdParser and asmParser
 
-Replace TokenArray with just std::vector<Token>
+ErrorMsgs should be a vector instead of C struct
+
+MemoryManager can go for now
 
 Add COLON_COLON token for static symbols
 

@@ -5,7 +5,6 @@
 
 #include "memory.hpp"
 #include "ast.hpp"
-#include "token.hpp"
 #include "error.hpp"
 #include "lexer.hpp"
 #include "assembler.hpp"
@@ -21,8 +20,6 @@
 extern size_t allocated;
 
 int main (int argc, char **argv) {
-
-    ems_init(&ems);
 
     
     if (argc < 2) {
@@ -57,8 +54,8 @@ int main (int argc, char **argv) {
         std::unordered_map<std::string, X86Frame> frames = std::unordered_map<std::string, X86Frame>();
         Semant s = Semant(&frames);
         s.generate_ir(f, out);
-        if (ems.count > 0) {
-            ems_print(&ems);
+        if (ems.has_errors()) {
+            ems.print();
             return 1;
         }
 
@@ -81,8 +78,8 @@ int main (int argc, char **argv) {
         gen.generate_asm(cfg, &s.m_quads, &s.m_tac_labels, &frames, f.substr(0, f.size() - 4) + ".asm");
         asm_files.push_back(f.substr(0, f.size() - 4) + ".asm");
 
-        if (ems.count > 0) {
-            ems_print(&ems);
+        if (ems.has_errors()) {
+            ems.print();
             return 1;
         }
     }
@@ -97,8 +94,8 @@ int main (int argc, char **argv) {
         Assembler a;
         a.generate_obj(f, out);
 
-        if (ems.count > 0) {
-            ems_print(&ems);
+        if (ems.has_errors()) {
+            ems.print();
             return 1;
         }
     }
@@ -107,15 +104,10 @@ int main (int argc, char **argv) {
     Linker l;
     l.link(obj_files, "out.exe");
    
-    if (ems.count > 0) {
-        ems_print(&ems);
+    if (ems.has_errors()) {
+        ems.print();
         return 1;
     }
     
-    //cleanup
-//    printf("Memory allocated: %ld\n", allocated);
-    ems_free(&ems);
-//    printf("Allocated memory remaining: %ld\n", allocated);
-
     return 0;
 }

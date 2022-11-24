@@ -127,7 +127,7 @@ class Assembler {
                                 }
                                 m_right->assemble(a);
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: add doesn't work with those operand types");
+                                ems.add_error(m_t.line, "Assembler Error: add doesn't work with those operand types");
                             }
                             break;
                         }
@@ -140,7 +140,7 @@ class Assembler {
                                 NodeReg32* reg = dynamic_cast<NodeReg32*>(m_right);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | reg->bit_pattern() << 3 | mem->bit_pattern());
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: and doesn't work with those operand types");
+                                ems.add_error(m_t.line, "Assembler Error: and doesn't work with those operand types");
                             }
                             break;
                         }
@@ -149,7 +149,7 @@ class Assembler {
                                 a.m_buf.push_back(0xe8);
                                 m_left->assemble(a);
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: call only works with labels for now");
+                                ems.add_error(m_t.line, "Assembler Error: call only works with labels for now");
                             }
                             break;
                         }
@@ -179,7 +179,7 @@ class Assembler {
                                 NodeReg32* reg = dynamic_cast<NodeReg32*>(m_right);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | reg->bit_pattern() << 3 | mem->bit_pattern());
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: cmp does not work with those operands");
+                                ems.add_error(m_t.line, "Assembler Error: cmp does not work with those operands");
                             }
                             break;
                         }
@@ -190,7 +190,7 @@ class Assembler {
                                 NodeReg32 *reg = dynamic_cast<NodeReg32*>(m_left);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x01 << 3 | reg->bit_pattern());
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: dec only works with registers");
+                                ems.add_error(m_t.line, "Assembler Error: dec only works with registers");
                             }
                             break;
                         }
@@ -201,7 +201,7 @@ class Assembler {
                                 NodeReg32 *reg = dynamic_cast<NodeReg32*>(m_left);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x06 << 3 | reg->bit_pattern());
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: div only works with register");
+                                ems.add_error(m_t.line, "Assembler Error: div only works with register");
                             }
                             break;
                         }
@@ -212,7 +212,7 @@ class Assembler {
                                 NodeReg32 *reg = dynamic_cast<NodeReg32*>(m_left);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x07 << 3 | reg->bit_pattern());
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: div only works with register");
+                                ems.add_error(m_t.line, "Assembler Error: div only works with register");
                             }
                             break;
                         }
@@ -225,7 +225,7 @@ class Assembler {
                                 NodeReg32* r_m = dynamic_cast<NodeReg32*>(m_right);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | reg->bit_pattern() << 3 | r_m->bit_pattern());
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: SUB does not work with those operands.");
+                                ems.add_error(m_t.line, "Assembler Error: SUB does not work with those operands.");
                             }
                             break;
                         }
@@ -236,13 +236,13 @@ class Assembler {
                                 NodeReg32 *reg = dynamic_cast<NodeReg32*>(m_left);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x0 << 3 | reg->bit_pattern());
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: inc only works with register operands");
+                                ems.add_error(m_t.line, "Assembler Error: inc only works with register operands");
                             }
                             break;
                         }
                         case T_INTR: {
                             if (!is_expr(m_left)) {
-                                ems_add(&ems, m_t.line, "Assembler Error: int operator must be followed by imm32.");
+                                ems.add_error(m_t.line, "Assembler Error: int operator must be followed by imm32.");
                             } else {
                                 a.m_buf.push_back(0xcd);
                                 a.m_buf.push_back((uint8_t)(m_left->eval())); //int instruction is followed by a single byte
@@ -262,7 +262,7 @@ class Assembler {
                                 a.m_buf.push_back(0x8f);
                                 m_left->assemble(a);
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: jg only works with labels for now");
+                                ems.add_error(m_t.line, "Assembler Error: jg only works with labels for now");
                             }
                             break;
                         }
@@ -271,7 +271,7 @@ class Assembler {
                                 a.m_buf.push_back(0xe9);
                                 m_left->assemble(a);
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: jmp only works with labels for now");
+                                ems.add_error(m_t.line, "Assembler Error: jmp only works with labels for now");
                             }
                             break;
                         }
@@ -282,7 +282,7 @@ class Assembler {
                                 a.m_buf.push_back(0x85);
                                 m_left->assemble(a);
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: jnz only works with labels for now");
+                                ems.add_error(m_t.line, "Assembler Error: jnz only works with labels for now");
                             }
                             break;
                         }
@@ -343,7 +343,7 @@ class Assembler {
                                     a.m_buf.push_back(0x00);
                                 }
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: mov with those operands not supported");
+                                ems.add_error(m_t.line, "Assembler Error: mov with those operands not supported");
                             }
                             break;
                         }
@@ -357,7 +357,7 @@ class Assembler {
                                 NodeReg8* mem = dynamic_cast<NodeReg8*>(m_right);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | reg->bit_pattern() << 3 | mem->bit_pattern());
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: movzx with those operands not supported");
+                                ems.add_error(m_t.line, "Assembler Error: movzx with those operands not supported");
                             }
                             break;
                         }
@@ -368,7 +368,7 @@ class Assembler {
                                 NodeReg32 *reg = dynamic_cast<NodeReg32*>(m_left);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x03 << 3 | reg->bit_pattern());
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: neg only accepts registers as operands");
+                                ems.add_error(m_t.line, "Assembler Error: neg only accepts registers as operands");
                             }
                             break;
                         }
@@ -381,7 +381,7 @@ class Assembler {
                                 NodeReg32* reg = dynamic_cast<NodeReg32*>(m_right);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | reg->bit_pattern() << 3 | mem->bit_pattern());
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: and doesn't work with those operand types");
+                                ems.add_error(m_t.line, "Assembler Error: and doesn't work with those operand types");
                             }
                             break;
                         }
@@ -396,7 +396,7 @@ class Assembler {
                                 NodeReg32* reg = dynamic_cast<NodeReg32*>(m_left);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x06 << 3 | reg->bit_pattern());
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: push with those operands not supported");
+                                ems.add_error(m_t.line, "Assembler Error: push with those operands not supported");
                             }
                             break;
                         }
@@ -418,7 +418,7 @@ class Assembler {
                                 NodeReg8* reg8 = dynamic_cast<NodeReg8*>(m_left);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x0 << 3 | reg8->bit_pattern());
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: setl with those operands not supported");
+                                ems.add_error(m_t.line, "Assembler Error: setl with those operands not supported");
                             }
                             break;
                         }
@@ -430,7 +430,7 @@ class Assembler {
                                 NodeReg8* reg8 = dynamic_cast<NodeReg8*>(m_left);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x0 << 3 | reg8->bit_pattern());
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: setg with those operands not supported");
+                                ems.add_error(m_t.line, "Assembler Error: setg with those operands not supported");
                             }
                             break;
                         }
@@ -442,7 +442,7 @@ class Assembler {
                                 NodeReg8* reg8 = dynamic_cast<NodeReg8*>(m_left);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x0 << 3 | reg8->bit_pattern());
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: setle with those operands not supported");
+                                ems.add_error(m_t.line, "Assembler Error: setle with those operands not supported");
                             }
                             break;
                         }
@@ -454,7 +454,7 @@ class Assembler {
                                 NodeReg8* reg8 = dynamic_cast<NodeReg8*>(m_left);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x0 << 3 | reg8->bit_pattern());
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: setge with those operands not supported");
+                                ems.add_error(m_t.line, "Assembler Error: setge with those operands not supported");
                             }
                             break;
                         }
@@ -466,7 +466,7 @@ class Assembler {
                                 NodeReg8* reg8 = dynamic_cast<NodeReg8*>(m_left);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x0 << 3 | reg8->bit_pattern());
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: sete with those operands not supported");
+                                ems.add_error(m_t.line, "Assembler Error: sete with those operands not supported");
                             }
                             break;
                         }
@@ -478,7 +478,7 @@ class Assembler {
                                 NodeReg8* reg8 = dynamic_cast<NodeReg8*>(m_left);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | 0x0 << 3 | reg8->bit_pattern());
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: setne with those operands not supported");
+                                ems.add_error(m_t.line, "Assembler Error: setne with those operands not supported");
                             }
                             break;
                         }
@@ -502,7 +502,7 @@ class Assembler {
                                     m_right->assemble(a);
                                 }
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: SUB does not work with those operands.");
+                                ems.add_error(m_t.line, "Assembler Error: SUB does not work with those operands.");
                             }
                             break;
                         }
@@ -520,7 +520,7 @@ class Assembler {
                                     m_right->assemble(a);
                                 }
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: test operator only works with [reg], [imm] for now");
+                                ems.add_error(m_t.line, "Assembler Error: test operator only works with [reg], [imm] for now");
                             }
                             break;
                         }
@@ -532,12 +532,12 @@ class Assembler {
                                 NodeReg32* src = dynamic_cast<NodeReg32*>(m_right);
                                 a.m_buf.push_back(mod_tbl[(uint8_t)OpMod::MOD_REG] | dst->bit_pattern() << 3 | src->bit_pattern());
                             } else {
-                                ems_add(&ems, m_t.line, "Assembler Error: xor only works with register operands for now.");
+                                ems.add_error(m_t.line, "Assembler Error: xor only works with register operands for now.");
                             }
                             break;
                         }
                         default:
-                            ems_add(&ems, m_t.line, "Assembler Error: operator not currently supported.");
+                            ems.add_error(m_t.line, "Assembler Error: operator not currently supported.");
                             break;
                     }
                 }
@@ -653,7 +653,7 @@ class Assembler {
                         return -1 * m_right->eval();
                     }
                     
-                    ems_add(&ems, m_t.line, "Assembler Error: Only '-' are recognized as unary operators");
+                    ems.add_error(m_t.line, "Assembler Error: Only '-' are recognized as unary operators");
                     return 0;
                 }
                 std::string to_string() {
@@ -682,7 +682,7 @@ class Assembler {
                         case T_STAR:    return left * right;
                         case T_SLASH:   return left / right;
                         default:
-                            ems_add(&ems, m_t.line, "Assembler Error: binary operator must be *+-/"); 
+                            ems.add_error(m_t.line, "Assembler Error: binary operator must be *+-/"); 
                             return 0;
                     }
                 }
@@ -729,7 +729,7 @@ class Assembler {
                     std::unordered_map<std::string, Label>::iterator it = a.m_labels.find(s);
                     if (it != a.m_labels.end()) {
                         if (it->second.m_defined) {
-                            ems_add(&ems, m_t.line, "Assembler Error: Labels cannot be defined more than once.");
+                            ems.add_error(m_t.line, "Assembler Error: Labels cannot be defined more than once.");
                         } else {
                             it->second.m_t = m_t;
                             it->second.m_addr = a.m_buf.size();

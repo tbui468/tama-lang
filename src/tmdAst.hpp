@@ -23,7 +23,7 @@ class AstBinary: public Ast {
             EmitTacResult right_result = m_right->emit_ir(s);
 
             if (!left_result.m_type.is_of_type(right_result.m_type)) {
-                ems_add(&ems, m_op.line, "Type Error: Left and right types don't match!");
+                ems.add_error(m_op.line, "Type Error: Left and right types don't match!");
             } else if (m_op.type == T_PLUS || m_op.type == T_MINUS || m_op.type == T_SLASH || m_op.type == T_STAR) {
                 ret_type = Type(T_INT_TYPE);
             } else {
@@ -86,7 +86,7 @@ class AstBinary: public Ast {
                     break;
                 }
                 default:
-                    ems_add(&ems, m_op.line, "Translate Error: Binary operator not recognized.");
+                    ems.add_error(m_op.line, "Translate Error: Binary operator not recognized.");
                     break;
             }
 
@@ -115,7 +115,7 @@ class AstUnary: public Ast {
                 s.m_quads.push_back(TacQuad(tg, "1", r.m_temp, TacT::Less));
                 s.m_quads.push_back(TacQuad(t, tl, tg, TacT::Or));
             } else {
-                ems_add(&ems, m_op.line, "Unary expression does not support that operator.");
+                ems.add_error(m_op.line, "Unary expression does not support that operator.");
             }
             return {t, r.m_type};
         }
@@ -139,7 +139,7 @@ class AstLiteral: public Ast {
             } else if (m_lexeme.type == T_NIL) {
                 t = "0";
             } else {
-                ems_add(&ems, m_lexeme.line, "Synax Error: Invalid literal");
+                ems.add_error(m_lexeme.line, "Synax Error: Invalid literal");
             }
 
             Type type = Type(T_NIL_TYPE);
@@ -242,7 +242,7 @@ class AstFunDef: public Ast {
             }
             
             if (s.m_globals.m_symbols.find(fun_name) != s.m_globals.m_symbols.end()) {
-                ems_add(&ems, m_symbol.line, "Syntax Error: Function with name already declared in global scope.");
+                ems.add_error(m_symbol.line, "Syntax Error: Function with name already declared in global scope.");
             } else {
                 s.m_globals.m_symbols.insert({fun_name, Symbol(fun_name, "", Type(T_FUN_TYPE, m_ret_type.type, ptypes), 0)});
             }
@@ -280,7 +280,7 @@ class AstDeclSym: public Ast {
             for (Ast* n: f->m_params) {
                 AstParam* p = dynamic_cast<AstParam*>(n);
                 if (strncmp(p->m_symbol.start, m_symbol.start, m_symbol.len) == 0) {
-                    ems_add(&ems, m_symbol.line, "Syntax Error: Formal parameter already declared using symbol");
+                    ems.add_error(m_symbol.line, "Syntax Error: Formal parameter already declared using symbol");
                     break;
                 }
             }
@@ -288,11 +288,11 @@ class AstDeclSym: public Ast {
             EmitTacResult r = m_value->emit_ir(s);
 
             if (r.m_type.m_dtype != m_type.type) {
-                ems_add(&ems, m_symbol.line, "Type Error: Declaration type and assigned value type don't match!");
+                ems.add_error(m_symbol.line, "Type Error: Declaration type and assigned value type don't match!");
             }
 
             if(s.get_compiling_frame()->symbol_defined_in_current_scope(std::string(m_symbol.start, m_symbol.len))) {
-                ems_add(&ems, m_symbol.line, "Syntax Error: Local symbol already declared in this scope!");
+                ems.add_error(m_symbol.line, "Syntax Error: Local symbol already declared in this scope!");
             }
 
             std::string local_temp = s.get_compiling_frame()->add_local(std::string(m_symbol.start, m_symbol.len), r.m_type);
@@ -326,7 +326,7 @@ class AstGetSym: public Ast {
                 Symbol* sym = s.get_compiling_frame()->get_symbol_from_scopes(std::string(m_symbol.start, m_symbol.len));
 
                 if (!sym) {
-                    ems_add(&ems, m_symbol.line, "Syntax Error: Variable not declared!");
+                    ems.add_error(m_symbol.line, "Syntax Error: Variable not declared!");
                     return {"", Type(T_NIL_TYPE)};
                 }
                 
@@ -365,13 +365,13 @@ class AstSetSym: public Ast {
                 Symbol* sym = s.get_compiling_frame()->get_symbol_from_scopes(std::string(m_symbol.start, m_symbol.len));
 
                 if (!sym) {
-                    ems_add(&ems, m_symbol.line, "Syntax Error: Variable not declared!");
+                    ems.add_error(m_symbol.line, "Syntax Error: Variable not declared!");
                     return {"", Type(T_NIL_TYPE)};
                 }
 
                 EmitTacResult r = m_value->emit_ir(s);
                 if (!sym->m_type.is_of_type(r.m_type)) {
-                    ems_add(&ems, m_symbol.line, "Type Error: Declaration type and assigned value type don't match!");
+                    ems.add_error(m_symbol.line, "Type Error: Declaration type and assigned value type don't match!");
                     return {"", Type(T_NIL_TYPE)};
                 }
 
@@ -384,7 +384,7 @@ class AstSetSym: public Ast {
 
                 Type type = sym->m_type.m_ptypes[arg_offset];
                 if (!type.is_of_type(r.m_type)) {
-                    ems_add(&ems, m_symbol.line, "Type Error: Formal parameter type and assigned value type don't match!");
+                    ems.add_error(m_symbol.line, "Type Error: Formal parameter type and assigned value type don't match!");
                     return {"", Type(T_NIL_TYPE)};
                 }
 
@@ -427,7 +427,7 @@ class AstIf: public Ast {
         EmitTacResult emit_ir(Semant& s) {
             EmitTacResult cond_r = m_condition->emit_ir(s);
             if (cond_r.m_type.m_dtype != T_BOOL_TYPE) {
-                ems_add(&ems, m_t.line, "Syntax Error: 'if' keyword must be followed by boolean expression.");
+                ems.add_error(m_t.line, "Syntax Error: 'if' keyword must be followed by boolean expression.");
             }
 
             std::string true_label = TacQuad::new_label();
@@ -475,7 +475,7 @@ class AstWhile: public Ast {
 
             EmitTacResult cond_r = m_condition->emit_ir(s);
             if (cond_r.m_type.m_dtype != T_BOOL_TYPE) {
-                ems_add(&ems, m_t.line, "Type Error: 'while' keyword must be followed by boolean expression.");
+                ems.add_error(m_t.line, "Type Error: 'while' keyword must be followed by boolean expression.");
             }
 
             std::string body_l = TacQuad::new_label();
@@ -515,20 +515,20 @@ class AstCall: public Ast {
                 }
 
                 if (!sym) {
-                    ems_add(&ems, m_symbol.line, "Syntax Error: Function '%.*s' not defined.", m_symbol.len, m_symbol.start);
+                    ems.add_error(m_symbol.line, "Syntax Error: Function '%.*s' not defined.", m_symbol.len, m_symbol.start);
                     return {"", Type(T_NIL_TYPE)};
                 }
             }
 
             if (m_args.size() != sym->m_type.m_ptypes.size()) {
-                ems_add(&ems, m_symbol.line, "Type Error: Argument count does not match formal parameter count.");
+                ems.add_error(m_symbol.line, "Type Error: Argument count does not match formal parameter count.");
                 return {"", Type(T_NIL_TYPE)};
             }
 
             for (int i = m_args.size() - 1; i >= 0; i--) {
                 EmitTacResult r = m_args[i]->emit_ir(s);
                 if (!r.m_type.is_of_type(sym->m_type.m_ptypes[i])) {
-                    ems_add(&ems, m_symbol.line, "Type Error: Argument type doesn't match formal parameter type.");
+                    ems.add_error(m_symbol.line, "Type Error: Argument type doesn't match formal parameter type.");
                 }
                 s.m_quads.push_back(TacQuad("", "push_arg", r.m_temp, TacT::PushArg));
             }
@@ -560,14 +560,14 @@ class AstReturn: public Ast {
         }
         EmitTacResult emit_ir(Semant& s) {
             if (!s.m_compiling_fun) {
-                ems_add(&ems, m_return.line, "Synax Error: 'return' can only be used inside a function definition.");
+                ems.add_error(m_return.line, "Synax Error: 'return' can only be used inside a function definition.");
                 return {"", Type(T_NIL_TYPE)};
             }
 
             EmitTacResult r = m_expr->emit_ir(s);
             AstFunDef* n = dynamic_cast<AstFunDef*>(s.m_compiling_fun);
             if (r.m_type.m_dtype != n->m_ret_type.type) {
-                ems_add(&ems, m_return.line, "Synax Error: return data type does not match function return type.");
+                ems.add_error(m_return.line, "Synax Error: return data type does not match function return type.");
             }
 
             s.m_quads.push_back(TacQuad("", "return", r.m_temp, TacT::Return));

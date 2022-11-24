@@ -171,7 +171,7 @@ void Linker::apply_relocations() {
             }
 
             if (!found_def) {
-                ems_add(&ems, 0, "Linker Error: Symbol '%s' not defined in any translation units.", sym_name);
+                ems.add_error(0, "Linker Error: Symbol '%s' not defined in any translation units.", sym_name);
             }
 
         }

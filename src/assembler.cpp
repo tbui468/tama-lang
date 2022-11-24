@@ -179,9 +179,9 @@ void Assembler::append_rel_section(int sh_rel_offset, int sh_text_offset, int sh
 void Assembler::generate_obj(const std::string& input_file, const std::string& output_file) {
     read(input_file);
     lex();
-    if (ems.count > 0) return;
+    if (ems.has_errors()) return;
     parse();
-    if (ems.count > 0) return;
+    if (ems.has_errors()) return;
 
     Elf32ElfHeader eh;
     eh.m_shstrndx = 2;
@@ -229,7 +229,7 @@ void Assembler::generate_obj(const std::string& input_file, const std::string& o
         append_rel_section(sh_rel_offset, sh_text_offset, sh_symtab_offset, sh_strtab_offset);
     }
 
-    if (ems.count > 0) return;
+    if (ems.has_errors()) return;
     write(output_file);
 
 
@@ -287,7 +287,7 @@ Assembler::Node *Assembler::parse_unit() {
         case T_L_BRACKET: {
             Node* reg = parse_unit();
             if (!dynamic_cast<NodeReg32*>(reg)) {
-                ems_add(&ems, next.line, "Parse Error: Memory access requires register before displacement");
+                ems.add_error(next.line, "Parse Error: Memory access requires register before displacement");
             }
             if (peek_one().type == T_R_BRACKET) {
                 consume_token(T_R_BRACKET);
@@ -302,11 +302,11 @@ Assembler::Node *Assembler::parse_unit() {
                 consume_token(T_R_BRACKET);
                 return new NodeMem(reg, displacement);
             }
-            ems_add(&ems, next.line, "Parse Error: Unrecognized token in memory access!");
+            ems.add_error(next.line, "Parse Error: Unrecognized token in memory access!");
             return NULL;
         }
         default:
-            ems_add(&ems, next.line, "Parse Error: Unrecognized token!");
+            ems.add_error(next.line, "Parse Error: Unrecognized token!");
     }
     return NULL;
 }
@@ -397,7 +397,7 @@ Assembler::Node *Assembler::parse_stmt() {
             case T_RET:
                 break;
             default:
-                ems_add(&ems, next.line, "Parse Error: Invalid token type!");
+                ems.add_error(next.line, "Parse Error: Invalid token type!");
         }
         return new NodeOp(op, left, right);
     }
@@ -441,7 +441,7 @@ struct Token Assembler::next_token() {
 struct Token Assembler::consume_token(enum TokenType tt) {
     struct Token t = next_token();
     if (t.type != tt) {
-        ems_add(&ems, t.line, "Unexpected token!");
+        ems.add_error(t.line, "Unexpected token!");
     }
     return t;
 }

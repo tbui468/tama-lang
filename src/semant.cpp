@@ -34,9 +34,9 @@ void Semant::insert_return_labels() {
 void Semant::generate_ir(const std::string& input_file, const std::string& output_file) {
     read(input_file);
     lex();
-    if (ems.count > 0) return;
+    if (ems.has_errors()) return;
     parse();
-    if (ems.count > 0) return;
+    if (ems.has_errors()) return;
 
     add_tac_label("_start");
     m_quads.push_back(TacQuad("", "entry", "", TacT::Entry));
@@ -144,7 +144,7 @@ Ast* Semant::TmdParser::parse_literal() {
     } else if (next.type == T_NIL) {
         return new AstLiteral(next_token());
     } else {
-        ems_add(&ems, next.line, "Parse Error: Unexpected token.");
+        ems.add_error(next.line, "Parse Error: Unexpected token.");
         return new AstLiteral(next_token());
     }
 }
@@ -372,7 +372,7 @@ void Semant::extract_global_declarations(const std::string& module_file) {
             }
             
             if (m_globals.m_symbols.find(fun_name) != m_globals.m_symbols.end()) {
-                ems_add(&ems, f->m_symbol.line, "Syntax Error: Function with name already declared in global scope.");
+                ems.add_error(f->m_symbol.line, "Syntax Error: Function with name already declared in global scope.");
             } else {
                 m_globals.m_symbols.insert({fun_name, Symbol(fun_name, "", Type(T_FUN_TYPE, f->m_ret_type.type, ptypes), 0)});
             }
