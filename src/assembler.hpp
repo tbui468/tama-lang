@@ -58,7 +58,6 @@ class Assembler {
             {"dh", T_DH},
             {"bh", T_BH},
             {"int", T_INTR},
-            {"equ", T_EQU},
             {"cdq", T_CDQ},
             {"xor", T_XOR},
             {"call", T_CALL},

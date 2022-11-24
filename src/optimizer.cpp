@@ -41,19 +41,6 @@ void Optimizer::fold_constants(std::vector<TacQuad>* quads) {
                 case TacT::Or:
                     result = left || right;
                     break;
-                    /*
-                case T_GREATER:
-                    result = left > right;
-                    break;
-                case T_LESS_EQUAL:
-                    result = left <= right;
-                    break;
-                case T_GREATER_EQUAL:
-                    result = left >= right;
-                    break;
-                case T_NOT_EQUAL:
-                    result = left != right;
-                    break;*/
                 default:
                     continue;
             }

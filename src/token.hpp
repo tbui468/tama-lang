@@ -78,8 +78,6 @@ enum TokenType {
     T_INC,
     T_DIV,
     T_INTR,
-    T_DOLLAR,   //Let's just force user to define labels instead of compiling $$
-    T_EQU,       //used to compute sizes (should compute the value and then patch immediately)
     T_ORG,
     T_CDQ,
     T_XOR,
@@ -100,8 +98,6 @@ enum TokenType {
     T_SETGE,
     T_SETE,
     T_SETNE,
-
-    T_CONDJUMP, //NOTE: used in TAC operator since we need three operands for conditional jumps
 };
 
 struct Token {

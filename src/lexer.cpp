@@ -207,11 +207,6 @@ struct Token Lexer::next_token() {
             t.start = &m_code[m_current];
             t.len = 1;
             break;
-        case '$':
-            t.type = T_DOLLAR;
-            t.start = &m_code[m_current];
-            t.len = 1;
-            break;
         default:
             if (is_digit(c)) {
                 t = read_number();

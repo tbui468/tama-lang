@@ -76,8 +76,6 @@ int main (int argc, char **argv) {
         opt.simplify_algebraic_identities(&s.m_quads);
 
 
-        TacQuad::print_tac(s.m_quads, s.m_tac_labels);
-
         std::cout << "Generating x86 code..." << std::endl;
         X86Generator gen;
         gen.generate_asm(cfg, &s.m_quads, &s.m_tac_labels, &frames, f.substr(0, f.size() - 4) + ".asm");

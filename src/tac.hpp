@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <string>
-#include "token.hpp"
 #include "type.hpp"
 
 struct EmitTacResult {
