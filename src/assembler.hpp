@@ -623,7 +623,14 @@ class Assembler {
                     a.m_buf.insert(a.m_buf.end(), (uint8_t*)&num, (uint8_t*)&num + sizeof(uint32_t));
                 }
                 int32_t eval() {
-                    return get_double(m_t);
+                    char* end = m_t.start + m_t.len;
+                    long ret;
+                    if (m_t.type == T_INT) {
+                        ret = strtol(m_t.start, &end, 10);
+                    } else if (m_t.type == T_HEX) {
+                        ret = strtol(m_t.start + 2, &end, 16);
+                    }
+                    return (int32_t)ret;
                 }
                 std::string to_string() {
                     return "NodeImm";

@@ -1,6 +1,14 @@
 ****************Refactor******************
 Replace C-style enum with type-safe C++ enum class
 
+Replace TokenArray with just std::vector<Token>
+
+Add COLON_COLON token for static symbols
+
+**************What programs can I write with tamarind***********
+blockchain
+    gossip network
+
 ****************print***********************
 assemble basic.asm into basic.obj
 create header files for basic.tmd with just function headers to import

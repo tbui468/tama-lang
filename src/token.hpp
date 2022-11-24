@@ -107,19 +107,4 @@ struct Token {
     int line;
 };
 
-struct TokenArray {
-    struct Token *tokens;
-    int count;
-    int max_count;
-};
-
-
-
-
-uint32_t get_double(struct Token t);
-uint8_t get_byte(struct Token t);
-void ta_init(struct TokenArray *ta);
-void ta_free(struct TokenArray *ta);
-void ta_add(struct TokenArray *ta, struct Token t);
-
 #endif //TMD_TOKEN_H

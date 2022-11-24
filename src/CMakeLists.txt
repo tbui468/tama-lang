@@ -1,7 +1,6 @@
 set(Sources
     main.cpp
     memory.cpp
-    token.cpp
     assembler.cpp
     error.cpp
     lexer.cpp
