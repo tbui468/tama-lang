@@ -1,4 +1,4 @@
-main: () -> int {
+main::() -> int {
                             x: int = 0
                             if 0 < 10 {
                                 x = x + 1

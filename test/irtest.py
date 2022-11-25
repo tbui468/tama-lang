@@ -41,7 +41,7 @@ function_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             return 0
                         }
                         """
@@ -52,7 +52,7 @@ function_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             return 1
                         }
                         """
@@ -63,7 +63,7 @@ function_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             return 1
                         }
                         """
@@ -74,7 +74,7 @@ function_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             return 0
                         }
                         """
@@ -85,7 +85,7 @@ function_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> nil {
+                        main::() -> nil {
                             return nil
                         }
                         """
@@ -96,10 +96,10 @@ function_tests = [
                 [
                     ("main.tmd",
                         """
-                        myadd: (a: int, b: int) -> int {
+                        myadd::(a: int, b: int) -> int {
                             return a + b
                         }
-                        main: () -> int {
+                        main::() -> int {
                             return 0
                         }
                         """
@@ -110,10 +110,10 @@ function_tests = [
                 [
                     ("main.tmd",
                         """
-                        myadd: (a: int, b: int) -> int {
+                        myadd::(a: int, b: int) -> int {
                             return a + b
                         }
-                        main: () -> int {
+                        main::() -> int {
                             return myadd(-5, 5)
                         }
                         """
@@ -124,14 +124,14 @@ function_tests = [
                 [
                     ("main.tmd",
                         """
-                        fib: (n: int) -> int {
+                        fib::(n: int) -> int {
                             if n < 2 {
                                 return n
                             } else {
                                 return fib(n - 1) + fib(n - 2)
                             }
                         }
-                        main: () -> int {
+                        main::() -> int {
                             return fib(10)
                         }
                         """
@@ -144,7 +144,7 @@ arithmetic_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             return 10 + 16 / 2 - 3 * 6
                         }
                         """
@@ -157,7 +157,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return false
                         }
                         """
@@ -168,7 +168,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return true
                         }
                         """
@@ -179,7 +179,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return 5 < 10
                         }
                         """
@@ -190,7 +190,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return 10 < 5
                         }
                         """
@@ -201,7 +201,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return 5 <= 10
                         }
                         """
@@ -212,7 +212,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return 5 <= 5
                         }
                         """
@@ -223,7 +223,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return 10 <= 5
                         }
                         """
@@ -234,7 +234,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return 10 > 5
                         }
                         """
@@ -245,7 +245,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return 5 > 10
                         }
                         """
@@ -256,7 +256,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return 10 >= 5
                         }
                         """
@@ -267,7 +267,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return 5 >= 5
                         }
                         """
@@ -278,7 +278,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return 5 >= 10
                         }
                         """
@@ -289,7 +289,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return 0 == 0
                         }
                         """
@@ -300,7 +300,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return 0 == 1
                         }
                         """
@@ -311,7 +311,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return 0 != 1
                         }
                         """
@@ -322,7 +322,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return 0 != 0
                         }
                         """
@@ -333,7 +333,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return false and false
                         }
                         """
@@ -344,7 +344,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return false and true
                         }
                         """
@@ -355,7 +355,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return true and false
                         }
                         """
@@ -366,7 +366,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return true and true
                         }
                         """
@@ -377,7 +377,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return false or false
                         }
                         """
@@ -388,7 +388,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return false or true
                         }
                         """
@@ -399,7 +399,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return true or false
                         }
                         """
@@ -410,7 +410,7 @@ boolean_expr_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> bool {
+                        main::() -> bool {
                             return true or true
                         }
                         """
@@ -425,7 +425,7 @@ variable_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             x: int = 1 + 4
                             return 0
                         }
@@ -437,7 +437,7 @@ variable_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             x: int = 1
                             return x
                         }
@@ -449,7 +449,7 @@ variable_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             x: int = 0
                             x = 1
                             return x
@@ -462,7 +462,7 @@ variable_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             x: int = 1
                             {
                                 return x
@@ -476,7 +476,7 @@ variable_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             x: int = 1
                             {
                                 x = 2
@@ -491,7 +491,7 @@ variable_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             x: int = 1
                             {
                                 x: int = 2
@@ -506,7 +506,7 @@ variable_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             x: int = 1
                             {
                                 x: int = 2
@@ -527,14 +527,14 @@ module_tests = [
                     ("main.tmd",
                         """
                         import math
-                        main: () -> int {
+                        main::() -> int {
                             return 0
                         }
                         """
                     ),
                     ("math.tmd",
                         """
-                        myadd: (a: int, b:int) -> int {
+                        myadd::(a: int, b:int) -> int {
                             return a + b
                         }
                         """
@@ -546,14 +546,14 @@ module_tests = [
                     ("main.tmd",
                         """
                         import math
-                        main: () -> int {
+                        main::() -> int {
                             return myadd(-5, 5)
                         }
                         """
                     ),
                     ("math.tmd",
                         """
-                        myadd: (a: int, b:int) -> int {
+                        myadd::(a: int, b:int) -> int {
                             return a + b
                         }
                         """
@@ -567,7 +567,7 @@ conditional_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             if 0 < 10 {
                                 return 1
                             }
@@ -581,7 +581,7 @@ conditional_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             if 0 > 10 {
                                 return 1
                             }
@@ -595,7 +595,7 @@ conditional_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             if 0 < 10 {
                                 return 1
                             } else {
@@ -610,7 +610,7 @@ conditional_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             if 0 > 10 {
                                 return 1
                             } else {
@@ -625,7 +625,7 @@ conditional_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             x: int = 0
                             if 0 < 10 {
                                 x = x + 1
@@ -646,7 +646,7 @@ while_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             while 0 > 10 {
                                 return 1
                             }
@@ -660,7 +660,7 @@ while_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             x: int = 0
                             while x < 1 {
                                 x = x + 1
@@ -675,7 +675,7 @@ while_tests = [
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             x: int = 0
                             while x < 5 {
                                 x = x + 1
@@ -723,7 +723,7 @@ test(
                 [
                     ("main.tmd",
                         """
-                        main: () -> int {
+                        main::() -> int {
                             x: int = 0
                             if 0 < 10 {
                                 x = x + 1

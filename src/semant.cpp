@@ -294,37 +294,36 @@ Ast* Semant::TmdParser::parse_stmt() {
         Ast* arg = parse_expr();
         consume_token(T_R_PAREN);
         return new AstPrint(arg);
+    } else if (next.type == T_IDENTIFIER && peek_two().type == T_COLON_COLON) {
+        struct Token sym = consume_token(T_IDENTIFIER);
+        consume_token(T_COLON_COLON);
+        consume_token(T_L_PAREN);
+        std::vector<Ast*> params;
+        while (peek_one().type != T_R_PAREN) {
+            struct Token sym = consume_token(T_IDENTIFIER);
+            consume_token(T_COLON);
+            struct Token type = next_token();
+            params.push_back(new AstParam(sym, type));
+            if (peek_one().type == T_COMMA) {
+                consume_token(T_COMMA);
+            }
+        } 
+        consume_token(T_R_PAREN);
+        consume_token(T_MINUS);
+        consume_token(T_GREATER);
+
+        struct Token ret_type = next_token();
+        if (ret_type.type == T_NIL) ret_type.type = T_NIL_TYPE;
+
+        Ast* body = parse_block();
+        return new AstFunDef(sym, params, ret_type, body);
     } else if (next.type == T_IDENTIFIER && peek_two().type == T_COLON) {
         struct Token sym = consume_token(T_IDENTIFIER);
         consume_token(T_COLON);
-
-        if (peek_one().type == T_L_PAREN) {
-            consume_token(T_L_PAREN);
-            std::vector<Ast*> params;
-            while (peek_one().type != T_R_PAREN) {
-                struct Token sym = consume_token(T_IDENTIFIER);
-                consume_token(T_COLON);
-                struct Token type = next_token();
-                params.push_back(new AstParam(sym, type));
-                if (peek_one().type == T_COMMA) {
-                    consume_token(T_COMMA);
-                }
-            } 
-            consume_token(T_R_PAREN);
-            consume_token(T_MINUS);
-            consume_token(T_GREATER);
-
-            struct Token ret_type = next_token();
-            if (ret_type.type == T_NIL) ret_type.type = T_NIL_TYPE;
-
-            Ast* body = parse_block();
-            return new AstFunDef(sym, params, ret_type, body);
-        } else {
-            struct Token type = next_token();
-            consume_token(T_EQUAL);
-            Ast *expr = parse_expr();
-            return new AstDeclSym(sym, type, expr);
-        }
+        struct Token type = next_token();
+        consume_token(T_EQUAL);
+        Ast *expr = parse_expr();
+        return new AstDeclSym(sym, type, expr);
     } else if (next.type == T_L_BRACE) {
         return parse_block();
     } else if (next.type == T_IF) {

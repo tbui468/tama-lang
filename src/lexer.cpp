@@ -138,9 +138,14 @@ struct Token Lexer::next_token() {
             t.len = 1;
             break;
         case ':':
-            t.type = T_COLON;
             t.start = &m_code[m_current];
-            t.len = 1;
+            if (m_current + 1 < m_code.size() && m_code[m_current + 1] == ':') {
+                t.type = T_COLON_COLON;
+                t.len = 2;
+            } else {
+                t.type = T_COLON;
+                t.len = 1;
+            }
             break;
         case '<':
             t.start = &m_code[m_current];

@@ -37,6 +37,7 @@ enum TokenType {
     T_NIL,
     T_EOF,
     T_COLON,
+    T_COLON_COLON,
     T_INT_TYPE,
     T_NIL_TYPE, //Only returned when type checked
     T_RET_TYPE,
